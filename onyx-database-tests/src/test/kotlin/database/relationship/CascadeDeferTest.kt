@@ -4,8 +4,8 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.factory.impl.CacheManagerFactory
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory
-import com.onyxdevtools.server.entities.Actor
-import com.onyxdevtools.server.entities.Movie
+import dev.onyx.server.entities.Actor
+import dev.onyx.server.entities.Movie
 import database.base.DatabaseBaseTest
 import org.junit.Test
 import org.junit.runner.RunWith

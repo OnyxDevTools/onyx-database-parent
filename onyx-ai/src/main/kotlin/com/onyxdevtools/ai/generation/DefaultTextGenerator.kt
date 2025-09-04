@@ -1,12 +1,12 @@
-package com.onyxdevtools.ai.generation
+package dev.onyx.ai.generation
 
-import com.onyxdevtools.ai.Constants.EPSILON
-import com.onyxdevtools.ai.NeuralNetwork
-import com.onyxdevtools.ai.Tensor
-import com.onyxdevtools.ai.layer.impl.CachedMultiHeadAttentionLayer
-import com.onyxdevtools.ai.layer.impl.RotaryMultiHeadAttentionLayer
-import com.onyxdevtools.ai.transformation.BPETokenizer
-import com.onyxdevtools.ai.transformation.Vocabulary
+import dev.onyx.ai.Constants.EPSILON
+import dev.onyx.ai.NeuralNetwork
+import dev.onyx.ai.Tensor
+import dev.onyx.ai.layer.impl.CachedMultiHeadAttentionLayer
+import dev.onyx.ai.layer.impl.RotaryMultiHeadAttentionLayer
+import dev.onyx.ai.transformation.BPETokenizer
+import dev.onyx.ai.transformation.Vocabulary
 
 /**
  * High-performance text generator optimized for autoregressive generation.

@@ -1,4 +1,4 @@
-package com.onyxdevtools.server.entities
+package dev.onyx.server.entities
 
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity

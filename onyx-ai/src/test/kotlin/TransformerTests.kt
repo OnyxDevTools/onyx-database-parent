@@ -1,7 +1,7 @@
-package com.onyxdevtools.ai
+package dev.onyx.ai
 
-import com.onyxdevtools.ai.Constants.EPSILON
-import com.onyxdevtools.ai.transformation.impl.*
+import dev.onyx.ai.Constants.EPSILON
+import dev.onyx.ai.transformation.impl.*
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.sqrt

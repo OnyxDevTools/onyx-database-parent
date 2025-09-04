@@ -1,8 +1,8 @@
-package com.onyxdevtools.ai.layer.impl
+package dev.onyx.ai.layer.impl
 
 import Activation
-import com.onyxdevtools.ai.Tensor
-import com.onyxdevtools.ai.layer.Layer
+import dev.onyx.ai.Tensor
+import dev.onyx.ai.layer.Layer
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -41,8 +41,8 @@ import kotlin.math.sqrt
  * @see Layer
  * @see CachedMultiHeadAttentionLayer
  */
-import com.onyxdevtools.ai.compute.ComputeContext
-import com.onyxdevtools.ai.compute.DefaultComputeContext
+import dev.onyx.ai.compute.ComputeContext
+import dev.onyx.ai.compute.DefaultComputeContext
 
 class LayerNormalizationLayer(
     private val size: Int,

@@ -1,7 +1,7 @@
 import Activation
-import com.onyxdevtools.ai.Tensor
-import com.onyxdevtools.ai.layer.impl.CachedMultiHeadAttentionLayer
-import com.onyxdevtools.ai.compute.DefaultComputeContext
+import dev.onyx.ai.Tensor
+import dev.onyx.ai.layer.impl.CachedMultiHeadAttentionLayer
+import dev.onyx.ai.compute.DefaultComputeContext
 import org.junit.Assert.*
 import kotlin.test.Test
 

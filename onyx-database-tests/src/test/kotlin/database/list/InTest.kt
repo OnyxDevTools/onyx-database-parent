@@ -51,7 +51,7 @@ class InTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseTest(fa
         val queryResults = arrayListOf(1.126,1.11).map {
             AllAttributeForFetch().apply { doubleValue = it }
         }
-        val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, ("doubleValue" `in` queryResults.values("doubleValue")))
+        val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, ("doubleValue" IN queryResults.values("doubleValue")))
         assertEquals(3, results.size, "Expected 3 results")
     }
 

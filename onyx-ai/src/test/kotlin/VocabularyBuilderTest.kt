@@ -1,8 +1,8 @@
-package com.onyxdevtools.ai
+package dev.onyx.ai
 
-import com.onyxdevtools.ai.transformation.BPETokenizer
-import com.onyxdevtools.ai.transformation.MutableVocabulary
-import com.onyxdevtools.ai.transformation.appendToVocabulary
+import dev.onyx.ai.transformation.BPETokenizer
+import dev.onyx.ai.transformation.MutableVocabulary
+import dev.onyx.ai.transformation.appendToVocabulary
 import kotlin.test.Test
 import kotlin.test.assertTrue
 

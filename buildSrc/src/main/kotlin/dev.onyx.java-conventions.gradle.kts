@@ -25,7 +25,7 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
-group = "com.onyxdevtools"
+group = "dev.onyx"
 version = "3.5.20"
 java.sourceCompatibility = JavaVersion.VERSION_21
 java.targetCompatibility = JavaVersion.VERSION_21

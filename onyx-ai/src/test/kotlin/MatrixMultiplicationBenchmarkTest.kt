@@ -1,4 +1,4 @@
-package com.onyxdevtools.ai.compute
+package dev.onyx.ai.compute
 
 import org.junit.After
 import org.junit.Before
@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import kotlin.system.measureNanoTime
 import kotlin.random.Random
-import com.onyxdevtools.ai.Tensor
+import dev.onyx.ai.Tensor
 import kotlin.system.measureNanoTime
 import kotlin.test.Ignore
 

@@ -1,6 +1,6 @@
-package com.onyxdevtools.ai
+package dev.onyx.ai
 
-import com.onyxdevtools.ai.compute.BasicCPUComputeBackend
+import dev.onyx.ai.compute.BasicCPUComputeBackend
 import java.io.InvalidObjectException
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream

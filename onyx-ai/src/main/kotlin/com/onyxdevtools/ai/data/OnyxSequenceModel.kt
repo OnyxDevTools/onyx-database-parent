@@ -1,4 +1,4 @@
-package com.onyxdevtools.ai.data
+package dev.onyx.ai.data
 
 import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.annotations.Attribute

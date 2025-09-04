@@ -1,4 +1,4 @@
-package com.onyxdevtools.ai.transformation
+package dev.onyx.ai.transformation
 
 class MutableVocabulary : Vocabulary {
     /** Map from token strings to their assigned integer IDs */

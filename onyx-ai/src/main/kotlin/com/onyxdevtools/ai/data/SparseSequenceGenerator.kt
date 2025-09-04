@@ -1,6 +1,6 @@
-package com.onyxdevtools.ai.data
+package dev.onyx.ai.data
 
-import com.onyxdevtools.ai.transformation.Vocabulary
+import dev.onyx.ai.transformation.Vocabulary
 
 /**
  * Memory-efficient implementation of SequenceGenerator using sparse target representations.

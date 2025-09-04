@@ -1,4 +1,4 @@
-package com.onyxdevtools.ai.transformation
+package dev.onyx.ai.transformation
 
 /**
  * Interface defining a vocabulary that maps between tokens and their corresponding integer IDs.

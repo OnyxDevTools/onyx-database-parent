@@ -1,14 +1,14 @@
 
-package com.onyxdevtools.ai
+package dev.onyx.ai
 
-import com.onyxdevtools.ai.transformation.fitAndTransform
-import com.onyxdevtools.ai.transformation.impl.*
-import com.onyxdevtools.ai.transformation.inverse
+import dev.onyx.ai.transformation.fitAndTransform
+import dev.onyx.ai.transformation.impl.*
+import dev.onyx.ai.transformation.inverse
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import com.onyxdevtools.ai.layer.impl.RotaryMultiHeadAttentionLayer
+import dev.onyx.ai.layer.impl.RotaryMultiHeadAttentionLayer
 
 class NeuralNetworkBuilderTest {
 

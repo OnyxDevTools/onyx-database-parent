@@ -1,6 +1,6 @@
-package com.onyxdevtools.ai.extensions
+package dev.onyx.ai.extensions
 
-import com.onyxdevtools.ai.Tensor
+import dev.onyx.ai.Tensor
 import kotlin.math.exp
 import kotlin.math.ln
 

@@ -1,12 +1,12 @@
-package com.onyxdevtools.ai.layer.impl
+package dev.onyx.ai.layer.impl
 
 import Activation
-import com.onyxdevtools.ai.Tensor
-import com.onyxdevtools.ai.layer.Layer
+import dev.onyx.ai.Tensor
+import dev.onyx.ai.layer.Layer
 import java.io.Serializable
 import kotlin.math.sqrt
-import com.onyxdevtools.ai.compute.ComputeContext
-import com.onyxdevtools.ai.compute.DefaultComputeContext
+import dev.onyx.ai.compute.ComputeContext
+import dev.onyx.ai.compute.DefaultComputeContext
 
 class BatchNormalizationLayer(
     private val size: Int,

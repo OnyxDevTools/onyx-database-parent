@@ -2,11 +2,11 @@ val ktorVersion = "3.0.3"
 val gsonVersion = "2.8.9"
 val okHttpVersion = "4.12.0"
 
-description = "com.onyxdevtools:onyx-cloud-client"
+description = "dev.onyx:onyx-cloud-client"
 
 plugins {
     kotlin("jvm") version Config.KOTLIN_VERSION
-    id("com.onyxdevtools.java-conventions")
+    id("dev.onyx.java-conventions")
 }
 
 dependencies {

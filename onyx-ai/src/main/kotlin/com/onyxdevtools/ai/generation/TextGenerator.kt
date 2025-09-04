@@ -1,8 +1,8 @@
-package com.onyxdevtools.ai.generation
+package dev.onyx.ai.generation
 
-import com.onyxdevtools.ai.NeuralNetwork
-import com.onyxdevtools.ai.transformation.BPETokenizer
-import com.onyxdevtools.ai.transformation.Vocabulary
+import dev.onyx.ai.NeuralNetwork
+import dev.onyx.ai.transformation.BPETokenizer
+import dev.onyx.ai.transformation.Vocabulary
 
 /**
  * Interface for generating text using trained neural network models.

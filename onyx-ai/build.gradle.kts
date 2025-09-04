@@ -1,10 +1,10 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-description = "com.onyxdevtools:onyx-ai"
+description = "dev.onyx:onyx-ai"
 
 plugins {
     kotlin("jvm") version Config.KOTLIN_VERSION
-    id("com.onyxdevtools.java-conventions")
+    id("dev.onyx.java-conventions")
 }
 
 dependencies {
@@ -12,7 +12,7 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(Config.JAVA_VERSION)
     compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21) }
 }
 

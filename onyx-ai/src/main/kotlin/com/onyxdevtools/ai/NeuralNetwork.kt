@@ -1,13 +1,13 @@
 @file:Suppress("unused", "MemberVisibilityCanBePrivate")
 
-package com.onyxdevtools.ai
+package dev.onyx.ai
 
-import com.onyxdevtools.ai.extensions.*
-import com.onyxdevtools.ai.layer.Layer
-import com.onyxdevtools.ai.transformation.*
-import com.onyxdevtools.ai.batch.SequentialBatchSplitter
-import com.onyxdevtools.ai.batch.TokenBatchSplitter
-import com.onyxdevtools.ai.layer.impl.RotaryMultiHeadAttentionLayer
+import dev.onyx.ai.extensions.*
+import dev.onyx.ai.layer.Layer
+import dev.onyx.ai.transformation.*
+import dev.onyx.ai.batch.SequentialBatchSplitter
+import dev.onyx.ai.batch.TokenBatchSplitter
+import dev.onyx.ai.layer.impl.RotaryMultiHeadAttentionLayer
 import java.io.*
 import kotlin.apply
 import kotlin.math.min

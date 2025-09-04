@@ -1,4 +1,4 @@
-package com.onyxdevtools.ai
+package dev.onyx.ai
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

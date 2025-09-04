@@ -1,9 +1,9 @@
-package com.onyxdevtools.ai
+package dev.onyx.ai
 
-import com.onyxdevtools.ai.Constants.EPSILON
-import com.onyxdevtools.ai.transformation.fitAndTransform
-import com.onyxdevtools.ai.transformation.impl.CategoricalIndexer
-import com.onyxdevtools.ai.transformation.inverse
+import dev.onyx.ai.Constants.EPSILON
+import dev.onyx.ai.transformation.fitAndTransform
+import dev.onyx.ai.transformation.impl.CategoricalIndexer
+import dev.onyx.ai.transformation.inverse
 import org.junit.Ignore
 import kotlin.math.abs
 import kotlin.test.Test

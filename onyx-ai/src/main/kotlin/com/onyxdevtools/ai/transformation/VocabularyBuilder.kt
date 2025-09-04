@@ -1,4 +1,4 @@
-package com.onyxdevtools.ai.transformation
+package dev.onyx.ai.transformation
 
 /**
  * Extension function to append tokens from text to an existing vocabulary.

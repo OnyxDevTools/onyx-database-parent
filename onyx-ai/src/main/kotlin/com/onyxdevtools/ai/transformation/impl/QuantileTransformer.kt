@@ -1,9 +1,9 @@
 @file:Suppress("DuplicatedCode")
 
-package com.onyxdevtools.ai.transformation.impl
+package dev.onyx.ai.transformation.impl
 
-import com.onyxdevtools.ai.Constants.EPSILON
-import com.onyxdevtools.ai.transformation.ColumnTransform
+import dev.onyx.ai.Constants.EPSILON
+import dev.onyx.ai.transformation.ColumnTransform
 import java.io.Serializable
 import kotlin.math.abs
 import kotlin.math.max

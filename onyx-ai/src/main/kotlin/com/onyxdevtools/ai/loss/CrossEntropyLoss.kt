@@ -1,6 +1,6 @@
-package com.onyxdevtools.ai.loss
+package dev.onyx.ai.loss
 
-import com.onyxdevtools.ai.Tensor
+import dev.onyx.ai.Tensor
 import kotlin.math.exp
 import kotlin.math.ln
 

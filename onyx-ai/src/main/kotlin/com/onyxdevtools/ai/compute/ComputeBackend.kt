@@ -1,6 +1,6 @@
-package com.onyxdevtools.ai.compute
+package dev.onyx.ai.compute
 
-import com.onyxdevtools.ai.Tensor
+import dev.onyx.ai.Tensor
 
 /**
  * Core compute backend interface that abstracts linear algebra operations.

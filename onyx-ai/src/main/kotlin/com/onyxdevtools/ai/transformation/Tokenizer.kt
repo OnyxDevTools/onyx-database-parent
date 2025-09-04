@@ -1,4 +1,4 @@
-package com.onyxdevtools.ai.transformation
+package dev.onyx.ai.transformation
 
 /**
  * A tokenizer that breaks text into tokens.

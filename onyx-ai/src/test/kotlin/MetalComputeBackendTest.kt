@@ -1,7 +1,7 @@
-import com.onyxdevtools.ai.Tensor
-import com.onyxdevtools.ai.compute.MetalComputeBackend
-import com.onyxdevtools.ai.compute.ComputeBackendFactory
-import com.onyxdevtools.ai.compute.ComputeBackendType
+import dev.onyx.ai.Tensor
+import dev.onyx.ai.compute.MetalComputeBackend
+import dev.onyx.ai.compute.ComputeBackendFactory
+import dev.onyx.ai.compute.ComputeBackendType
 import org.junit.Assert.*
 import kotlin.test.Test
 

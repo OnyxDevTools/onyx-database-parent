@@ -1,13 +1,13 @@
-import com.onyxdevtools.ai.NeuralNetwork
-import com.onyxdevtools.ai.Tensor
-import com.onyxdevtools.ai.extensions.sparseCategoricalCrossEntropy
-import com.onyxdevtools.ai.generation.chat
-import com.onyxdevtools.ai.layer.Layer
-import com.onyxdevtools.ai.layer.impl.*
-import com.onyxdevtools.ai.transformation.BPETokenizer
-import com.onyxdevtools.ai.transformation.OnyxVocabulary
-import com.onyxdevtools.ai.transformation.Vocabulary
-import com.onyxdevtools.ai.transformation.appendToVocabulary
+import dev.onyx.ai.NeuralNetwork
+import dev.onyx.ai.Tensor
+import dev.onyx.ai.extensions.sparseCategoricalCrossEntropy
+import dev.onyx.ai.generation.chat
+import dev.onyx.ai.layer.Layer
+import dev.onyx.ai.layer.impl.*
+import dev.onyx.ai.transformation.BPETokenizer
+import dev.onyx.ai.transformation.OnyxVocabulary
+import dev.onyx.ai.transformation.Vocabulary
+import dev.onyx.ai.transformation.appendToVocabulary
 import kotlin.random.Random
 import java.io.File
 

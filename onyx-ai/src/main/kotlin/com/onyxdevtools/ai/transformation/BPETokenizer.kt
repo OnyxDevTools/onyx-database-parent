@@ -1,4 +1,4 @@
-package com.onyxdevtools.ai.transformation
+package dev.onyx.ai.transformation
 
 import java.text.Normalizer
 import java.util.concurrent.ConcurrentHashMap

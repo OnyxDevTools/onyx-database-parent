@@ -3,16 +3,16 @@
  */
 
 plugins {
-    id("com.onyxdevtools.java-conventions")
+    id("dev.onyx.java-conventions")
     kotlin("jvm") version Config.KOTLIN_VERSION
 }
 
-description = "com.onyxdevtools:onyx-database"
+description = "dev.onyx:onyx-database"
 
 java {
     withJavadocJar()
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(Config.JAVA_VERSION)
 }

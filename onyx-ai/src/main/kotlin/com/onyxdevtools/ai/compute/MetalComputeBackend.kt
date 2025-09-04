@@ -1,6 +1,6 @@
-package com.onyxdevtools.ai.compute
+package dev.onyx.ai.compute
 
-import com.onyxdevtools.ai.Tensor
+import dev.onyx.ai.Tensor
 import java.util.*
 import kotlin.math.*
 

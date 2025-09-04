@@ -1,7 +1,7 @@
-package com.onyxdevtools.ai.transformation.impl
+package dev.onyx.ai.transformation.impl
 
-import com.onyxdevtools.ai.Constants.EPSILON
-import com.onyxdevtools.ai.transformation.ColumnTransform
+import dev.onyx.ai.Constants.EPSILON
+import dev.onyx.ai.transformation.ColumnTransform
 import kotlin.math.exp
 import kotlin.math.ln
 import java.io.Serializable

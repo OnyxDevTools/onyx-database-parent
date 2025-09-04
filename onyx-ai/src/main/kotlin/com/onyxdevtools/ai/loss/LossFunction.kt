@@ -1,6 +1,6 @@
-package com.onyxdevtools.ai.loss
+package dev.onyx.ai.loss
 
-import com.onyxdevtools.ai.Tensor
+import dev.onyx.ai.Tensor
 
 /**
  * Interface defining the contract for loss functions used in neural network training.

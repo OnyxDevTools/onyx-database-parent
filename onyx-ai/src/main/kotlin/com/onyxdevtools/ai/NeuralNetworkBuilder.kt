@@ -1,12 +1,12 @@
-package com.onyxdevtools.ai
+package dev.onyx.ai
 
 import Activation
-import com.onyxdevtools.ai.layer.Layer
-import com.onyxdevtools.ai.layer.impl.*
-import com.onyxdevtools.ai.transformation.ColumnTransform
-import com.onyxdevtools.ai.transformation.impl.*
-import com.onyxdevtools.ai.layer.impl.SwiGLULayer
-import com.onyxdevtools.ai.layer.impl.ResidualLayer
+import dev.onyx.ai.layer.Layer
+import dev.onyx.ai.layer.impl.*
+import dev.onyx.ai.transformation.ColumnTransform
+import dev.onyx.ai.transformation.impl.*
+import dev.onyx.ai.layer.impl.SwiGLULayer
+import dev.onyx.ai.layer.impl.ResidualLayer
 
 /**
  * A builder-style DSL for constructing a [NeuralNetwork].

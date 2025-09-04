@@ -1,5 +1,5 @@
-import com.onyxdevtools.ai.transformation.BPETokenizer
-import com.onyxdevtools.ai.transformation.Vocabulary
+import dev.onyx.ai.transformation.BPETokenizer
+import dev.onyx.ai.transformation.Vocabulary
 import kotlin.test.*
 
 @Ignore

@@ -1,6 +1,6 @@
-package com.onyxdevtools.ai.batch
+package dev.onyx.ai.batch
 
-import com.onyxdevtools.ai.Tensor
+import dev.onyx.ai.Tensor
 
 /**
  * Batch splitter implementation for sparse token targets.

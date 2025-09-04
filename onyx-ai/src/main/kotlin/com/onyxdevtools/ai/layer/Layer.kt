@@ -1,7 +1,7 @@
-package com.onyxdevtools.ai.layer
+package dev.onyx.ai.layer
 
 import Activation
-import com.onyxdevtools.ai.Tensor
+import dev.onyx.ai.Tensor
 
 /**
  * Represents a neural network layer.

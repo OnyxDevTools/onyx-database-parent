@@ -1,7 +1,7 @@
-package com.onyxdevtools.ai.data
+package dev.onyx.ai.data
 
-import com.onyxdevtools.ai.transformation.Vocabulary
-import com.onyxdevtools.ai.Tensor
+import dev.onyx.ai.transformation.Vocabulary
+import dev.onyx.ai.Tensor
 
 /**
  * Sealed class representing different target representations for sequence generation.

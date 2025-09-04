@@ -1,4 +1,4 @@
-package com.onyxdevtools.ai.compute
+package dev.onyx.ai.compute
 
 /**
  * Factory for creating compute backend instances.

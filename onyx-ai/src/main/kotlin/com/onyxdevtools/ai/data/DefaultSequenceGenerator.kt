@@ -1,6 +1,6 @@
-package com.onyxdevtools.ai.data
+package dev.onyx.ai.data
 
-import com.onyxdevtools.ai.transformation.Vocabulary
+import dev.onyx.ai.transformation.Vocabulary
 
 /**
  * Default implementation of SequenceGenerator for creating training sequences from tokenized text.

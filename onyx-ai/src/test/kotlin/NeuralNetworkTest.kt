@@ -1,9 +1,9 @@
-package com.onyxdevtools.ai
+package dev.onyx.ai
 
-import com.onyxdevtools.ai.extensions.average
-import com.onyxdevtools.ai.extensions.meanStandardError
-import com.onyxdevtools.ai.layer.impl.BatchNormalizationLayer
-import com.onyxdevtools.ai.layer.impl.DenseLayer
+import dev.onyx.ai.extensions.average
+import dev.onyx.ai.extensions.meanStandardError
+import dev.onyx.ai.layer.impl.BatchNormalizationLayer
+import dev.onyx.ai.layer.impl.DenseLayer
 import org.junit.Assert.*
 import org.junit.Ignore
 import java.io.*

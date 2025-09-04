@@ -1,4 +1,4 @@
-package com.onyxdevtools.ai.transformation
+package dev.onyx.ai.transformation
 
 import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.annotations.Attribute

@@ -1,11 +1,11 @@
-package com.onyxdevtools.ai.layer.impl
+package dev.onyx.ai.layer.impl
 
 import Activation
-import com.onyxdevtools.ai.Constants.EPSILON
-import com.onyxdevtools.ai.Tensor
-import com.onyxdevtools.ai.layer.Layer
+import dev.onyx.ai.Constants.EPSILON
+import dev.onyx.ai.Tensor
+import dev.onyx.ai.layer.Layer
 import java.lang.ThreadLocal
-import com.onyxdevtools.ai.compute.*
+import dev.onyx.ai.compute.*
 import kotlin.math.sqrt
 import kotlin.math.exp
 

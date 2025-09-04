@@ -1,4 +1,4 @@
-package com.onyxdevtools.ai
+package dev.onyx.ai
 
 /**
  * Common constants used throughout the AI library
