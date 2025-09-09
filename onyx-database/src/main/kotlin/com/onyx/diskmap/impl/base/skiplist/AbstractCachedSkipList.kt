@@ -53,8 +53,8 @@ abstract class AbstractCachedSkipList<K, V> constructor(fileStore: WeakReference
      * @param node Node to delete
      * @param head Current head nodes
      */
-    override fun deleteNode(node: SkipNode, head:SkipNode) {
-        super.deleteNode(node, head)
+    override fun deleteNode(node: SkipNode) {
+        super.deleteNode(node)
         nodeCache.remove(node.position)
     }
 

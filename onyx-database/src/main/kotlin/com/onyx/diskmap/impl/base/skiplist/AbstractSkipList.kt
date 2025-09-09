@@ -263,22 +263,21 @@ abstract class AbstractSkipList<K, V>(
             for (i in 0..this.head!!.level.toInt()) {
                 val predecessorAtLevelI = update[i] ?: continue
 
-
                 val nodeAfterPredecessorPos = predecessorAtLevelI.right
                 if (nodeAfterPredecessorPos > 0L) {
                     val nodeToDeleteAtLevelI = findNodeAtPosition(nodeAfterPredecessorPos)
-
-                    if (nodeToDeleteAtLevelI != null &&
-                        isEqual(key, nodeToDeleteAtLevelI.getKey(records, storeKeyWithinNode, keyType))
-                    ) {
-                        deleteNode(nodeToDeleteAtLevelI, head!!)
-                        nodeToDeleteAtLevelI.setLeft(fileStore, 0L)
-                        nodeToDeleteAtLevelI.setRight(fileStore, 0L)
-                        nodeToDeleteAtLevelI.setBottom(fileStore, 0L)
-                        if (i == 0) {
-                            nodeToDeleteAtLevelI.setRecord(fileStore, -1L)
+                    if (nodeToDeleteAtLevelI != null) {
+                        if (isEqual(key, nodeToDeleteAtLevelI.getKey(records, storeKeyWithinNode, keyType))) {
+                            predecessorAtLevelI.setRight(fileStore, nodeToDeleteAtLevelI.right)
+                            if (nodeToDeleteAtLevelI.right > 0L) {
+                                val successorNode = findNodeAtPosition(nodeToDeleteAtLevelI.right)
+                                if (successorNode != null) {
+                                    successorNode.setLeft(fileStore, predecessorAtLevelI.position)
+                                    updateNodeCache(successorNode)
+                                }
+                            }
+                            deleteNode(nodeToDeleteAtLevelI)
                         }
-                        nodeCache.remove(nodeToDeleteAtLevelI.position)
                     }
                 }
             }
@@ -304,14 +303,11 @@ abstract class AbstractSkipList<K, V>(
      * Delete a node and set values for neighboring nodes
      *
      */
-    protected open fun deleteNode(node: SkipNode, head: SkipNode) {
+    protected open fun deleteNode(node: SkipNode) {
         val leftNode: SkipNode? = if (node.left > 0) findNodeAtPosition(node.left) else null
         val rightNode: SkipNode? = if (node.right > 0) findNodeAtPosition(node.right) else null
         leftNode?.setRight(fileStore, rightNode?.position ?: 0L)
         updateNodeCache(leftNode)
-
-        if (leftNode?.position == head.position)
-            this.head = leftNode
         rightNode?.setLeft(fileStore, leftNode?.position ?: 0L)
         updateNodeCache(rightNode)
     }
