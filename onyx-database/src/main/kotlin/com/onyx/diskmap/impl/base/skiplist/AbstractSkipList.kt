@@ -85,7 +85,7 @@ abstract class AbstractSkipList<K, V>(
         val result = PutResult(key as Any, foundNodeBottomMost == null)
         result.recordId = foundNodeBottomMost?.position ?: -1L
 
-        if(preUpdate != null) {
+        if (preUpdate != null) {
             // The purpose of getting and setting the head is in the event there is a recursive call within the pre-update
             // method.  That would scratch out the head and we have to re-set it
             val tempHead = head
@@ -261,25 +261,24 @@ abstract class AbstractSkipList<K, V>(
             val returnValue: V? = nodeToDeleteBottomMost.getRecord(records)
 
             for (i in 0..this.head!!.level.toInt()) {
-                val predecessorAtLevelI = update[i]
-                    ?: continue
+                val predecessorAtLevelI = update[i] ?: continue
+
 
                 val nodeAfterPredecessorPos = predecessorAtLevelI.right
                 if (nodeAfterPredecessorPos > 0L) {
                     val nodeToDeleteAtLevelI = findNodeAtPosition(nodeAfterPredecessorPos)
-                    if (nodeToDeleteAtLevelI != null) {
-                        if (isEqual(key, nodeToDeleteAtLevelI.getKey(records, storeKeyWithinNode, keyType))) {
-                            predecessorAtLevelI.setRight(fileStore, nodeToDeleteAtLevelI.right)
-                            updateNodeCache(predecessorAtLevelI)
 
-                            if (nodeToDeleteAtLevelI.right > 0L) {
-                                val successorNode = findNodeAtPosition(nodeToDeleteAtLevelI.right)
-                                if (successorNode != null) {
-                                    successorNode.setLeft(fileStore, predecessorAtLevelI.position)
-                                    updateNodeCache(successorNode)
-                                }
-                            }
+                    if (nodeToDeleteAtLevelI != null &&
+                        isEqual(key, nodeToDeleteAtLevelI.getKey(records, storeKeyWithinNode, keyType))
+                    ) {
+                        deleteNode(nodeToDeleteAtLevelI, head!!)
+                        nodeToDeleteAtLevelI.setLeft(fileStore, 0L)
+                        nodeToDeleteAtLevelI.setRight(fileStore, 0L)
+                        nodeToDeleteAtLevelI.setBottom(fileStore, 0L)
+                        if (i == 0) {
+                            nodeToDeleteAtLevelI.setRecord(fileStore, -1L)
                         }
+                        nodeCache.remove(nodeToDeleteAtLevelI.position)
                     }
                 }
             }
