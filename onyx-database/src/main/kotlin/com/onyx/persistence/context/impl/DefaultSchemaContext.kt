@@ -336,7 +336,10 @@ open class DefaultSchemaContext : SchemaContext {
         val oldIndexes = systemEntity.indexes.associateBy { it.name }
         val newIndexes = newRevision.indexes.associateBy { it.name }
 
-        (oldIndexes - newIndexes).values.forEach { rebuildIndex(systemEntity, it.name) }
+        // Rebuild indexes that are new or have changed.  Indexes that were removed
+        // should not trigger a rebuild, otherwise the rebuild process may attempt to
+        // access descriptors that no longer exist which can lead to file corruption.
+        (newIndexes - oldIndexes).values.forEach { rebuildIndex(systemEntity, it.name) }
     }
 
     /**
