@@ -376,7 +376,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @param indexName Index to rebuild
      */
     protected open fun rebuildIndex(systemEntity: SystemEntity, indexName: String) = catchAll {
-        val entityDescriptor = getBaseDescriptorForEntity(systemEntity.className!!)
+        val entityDescriptor = getBaseDescriptorForEntity(systemEntity.name)
         val indexDescriptor = entityDescriptor.indexes[indexName]
         if (entityDescriptor.partition != null) {
 
@@ -503,7 +503,7 @@ open class DefaultSchemaContext : SchemaContext {
      */
     @Suppress("MemberVisibilityCanPrivate")
     @Throws(OnyxException::class)
-    fun getBaseDescriptorForEntity(entityClass: String): EntityDescriptor = getDescriptorForEntity(metadata(this.contextId).classForName(entityClass, this))
+    fun getBaseDescriptorForEntity(entityClass: String): EntityDescriptor = getDescriptorForEntity(metadata(this.contextId).classForName(entityClass, this).createNewEntity<IManagedEntity>(contextId))
 
     /**
      * Get Descriptor For Entity. Initializes EntityDescriptor or returns one if it already exists
