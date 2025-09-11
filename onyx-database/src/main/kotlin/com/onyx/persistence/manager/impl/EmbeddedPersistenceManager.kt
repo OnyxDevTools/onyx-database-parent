@@ -1,5 +1,6 @@
 package com.onyx.persistence.manager.impl
 
+import com.onyx.descriptor.truncateData
 import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
 import com.onyx.exception.*
 import com.onyx.extension.*
@@ -157,16 +158,25 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
 
         query.isUpdateOrDelete = true
         query.validate(context, descriptor)
-        val queryController = DefaultQueryInteractor(descriptor, this, context)
-
-        val results: QueryCollector<IManagedEntity> = queryController.getReferencesForQuery(query)
-        query.resultsCount = results.getNumberOfResults()
 
         journal {
             context.transactionInteractor.writeDeleteQuery(query)
         }
 
-        return queryController.deleteRecordsWithReferences(results.references, query)
+        if (query.isDefaultQuery(descriptor)) {
+            val count = countForQuery(query)
+
+            val sampleEntity: ManagedEntity = query.entityType!!.createNewEntity(context.contextId)
+            val descriptor = context.getDescriptorForEntity(sampleEntity)
+            descriptor.truncateData(includeAllPartitions = (query.partition as? String)?.isBlank() ?: true)
+
+            return count.toInt()
+        } else {
+            val queryController = DefaultQueryInteractor(descriptor, this, context)
+            val results: QueryCollector<IManagedEntity> = queryController.getReferencesForQuery(query)
+            query.resultsCount = results.getNumberOfResults()
+            return queryController.deleteRecordsWithReferences(results.references, query)
+        }
     }
 
     /**
@@ -559,13 +569,22 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
             descriptors.forEach descriptors@{ descriptor ->
                 if (done) return@descriptors
 
-                val partitionId = if(descriptor.hasPartition) context.getPartitionWithValue(query.entityType!!, descriptor.partition!!.partitionValue)!!.primaryKey.toLong() else 0L
+                val partitionId = if (descriptor.hasPartition) context.getPartitionWithValue(
+                    query.entityType!!,
+                    descriptor.partition!!.partitionValue
+                )!!.primaryKey.toLong() else 0L
                 context.getRecordInteractor(descriptor).forEach<T> record@{ it ->
                     val entry = it as? AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any?, IManagedEntity>
 
                     if (entry != null) {
                         val reference = Reference(partitionId, entry.node?.position ?: 0)
-                        if(query.criteria == null || entry.node != null && query.meetsCriteria(entry.value!!, reference, context, descriptor)) {
+                        if (query.criteria == null || entry.node != null && query.meetsCriteria(
+                                entry.value!!,
+                                reference,
+                                context,
+                                descriptor
+                            )
+                        ) {
                             if (!streamer.accept(entry.value as T, this)) {
                                 done = true
                                 return@record false

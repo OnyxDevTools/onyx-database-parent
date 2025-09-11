@@ -8,6 +8,7 @@ import com.onyx.extension.common.ReflectionCache.hasMember
 import com.onyx.extension.createNewEntity
 import com.onyx.extension.getAttributeWithinSelection
 import com.onyx.extension.getFunctionWithinSelection
+import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.function.QueryFunction
 import com.onyx.persistence.query.Query
@@ -51,35 +52,14 @@ class QueryAttributeResource(
             // We need to go through the attributes and get the correct serializer and attribute that we need to scan
             // The information is then stored in the ScanObject class name.  That is a utility class to keep a handle on
             // what we are looking for and what file we are looking in for the object type
-            for (it in attributes) {
+            for (it in attributes) attributeForEach@{
                 val attribute = it.getAttributeWithinSelection()
                 val function = it.getFunctionWithinSelection()
 
                 attributeTokens = attribute.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
 
-                if (attributeTokens.size > 1) {
-                    previousDescriptor = descriptor // This is so we can keep track of what the final descriptor is in the DOM
-
-                    // -2 because we ignore the last
-                    for (p in 0 until attributeTokens.size - 1) {
-                        val token = attributeTokens[p]
-                        relationshipDescriptor = previousDescriptor.relationships[token]
-                        tmpObject = relationshipDescriptor!!.inverseClass.createNewEntity(context.contextId) // Keep on getting the descriptors until we get what we need
-                        previousDescriptor = context.getDescriptorForEntity(tmpObject, query.partition)
-                    }
-
-                    // Hey we found what we want, lets get the attribute and than decide what descriptor we got
-                    scanObjects.add(QueryAttributeResource(
-                        descriptor = previousDescriptor,
-                        relationshipDescriptor = relationshipDescriptor,
-                        attribute = attribute,
-                        selection = it,
-                        context = context,
-                        function = function
-                    ))
-                } else {
+                val inspectAttribute: (String) -> Unit = { attribute ->
                     val attributeDescriptor = descriptor.attributes[attribute]
-
 
                     if (attributeDescriptor == null) {
                         relationshipDescriptor = descriptor.relationships[attribute]
@@ -96,8 +76,8 @@ class QueryAttributeResource(
                         else if (relationshipDescriptor == null) {
                             throw AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE + ": " + attribute + " not found on entity " + descriptor.entityClass.name)
                         } else {
-                            tmpObject = relationshipDescriptor.inverseClass.createNewEntity(context.contextId) // Keep on getting the descriptors until we get what we need
-                            previousDescriptor = context.getDescriptorForEntity(tmpObject, query.partition)
+                            tmpObject = relationshipDescriptor!!.inverseClass.createNewEntity(context.contextId) // Keep on getting the descriptors until we get what we need
+                            previousDescriptor = context.getDescriptorForEntity(tmpObject as ManagedEntity, query.partition)
 
                             scanObjects.add(QueryAttributeResource(
                                 descriptor = previousDescriptor,
@@ -117,6 +97,37 @@ class QueryAttributeResource(
                             function = function
                         ))
                     }
+                }
+
+                if (attributeTokens.size > 1) {
+                    previousDescriptor = descriptor // This is so we can keep track of what the final descriptor is in the DOM
+
+                    // -2 because we ignore the last
+                    innerLoop@for (p in 0 until attributeTokens.size - 1) {
+                        val token = attributeTokens[p]
+                        relationshipDescriptor = previousDescriptor.relationships[token]
+
+                        if (relationshipDescriptor == null) {
+                            inspectAttribute(token)
+                            innerLoop@break
+                        } else {
+                            tmpObject =
+                                relationshipDescriptor!!.inverseClass.createNewEntity(context.contextId) // Keep on getting the descriptors until we get what we need
+                            previousDescriptor = context.getDescriptorForEntity(tmpObject, query.partition)
+                        }
+                    }
+
+                    // Hey we found what we want, lets get the attribute and than decide what descriptor we got
+                    scanObjects.add(QueryAttributeResource(
+                        descriptor = previousDescriptor,
+                        relationshipDescriptor = relationshipDescriptor,
+                        attribute = attribute,
+                        selection = it,
+                        context = context,
+                        function = function
+                    ))
+                } else {
+                    inspectAttribute(attribute)
                 }
             }
             return scanObjects
