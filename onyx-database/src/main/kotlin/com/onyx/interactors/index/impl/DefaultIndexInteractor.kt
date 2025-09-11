@@ -202,10 +202,11 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
      *
      */
     @Throws(OnyxException::class)
+    @Synchronized
     override fun rebuild() {
         val dataFile = context.getDataFile(descriptor)
         val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(descriptor.identifier!!.type, descriptor.entityClass.name)
-        records.clear()
+        clear()
         records.entries.forEach {
             val recId = records.getRecID(it.key)
             if (recId > 0) {
@@ -221,6 +222,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
      *
      * @since 9/26/2024
      */
+    @Synchronized
     override fun clear() {
         references.clear()
     }

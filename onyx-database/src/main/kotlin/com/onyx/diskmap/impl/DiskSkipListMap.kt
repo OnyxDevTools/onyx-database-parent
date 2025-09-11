@@ -101,6 +101,7 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, recordStore:Wea
     override fun clear() = mapReadWriteLock.writeLock {
         super.clear()
         head = SkipNode.create(fileStore)
+        head?.write(store.get()!!)
         updateHeaderFirstNode(reference, head!!.position)
         reference.recordCount.set(0L)
         updateHeaderRecordCount(0L)

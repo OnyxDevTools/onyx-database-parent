@@ -56,6 +56,7 @@ abstract class AbstractSkipList<K, V>(
             val newHead = SkipNode.create(fileStore)
             head = newHead
             updateHeaderFirstNode(this.reference, newHead.position)
+            head?.write(store.get()!!)
         }
     }
 

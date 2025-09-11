@@ -289,9 +289,9 @@ open class DefaultSchemaContext : SchemaContext {
             attribute.isPartition = newSystemEntity.partitionName == attribute.name
         }
 
-        if (newSystemEntity != systemEntity) {
+        val entitiesMatch = newSystemEntity == systemEntity
+        if (!entitiesMatch) {
 
-            checkForIndexChanges(systemEntity, newSystemEntity)
             checkForInvalidRelationshipChanges(systemEntity, newSystemEntity)
 
             serializedPersistenceManager.from(SystemEntity::class).where("name" eq systemEntity.name).set("isLatestVersion" to false).update()
@@ -301,6 +301,10 @@ open class DefaultSchemaContext : SchemaContext {
 
         defaultSystemEntities[systemEntity.name] = systemEntity
         systemEntityByIDMap[systemEntity.primaryKey] = systemEntity
+
+        if (!entitiesMatch) {
+            checkForIndexChanges(systemEntity, newSystemEntity)
+        }
 
         return systemEntity
     }
