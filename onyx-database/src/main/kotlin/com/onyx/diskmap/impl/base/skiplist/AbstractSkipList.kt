@@ -344,8 +344,14 @@ abstract class AbstractSkipList<K, V>(
         var found = false
         moveDownLoop@ while (true) {
             moveRightLoop@ while (current.right > 0L && !found) {
-                val next: SkipNode? = findNodeAtPosition(current.right)
-                val nextKey: K = next?.getKey(records, storeKeyWithinNode, keyType)!!
+                val next: SkipNode = findNodeAtPosition(current.right) ?: break@moveRightLoop
+                @Suppress("UNCHECKED_CAST")
+                val nextKey = next.getKey<Any?>(records, storeKeyWithinNode, keyType) as K?
+
+                if (nextKey == null) {
+                    current = next
+                    continue@moveRightLoop
+                }
 
                 current = when {
                     isEqual(key, nextKey) -> {
@@ -358,9 +364,10 @@ abstract class AbstractSkipList<K, V>(
                 }
             }
 
-            when {
-                current.down > 0L -> current = findNodeAtPosition(current.down)!!
-                else -> break@moveDownLoop
+            if (current.down > 0L) {
+                current = findNodeAtPosition(current.down) ?: break@moveDownLoop
+            } else {
+                break@moveDownLoop
             }
         }
 
@@ -382,8 +389,8 @@ abstract class AbstractSkipList<K, V>(
     abstract fun updateKeyCache(node: K)
 
     companion object {
-        private fun <K> isGreater(key: K, key2: K): Boolean = key2.forceCompare(key, QueryCriteriaOperator.GREATER_THAN)
-        private fun <K> isEqual(key: K, key2: K): Boolean = key.forceCompare(key2, QueryCriteriaOperator.EQUAL)
+        private fun <K> isGreater(key: K, key2: K?): Boolean = key2.forceCompare(key, QueryCriteriaOperator.GREATER_THAN)
+        private fun <K> isEqual(key: K, key2: K?): Boolean = key.forceCompare(key2, QueryCriteriaOperator.EQUAL)
         private fun coinToss() = Math.random() < 0.3
 
         fun Any?.cast(type: Class<*>): Any? {
