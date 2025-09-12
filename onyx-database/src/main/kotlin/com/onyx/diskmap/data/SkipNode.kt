@@ -56,7 +56,7 @@ data class SkipNode(
 
     @Suppress("UNCHECKED_CAST")
     fun <T> getKey(records: Store, storedInNode: Boolean, type: Class<*>): T {
-        if (key == 0L) return null as T
+        if (key == 0L && record == 0L && left == 0L) return null as T
         if (keyValue != null) return keyValue as T
 
         if (storedInNode) {
