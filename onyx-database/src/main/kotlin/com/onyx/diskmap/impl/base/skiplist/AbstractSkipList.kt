@@ -371,6 +371,13 @@ abstract class AbstractSkipList<K, V>(
             }
         }
 
+        // ensure we always return a node from the bottom level even if the loop
+        // exited early due to a missing child pointer
+        while (current.down > 0L) {
+            val below = findNodeAtPosition(current.down) ?: break
+            current = below
+        }
+
         return current
     }
 
