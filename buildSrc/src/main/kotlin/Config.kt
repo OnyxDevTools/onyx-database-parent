@@ -11,6 +11,4 @@ object Config {
 
     // 3rd Party Dependencies ( HTTP Client )
     const val KTOR_VERSION = "3.2.3"
-    const val GSON_VERSION = "2.13.1"
-    const val OK_HTTP_VERSION = "5.1.0"
 }
