@@ -16,6 +16,7 @@ import com.onyx.persistence.query.Query
 import com.onyx.interactors.relationship.data.RelationshipTransaction
 import com.onyx.interactors.relationship.data.RelationshipReference
 import com.onyx.persistence.query.QueryListenerEvent
+import com.onyx.persistence.query.QueryPartitionMode
 import com.onyx.persistence.stream.QueryMapStream
 import com.onyx.persistence.stream.QueryStream
 import java.util.*
@@ -555,7 +556,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                     return@forEachIndexed
             }
         } else {
-            val descriptors = if (query.partition.toString().isNotEmpty() && query.partition != "ALL") {
+            val descriptors = if (query.partition.toString().isNotEmpty() && query.partition != QueryPartitionMode.ALL) {
                 listOf(context.getDescriptorForEntity(query.entityType!!, query.partition))
             } else {
                 val partitions = query.entityType!!.let { context.getAllPartitions(it) }
