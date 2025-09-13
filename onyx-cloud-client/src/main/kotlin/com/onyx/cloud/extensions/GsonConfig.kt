@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.onyx.cloud.extensions
 
 import com.google.gson.*
