@@ -555,7 +555,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                     return@forEachIndexed
             }
         } else {
-            val descriptors = if (query.partition.toString().isNotEmpty()) {
+            val descriptors = if (query.partition.toString().isNotEmpty() && query.partition != "ALL") {
                 listOf(context.getDescriptorForEntity(query.entityType!!, query.partition))
             } else {
                 val partitions = query.entityType!!.let { context.getAllPartitions(it) }
