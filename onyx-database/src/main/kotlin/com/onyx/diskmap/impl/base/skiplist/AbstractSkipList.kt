@@ -344,8 +344,16 @@ abstract class AbstractSkipList<K, V>(
         var found = false
         moveDownLoop@ while (true) {
             moveRightLoop@ while (current.right > 0L && !found) {
-                val next: SkipNode? = findNodeAtPosition(current.right)
-                val nextKey: K = next?.getKey(records, storeKeyWithinNode, keyType)!!
+                val next: SkipNode = findNodeAtPosition(current.right)!!
+
+                // Skip sentinel nodes that have no associated key
+                if (next.key == 0L) {
+                    current = next
+                    continue@moveRightLoop
+                }
+
+                @Suppress("UNCHECKED_CAST")
+                val nextKey = next.getKey<Any?>(records, storeKeyWithinNode, keyType) as K
 
                 current = when {
                     isEqual(key, nextKey) -> {
@@ -358,9 +366,10 @@ abstract class AbstractSkipList<K, V>(
                 }
             }
 
-            when {
-                current.down > 0L -> current = findNodeAtPosition(current.down)!!
-                else -> break@moveDownLoop
+            if (current.down > 0L) {
+                current = findNodeAtPosition(current.down)!!
+            } else {
+                break@moveDownLoop
             }
         }
 
