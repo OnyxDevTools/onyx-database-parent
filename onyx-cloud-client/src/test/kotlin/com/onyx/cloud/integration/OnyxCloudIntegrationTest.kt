@@ -197,4 +197,34 @@ class OnyxCloudIntegrationTest {
             safeDelete("Role", role.id!!)
         }
     }
+
+    @Test
+    fun groupByActiveUsers() {
+        val now = Date()
+        val active1 = newUser(now, isActive = true)
+        val active2 = newUser(now, isActive = true)
+        val inactive = newUser(now, isActive = false)
+
+        client.save(active1)
+        client.save(active2)
+        client.save(inactive)
+
+        try {
+            val results = client.from("User")
+                .select("isActive", "count(id)")
+                .groupBy("isActive")
+                .list<Map<String, Any>>()
+
+            val counts = results.records.associate {
+                (it["isActive"] as Boolean) to (it["count(id)"] as Number).toInt()
+            }
+
+            assertEquals(2, counts[true], "Expected two active users")
+            assertEquals(1, counts[false], "Expected one inactive user")
+        } finally {
+            safeDelete("User", active1.id!!)
+            safeDelete("User", active2.id!!)
+            safeDelete("User", inactive.id!!)
+        }
+    }
 }
