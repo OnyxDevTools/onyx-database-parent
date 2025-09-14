@@ -117,6 +117,25 @@ class OnyxCloudIntegrationTest {
     }
 
     @Test
+    fun updateUserUsername() {
+        val now = Date()
+        val user = newUser(now)
+        client.save(user)
+        try {
+            val newUsername = "updated-${UUID.randomUUID().toString().substring(0, 8)}"
+            val updated = client.from<User>()
+                .where("id" eq user.id!!)
+                .setUpdates("username" to newUsername)
+                .update()
+            assertEquals(1, updated)
+            val fetched = client.findById<User>(user.id!!)
+            assertEquals(newUsername, fetched?.username)
+        } finally {
+            safeDelete("User", user.id!!)
+        }
+    }
+
+    @Test
     fun resolvesProfileAndRoles() {
         val now = Date()
         val role = newRole(now)
