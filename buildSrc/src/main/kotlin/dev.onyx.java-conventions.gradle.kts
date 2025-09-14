@@ -41,8 +41,12 @@ fun base64Decode(prop: String): String? {
 }
 
 signing {
-    useInMemoryPgpKeys(base64Decode("signing.secretKey"), project.findProperty("signing.password") as String)
-    sign(publishing.publications)
+    val secretKey = base64Decode("signing.secretKey")
+    val password = project.findProperty("signing.password") as String?
+    if (secretKey != null && password != null) {
+        useInMemoryPgpKeys(secretKey, password)
+        sign(publishing.publications)
+    }
 }
 
 publishing {
@@ -50,9 +54,13 @@ publishing {
     repositories {
         maven {
             url = URI("https://maven.pkg.github.com/OnyxDevTools/onyx-database-parent")
-            credentials {
-                username = project.property("ossrhUsername") as String
-                password = project.property("ossrhPassword") as String
+            val ossrhUsername = project.findProperty("ossrhUsername") as String?
+            val ossrhPassword = project.findProperty("ossrhPassword") as String?
+            if (ossrhUsername != null && ossrhPassword != null) {
+                credentials {
+                    username = ossrhUsername
+                    password = ossrhPassword
+                }
             }
         }
     }

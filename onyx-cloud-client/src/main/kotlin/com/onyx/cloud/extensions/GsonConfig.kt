@@ -105,7 +105,7 @@ private val kotlinDelegateExclusionStrategy = object : ExclusionStrategy {
  * Configuration includes:
  * - Enabling complex map key serialization.
  * - Serializing special floating-point values (NaN, Infinity).
- * - Serializing null values.
+ * - Omitting null fields to avoid sending explicit nulls for unset properties.
  * - Excluding Kotlin synthetic delegate fields (`$delegate`).
  * - Registering a `CyclicTypeAdapterFactory` to handle object graph cycles.
  * - Registering custom adapters for `java.util.Date` serialization and deserialization.
@@ -114,7 +114,7 @@ private val kotlinDelegateExclusionStrategy = object : ExclusionStrategy {
 val gson: Gson = GsonBuilder()
     .enableComplexMapKeySerialization() // Allow non-primitive map keys
     .serializeSpecialFloatingPointValues() // Handle NaN, Infinity
-    .serializeNulls() // Output null fields explicitly
+    // Do not serialize nulls to prevent null relationship payloads
     .addSerializationExclusionStrategy(kotlinDelegateExclusionStrategy)
     .addDeserializationExclusionStrategy(kotlinDelegateExclusionStrategy)
     .registerTypeAdapterFactory(CyclicTypeAdapterFactory()) // Handle cyclical references
