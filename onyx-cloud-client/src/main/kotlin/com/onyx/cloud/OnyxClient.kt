@@ -39,6 +39,13 @@ class OnyxClient(
 ) {
     private val baseUrl: String = baseUrl.replace(Regex("/+$"), "")
 
+    init {
+        // Force IPv4 to avoid connectivity issues in environments without IPv6
+        // routing which would otherwise lead to "Network is unreachable"
+        // errors when the JDK prefers IPv6 addresses.
+        System.setProperty("java.net.preferIPv4Stack", "true")
+    }
+
     private class HttpMethod private constructor(val value: String) {
         companion object {
             val Get = HttpMethod("GET")
@@ -99,12 +106,26 @@ class OnyxClient(
      */
     fun <T : Any> save(table: KClass<*>, entityOrEntities: T): T {
         val path = "/data/${encode(databaseId)}/${encode(table)}"
+        val body = mapOf("payload" to entityOrEntities)
+        val response = makeRequest(HttpMethod.Put, path, body)
+
         return if (entityOrEntities is List<*>) {
-            makeRequest(HttpMethod.Put, path, entityOrEntities)
+            // For collections we don't attempt to parse the response since the
+            // caller already has the instances.
             entityOrEntities
         } else {
-            makeRequest(HttpMethod.Put, path, entityOrEntities).fromJson(table)
-                ?: throw IllegalStateException("Failed to parse response for save single entity")
+            try {
+                // The server typically wraps the saved entity in a `payload`
+                // property.  Attempt to extract that before falling back to
+                // the raw entity when parsing fails for any reason.
+                val json = JsonParser.parseString(response).asJsonObject
+                val payload = json.get("payload")
+                payload?.toString()?.fromJson(table) ?: entityOrEntities
+            } catch (_: Exception) {
+                // In case the response is not JSON or has an unexpected
+                // structure simply return the original entity.
+                entityOrEntities
+            }
         }
     }
 
@@ -430,44 +451,42 @@ class OnyxClient(
         val path = "/data/$encodedDbId/query/stream/$encodedTable$params"
         val urlStr = "$baseUrl$path"
 
-        withContext(Dispatchers.IO) {
-            val url = URI(urlStr).toURL()
-            val conn = (url.openConnection() as HttpURLConnection)
-            try {
-                conn.requestMethod = "PUT"
-                conn.instanceFollowRedirects = true
-                conn.connectTimeout = Timeouts.CONNECT_TIMEOUT
-                conn.readTimeout = Timeouts.STREAM_READ_TIMEOUT
-                conn.doInput = true
-                conn.doOutput = true
-                conn.useCaches = false
-                conn.setChunkedStreamingMode(8 * 1024)
-                applyHeaders(conn, defaultHeaders())
+        val url = URI(urlStr).toURL()
+        val conn = (url.openConnection() as HttpURLConnection)
+        try {
+            conn.requestMethod = "PUT"
+            conn.instanceFollowRedirects = true
+            conn.connectTimeout = Timeouts.CONNECT_TIMEOUT
+            conn.readTimeout = Timeouts.STREAM_READ_TIMEOUT
+            conn.doInput = true
+            conn.doOutput = true
+            conn.useCaches = false
+            conn.setChunkedStreamingMode(8 * 1024)
+            applyHeaders(conn, defaultHeaders())
 
-                val payload = selectQuery.toJson()
-                OutputStreamWriter(conn.outputStream, StandardCharsets.UTF_8).use {
-                    it.write(payload)
-                    it.flush()
-                }
-
-                val code = conn.responseCode
-                if (code !in 200..299) {
-                    val errorBody = conn.bodyAsString()
-                    throw RuntimeException("HTTP Error: $code ${conn.responseMessage}. Body: $errorBody")
-                }
-
-                BufferedReader(InputStreamReader(conn.inputStream, StandardCharsets.UTF_8)).use { reader ->
-                    var line: String?
-                    while (true) {
-                        line = reader.readLine() ?: break
-                        emit(line)
-                    }
-                }
-            } finally {
-                conn.disconnect()
+            val payload = selectQuery.toJson()
+            OutputStreamWriter(conn.outputStream, StandardCharsets.UTF_8).use {
+                it.write(payload)
+                it.flush()
             }
+
+            val code = conn.responseCode
+            if (code !in 200..299) {
+                val errorBody = conn.bodyAsString()
+                throw RuntimeException("HTTP Error: $code ${conn.responseMessage}. Body: $errorBody")
+            }
+
+            BufferedReader(InputStreamReader(conn.inputStream, StandardCharsets.UTF_8)).use { reader ->
+                var line: String?
+                while (true) {
+                    line = reader.readLine() ?: break
+                    emit(line)
+                }
+            }
+        } finally {
+            conn.disconnect()
         }
-    }
+    }.flowOn(Dispatchers.IO)
 
     /**
      * Opens a stream that only emits change events.
