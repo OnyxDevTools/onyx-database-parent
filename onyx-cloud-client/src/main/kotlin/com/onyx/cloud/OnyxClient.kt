@@ -99,13 +99,23 @@ class OnyxClient(
      */
     fun <T : Any> save(table: KClass<*>, entityOrEntities: T): T {
         val path = "/data/${encode(databaseId)}/${encode(table)}"
+        val payload = buildCascadePayload(entityOrEntities as Any)
         return if (entityOrEntities is List<*>) {
-            makeRequest(HttpMethod.Put, path, entityOrEntities)
+            makeRequest(HttpMethod.Put, path, payload)
             entityOrEntities
         } else {
-            makeRequest(HttpMethod.Put, path, entityOrEntities).fromJson(table)
+            makeRequest(HttpMethod.Put, path, payload).fromJson(table)
                 ?: throw IllegalStateException("Failed to parse response for save single entity")
         }
+    }
+
+    private fun buildCascadePayload(entityOrEntities: Any): Map<String, Any?> {
+        val wrapped = if (entityOrEntities is List<*>) {
+            mapOf("items" to entityOrEntities)
+        } else {
+            mapOf("single" to entityOrEntities)
+        }
+        return mapOf("payload" to wrapped)
     }
 
     /**
