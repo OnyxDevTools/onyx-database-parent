@@ -843,7 +843,7 @@ class QueryBuilder internal constructor(
         mapOf(
             "type" to "UpdateQuery",
             "conditions" to conditions,
-            "updates" to updates,
+            "updates" to updates?.mapValues { it.value?.toString() },
             "partition" to partitionValue
         ).filterValues { it != null && !(it is List<*> && it.isEmpty()) }
 
