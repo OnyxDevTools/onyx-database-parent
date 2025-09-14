@@ -187,6 +187,7 @@ class OnyxCloudIntegrationTest {
         client.save(userRole)
 
         try {
+            client.delete("User", user.id!!)
             assertNull(client.findById<User>(user.id!!))
             assertNull(client.findById<UserProfile>(profile.id!!))
             assertNull(client.findById<UserRole>(userRole.id!!))
