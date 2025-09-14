@@ -17,6 +17,7 @@ import io.ktor.http.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.channels.awaitClose
 import java.math.BigDecimal
 import java.net.URLEncoder
 import java.util.*
@@ -599,55 +600,53 @@ class OnyxClient(
         val params = "?includeQueryResults=$includeQueryResults&keepAlive=$keepAlive"
 
         // Ensure proper URL encoding for path segments
-        val encodedDbId = encode(databaseId) // Replace with your actual encoding if needed
-        val encodedTable = encode(table)     // Replace with your actual encoding if needed
+        val encodedDbId = encode(databaseId)
+        val encodedTable = encode(table)
         val path = "/data/$encodedDbId/query/stream/$encodedTable$params"
-        val url = "$baseUrl$path" // Ensure baseUrl doesn't have a trailing slash if path starts with one
+        val url = "$baseUrl$path"
 
-        // The flow builder constructs the Flow asynchronously
-        return flow {
-            // Prepare and execute the streaming request within the flow builder
-            streamClient.prepareRequest(url) {
-                method = HttpMethod.Put
-                headers {
-                    appendAll(buildHeaders())
-                    // Ensure Content-Type is set if the server expects it
-                    contentType(ContentType.Application.Json)
-                }
-                setBody(selectQuery.toJson())
-            }.execute { response -> // `execute` manages the response lifecycle
-                // Check for HTTP errors first
-                if (!response.status.isSuccess()) {
-                    // Consider reading the error body for more details
-                    val errorBody = try {
-                        response.bodyAsText()
+        // Use callbackFlow to allow emissions from different coroutines without violating
+        // the Flow context invariant. This is important because the underlying Ktor client
+        // may switch coroutines when delivering bytes from the network.
+        return callbackFlow {
+            try {
+                streamClient.prepareRequest(url) {
+                    method = HttpMethod.Put
+                    headers {
+                        appendAll(buildHeaders())
+                        contentType(ContentType.Application.Json)
+                    }
+                    setBody(selectQuery.toJson())
+                }.execute { response ->
+                    if (!response.status.isSuccess()) {
+                        val errorBody = try {
+                            response.bodyAsText()
+                        } catch (e: Exception) {
+                            "(Could not read error body: ${e.message})"
+                        }
+                        throw RuntimeException(
+                            "HTTP Error: ${response.status.value} ${response.status.description}. Body: $errorBody"
+                        )
+                    }
+
+                    val channel: ByteReadChannel = response.bodyAsChannel()
+                    try {
+                        while (true) {
+                            val line = channel.readUTF8Line() ?: break
+                            send(line)
+                        }
+                        close()
                     } catch (e: Exception) {
-                        "(Could not read error body: ${e.message})"
+                        // Propagate errors downstream
+                        close(e)
                     }
-                    throw RuntimeException("HTTP Error: ${response.status.value} ${response.status.description}. Body: $errorBody")
                 }
-
-                // Get the response body as a channel for reading bytes
-                val channel: ByteReadChannel = response.bodyAsChannel()
-
-                // Read lines efficiently using Ktor's built-in function
-                try {
-                    while (true) {
-                        // readUTF8Line reads until \n or \r\n, handles buffering internally.
-                        // Returns null when the channel is closed (end of stream).
-                        val line = channel.readUTF8Line() ?: break // Exit loop at end of stream
-                        emit(line) // Emit the complete line downstream
-                    }
-                } catch (e: Exception) {
-                    // Handle potential exceptions during reading (e.g., connection closed unexpectedly)
-                    // Log the error or rethrow a more specific exception
-                    println("Error reading stream: ${e.message}") // Replace with proper logging
-                    throw e // Rethrow or handle as appropriate for your application
-                }
-                // No need for explicit finally/close on channel here,
-                // Ktor's `execute` block handles consuming/closing the response body
-                // when this lambda finishes (normally or exceptionally).
+            } catch (e: Exception) {
+                close(e)
             }
+
+            // Suspend until the flow collector cancels the flow
+            awaitClose { /* The Ktor client handles connection cleanup */ }
         }
     }
 
