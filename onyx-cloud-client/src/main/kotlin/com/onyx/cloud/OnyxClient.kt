@@ -187,47 +187,6 @@ class OnyxClient(
     }
 
     /**
-     * Finds an entity and fetches relationships.
-     *
-     * @param T Result type.
-     * @param table Entity class.
-     * @param primaryKey Key value.
-     * @param fetchRelationships Relationships to fetch.
-     */
-    fun <T : Any> findByIdWithFetch(table: KClass<*>, primaryKey: String, fetchRelationships: List<String>): T? {
-        return findById(table, primaryKey, mapOf("fetch" to fetchRelationships))
-    }
-
-    /**
-     * Finds an entity and fetches relationships inferring the table.
-     *
-     * @param T Result type.
-     * @param primaryKey Key value.
-     * @param fetchRelationships Relationships to fetch.
-     */
-    inline fun <reified T : Any> findByIdWithFetch(primaryKey: String, fetchRelationships: List<String>): T? {
-        return findByIdWithFetch(T::class, primaryKey, fetchRelationships)
-    }
-
-    /**
-     * Finds an entity by id in a partition and fetches relationships.
-     *
-     * @param T Result type.
-     * @param table Entity class.
-     * @param primaryKey Key value.
-     * @param partition Partition value.
-     * @param fetchRelationships Relationships to fetch.
-     */
-    fun <T : Any> findByIdInPartitionWithFetch(
-        table: KClass<*>,
-        primaryKey: String,
-        partition: String,
-        fetchRelationships: List<String>
-    ): T? {
-        return findById(table, primaryKey, mapOf("partition" to partition, "fetch" to fetchRelationships))
-    }
-
-    /**
      * Deletes an entity by key.
      *
      * @param table Table name.
@@ -292,61 +251,6 @@ class OnyxClient(
     }
 
     /**
-     * Executes a select query with paging.
-     *
-     * @param table Table name.
-     * @param selectQuery Query body.
-     * @param pageSize Page size.
-     * @param nextPage Next page token.
-     */
-    fun executeQueryWithPaging(
-        table: String,
-        selectQuery: Any,
-        pageSize: Int,
-        nextPage: String
-    ): String {
-        return executeQuery(table, selectQuery, mapOf("pageSize" to pageSize, "nextPage" to nextPage))
-    }
-
-    /**
-     * Executes a select query scoped to a partition.
-     *
-     * @param table Table name.
-     * @param selectQuery Query body.
-     * @param partition Partition value.
-     */
-    fun executeQueryInPartition(
-        table: String,
-        selectQuery: Any,
-        partition: String
-    ): String {
-        return executeQuery(table, selectQuery, mapOf("partition" to partition))
-    }
-
-    /**
-     * Executes a select query in a partition with paging.
-     *
-     * @param table Table name.
-     * @param selectQuery Query body.
-     * @param partition Partition value.
-     * @param pageSize Page size.
-     * @param nextPage Next page token.
-     */
-    fun executeQueryInPartitionWithPaging(
-        table: String,
-        selectQuery: Any,
-        partition: String,
-        pageSize: Int,
-        nextPage: String
-    ): String {
-        return executeQuery(
-            table,
-            selectQuery,
-            mapOf("partition" to partition, "pageSize" to pageSize, "nextPage" to nextPage)
-        )
-    }
-
-    /**
      * Executes an update query.
      *
      * @param table Table name.
@@ -365,21 +269,6 @@ class OnyxClient(
     }
 
     /**
-     * Executes an update in a partition.
-     *
-     * @param table Table name.
-     * @param updateQuery Update body.
-     * @param partition Partition value.
-     */
-    fun executeUpdateQueryInPartition(
-        table: String,
-        updateQuery: Any,
-        partition: String
-    ): Int {
-        return executeUpdateQuery(table, updateQuery, mapOf("partition" to partition))
-    }
-
-    /**
      * Executes a delete-by-query.
      *
      * @param table Table name.
@@ -395,21 +284,6 @@ class OnyxClient(
         val queryString = buildQueryString(options)
         val path = "/data/${encode(databaseId)}/query/delete/${encode(table)}"
         return makeRequest(HttpMethod.Put, path, selectQuery, queryString = queryString).toIntOrNull() ?: 0
-    }
-
-    /**
-     * Executes a delete in a partition.
-     *
-     * @param table Table name.
-     * @param selectQuery Conditions body.
-     * @param partition Partition value.
-     */
-    fun executeDeleteQueryInPartition(
-        table: String,
-        selectQuery: Any,
-        partition: String
-    ): Int {
-        return executeDeleteQuery(table, selectQuery, mapOf("partition" to partition))
     }
 
     /**
@@ -510,52 +384,6 @@ class OnyxClient(
             }
             },
             errorRef = errorRef
-        )
-    }
-
-    /**
-     * Opens a stream that only emits change events.
-     *
-     * @param table Table name.
-     * @param selectQuery Query body.
-     * @param keepAlive Keep connection open for changes.
-     * @param onLine Callback invoked for each raw JSON line from the stream.
-     */
-    fun streamEventsOnly(
-        table: String,
-        selectQuery: Any,
-        keepAlive: Boolean = true,
-        onLine: (String) -> Unit,
-    ): StreamSubscription {
-        return stream(
-            table,
-            selectQuery,
-            includeQueryResults = false,
-            keepAlive = keepAlive,
-            onLine = onLine,
-        )
-    }
-
-    /**
-     * Opens a stream that emits initial results then changes.
-     *
-     * @param table Table name.
-     * @param selectQuery Query body.
-     * @param keepAlive Keep connection open for changes.
-     * @param onLine Callback invoked for each raw JSON line from the stream.
-     */
-    fun streamWithQueryResults(
-        table: String,
-        selectQuery: Any,
-        keepAlive: Boolean = false,
-        onLine: (String) -> Unit,
-    ): StreamSubscription {
-        return stream(
-            table,
-            selectQuery,
-            includeQueryResults = true,
-            keepAlive = keepAlive,
-            onLine = onLine,
         )
     }
 
@@ -1468,24 +1296,6 @@ sealed class QueryCondition {
 }
 
 /**
- * Builds a compound condition from parts.
- *
- * @param operator "AND" or "OR".
- * @param conditions Items to combine.
- */
-internal fun buildCompoundCondition(operator: String, conditions: List<Any?>): QueryCondition.CompoundCondition {
-    val logicalOp = LogicalOperator.valueOf(operator.uppercase())
-    val parsedConds = conditions.mapNotNull { cond ->
-        when (cond) {
-            is QueryCondition -> cond
-            is ConditionBuilder -> cond.toCondition()
-            else -> null
-        }
-    }
-    return QueryCondition.CompoundCondition(operator = logicalOp, conditions = parsedConds)
-}
-
-/**
  * Document model for the document endpoints.
  */
 data class Document(
@@ -1496,22 +1306,6 @@ data class Document(
     val mimeType: String = "",
     val content: String = ""
 )
-
-/**
- * Example Contact model.
- */
-data class Contact(
-    val id: Int = 0,
-    val contactType: String = "",
-    val email: String = "",
-    val name: String = "",
-    val message: String = "",
-    val billingIssue: Boolean? = null,
-    val salesInquiry: Boolean? = null,
-    val subjects: String = "",
-    val timestamp: String = ""
-)
-
 /**
  * Builder for creating complex where-clauses.
  */
