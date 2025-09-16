@@ -108,7 +108,20 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
             criteria.operator === QueryCriteriaOperator.GREATER_THAN_EQUAL -> interactor.findAllAbove(indexValue, true)
             criteria.operator === QueryCriteriaOperator.LESS_THAN -> interactor.findAllBelow(indexValue, false)
             criteria.operator === QueryCriteriaOperator.LESS_THAN_EQUAL -> interactor.findAllBelow(indexValue, true)
-            criteria.operator === QueryCriteriaOperator.BETWEEN -> interactor.findAllBetween((indexValue as? Pair<*,*>)?.first, true, (indexValue as? Pair<*,*>)?.second, true)
+            criteria.operator === QueryCriteriaOperator.BETWEEN ->
+                interactor.findAllBetween((indexValue as? Pair<*,*>)?.first,
+                    true,
+                    (indexValue as? Pair<*,*>)?.second,
+                    true)
+            criteria.operator === QueryCriteriaOperator.NOT_BETWEEN -> {
+                val pair = indexValue as? Pair<*,*>
+                if (pair != null) {
+                    interactor.findAllBelow(pair.first, false)
+                        .union(interactor.findAllAbove(pair.second, false))
+                } else {
+                    emptySet()
+                }
+            }
             else -> interactor.findAll(indexValue).keys
         }
     }.map {

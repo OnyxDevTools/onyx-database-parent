@@ -135,8 +135,8 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
                 // support range pair on either side of the comparison
                 val range = (first as? Pair<Any?, Any?>) ?: (second as? Pair<Any?, Any?>) ?: return false
                 val value = if (first is Pair<*, *>) second else first
-                return !(value.compare(range.first, QueryCriteriaOperator.GREATER_THAN_EQUAL) &&
-                         value.compare(range.second, QueryCriteriaOperator.LESS_THAN_EQUAL))
+                return !(range.first.compare(value, QueryCriteriaOperator.GREATER_THAN_EQUAL) &&
+                        range.second.compare(value, QueryCriteriaOperator.LESS_THAN_EQUAL))
             }
 
             QueryCriteriaOperator.NOT_EQUAL -> first != second

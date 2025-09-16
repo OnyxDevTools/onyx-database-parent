@@ -49,7 +49,7 @@ class BetweenTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseTe
         val start = Date(1001)
         val end = Date(1022)
         val results = manager.from<AllAttributeForFetch>()
-            .where(!("dateValue" between Pair(start, end)))
+            .where(("dateValue" notBetween Pair(start, end)))
             .list<AllAttributeForFetch>()
         assertEquals(3, results.size, "Expected 3 results outside the date range")
     }
@@ -75,7 +75,7 @@ class BetweenTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseTe
         }
         manager.saveEntities(entities)
         val results = manager.from<AllAttributeForFetchSequenceGen>()
-            .where(!("indexVal" between Pair(2, 4)))
+            .where("indexVal" notBetween Pair(2, 4))
             .list<AllAttributeForFetchSequenceGen>()
         assertEquals(2, results.size, "Expected 2 results for indexed not between")
     }

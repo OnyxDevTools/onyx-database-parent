@@ -61,15 +61,31 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
                     }
         } else {
             val values: Set<Long> = if(isBetween) {
-                recordInteractor.findAllBetween(rangeFrom, fromOperator === QueryCriteriaOperator.GREATER_THAN_EQUAL, rangeTo, toOperator === QueryCriteriaOperator.LESS_THAN_EQUAL)
+                recordInteractor.findAllBetween(
+                    rangeFrom,
+                    fromOperator === QueryCriteriaOperator.GREATER_THAN_EQUAL,
+                    rangeTo,
+                    toOperator === QueryCriteriaOperator.LESS_THAN_EQUAL)
             } else {
                 when {
-                    criteria.operator === QueryCriteriaOperator.GREATER_THAN ->         recordInteractor.findAllAbove(criteria.value!!, false)
-                    criteria.operator === QueryCriteriaOperator.GREATER_THAN_EQUAL ->   recordInteractor.findAllAbove(criteria.value!!, true)
-                    criteria.operator === QueryCriteriaOperator.LESS_THAN ->            recordInteractor.findAllBelow(criteria.value!!, false)
-                    criteria.operator === QueryCriteriaOperator.LESS_THAN_EQUAL ->      recordInteractor.findAllBelow(criteria.value!!, true)
-                    criteria.operator === QueryCriteriaOperator.BETWEEN ->              recordInteractor.findAllBetween((criteria.value as? Pair<*,*>)?.first, true, (criteria.value as? Pair<*,*>)?.second, true)
-                    else ->                                                             hashSetOf(recordInteractor.getReferenceId(criteria.value!!))
+                    criteria.operator === QueryCriteriaOperator.GREATER_THAN ->       recordInteractor.findAllAbove(criteria.value!!, false)
+                    criteria.operator === QueryCriteriaOperator.GREATER_THAN_EQUAL -> recordInteractor.findAllAbove(criteria.value!!, true)
+                    criteria.operator === QueryCriteriaOperator.LESS_THAN ->          recordInteractor.findAllBelow(criteria.value!!, false)
+                    criteria.operator === QueryCriteriaOperator.LESS_THAN_EQUAL ->    recordInteractor.findAllBelow(criteria.value!!, true)
+                    criteria.operator === QueryCriteriaOperator.BETWEEN ->            recordInteractor.findAllBetween((criteria.value as? Pair<*,*>)?.first,
+                        true,
+                        (criteria.value as? Pair<*,*>)?.second,
+                        true)
+                    criteria.operator === QueryCriteriaOperator.NOT_BETWEEN ->        {
+                        val pair = criteria.value as? Pair<*,*>
+                        if (pair != null) {
+                            recordInteractor.findAllBelow(pair.first as Any, false)
+                                .union(recordInteractor.findAllAbove(pair.second as Any, false))
+                        } else {
+                            emptySet()
+                        }
+                    }
+                    else ->                                                           hashSetOf(recordInteractor.getReferenceId(criteria.value!!))
                 }
             }
 

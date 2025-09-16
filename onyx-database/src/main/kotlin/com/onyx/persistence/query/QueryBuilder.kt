@@ -360,6 +360,8 @@ infix fun <T> String.lt(value: T): QueryCriteria = QueryCriteria(this, QueryCrit
 infix fun <T> String.match(value: T): QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.MATCHES, value)
 infix fun <T> String.between(range: Pair<T, T>): QueryCriteria =
     QueryCriteria(this, QueryCriteriaOperator.BETWEEN, range)
+infix fun <T> String.notBetween(range: Pair<T, T>): QueryCriteria =
+    QueryCriteria(this, QueryCriteriaOperator.NOT_BETWEEN, range)
 
 @Suppress("UNUSED")
 infix fun <T> String.notMatch(value: T): QueryCriteria =

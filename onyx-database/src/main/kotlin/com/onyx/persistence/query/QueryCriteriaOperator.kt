@@ -44,6 +44,7 @@ enum class QueryCriteriaOperator {
                 || this === LESS_THAN
                 || this === LESS_THAN_EQUAL
                 || this === BETWEEN
+                || this === NOT_BETWEEN
 
     /**
      * Get the inverse in order to support the .not() feature within query criteria
