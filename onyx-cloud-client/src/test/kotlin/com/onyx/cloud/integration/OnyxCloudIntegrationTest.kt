@@ -25,6 +25,14 @@ class OnyxCloudIntegrationTest {
         }
     }
 
+    private fun safeDeleteInPartition(table: String, id: String, partition: String) {
+        try {
+            client.deleteInPartition(table, id, partition)
+        } catch (_: Exception) {
+            // ignore if already removed
+        }
+    }
+
     private fun newUser(now: Date, isActive: Boolean = true) = User(
         id = UUID.randomUUID().toString(),
         username = "user-${UUID.randomUUID().toString().substring(0, 8)}",
@@ -226,6 +234,61 @@ class OnyxCloudIntegrationTest {
             safeDelete("User", active1.id!!)
             safeDelete("User", active2.id!!)
             safeDelete("User", inactive.id!!)
+        }
+    }
+
+    private fun createUserWithProfile(now: Date = Date()): Pair<User, UserProfile> {
+        var user = newUser(now)
+        user = client.save(user)
+
+        var profile = newProfile(user.id!!, now)
+        profile = client.save(profile)
+
+        return user to profile
+    }
+
+    @Test
+    fun saveUserProfileWithPartition() {
+        val now = Date()
+        val (user, profile) = createUserWithProfile(now)
+
+        try {
+            assertNotNull(profile.id)
+            assertEquals(user.id, profile.userId)
+        } finally {
+            safeDeleteInPartition("UserProfile", profile.id!!, user.id!!)
+            safeDelete("User", user.id!!)
+        }
+    }
+
+    @Test
+    fun findUserProfileInPartition() {
+        val (user, profile) = createUserWithProfile()
+
+        try {
+            val found = client.findByIdInPartition<UserProfile>(profile.id!!, user.id!!)
+            assertNotNull(found)
+            assertEquals(profile.id, found?.id)
+            assertEquals(user.id, found?.userId)
+        } finally {
+            safeDeleteInPartition("UserProfile", profile.id!!, user.id!!)
+            safeDelete("User", user.id!!)
+        }
+    }
+
+    @Test
+    fun queryUserProfilesInPartition() {
+        val (user, profile) = createUserWithProfile()
+
+        try {
+            val results = client.from<UserProfile>()
+                .inPartition(user.id!!)
+                .where("id" eq profile.id!!)
+                .list<UserProfile>()
+            assertTrue(results.records.any { it.id == profile.id })
+        } finally {
+            safeDeleteInPartition("UserProfile", profile.id!!, user.id!!)
+            safeDelete("User", user.id!!)
         }
     }
 }
