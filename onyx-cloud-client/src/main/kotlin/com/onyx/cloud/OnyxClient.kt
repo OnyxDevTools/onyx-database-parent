@@ -8,8 +8,6 @@ import com.onyx.cloud.exceptions.NotFoundException
 import com.onyx.cloud.extensions.fromJson
 import com.onyx.cloud.extensions.fromJsonList
 import com.onyx.cloud.extensions.toJson
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -21,6 +19,8 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.*
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
 
 /**
@@ -413,29 +413,42 @@ class OnyxClient(
     }
 
     /**
-     * Opens a JSONL stream as a cold [Flow].
+     * Opens a JSONL stream and invokes [onLine] for each line of the response.
+     *
+     * The stream is processed on a dedicated daemon thread and the returned [StreamSubscription]
+     * can be used to stop listening for events when desired.
      *
      * @param table Table name.
      * @param selectQuery Query body.
      * @param includeQueryResults Emit initial results first.
      * @param keepAlive Keep connection open for changes.
+     * @param onLine Callback invoked for each raw JSON line from the stream.
+     * @return An active [StreamSubscription] controlling the stream lifecycle.
      */
     fun stream(
         table: String,
         selectQuery: Any,
         includeQueryResults: Boolean = true,
         keepAlive: Boolean = false,
-    ): Flow<String> = flow {
+        onLine: (String) -> Unit,
+    ): StreamSubscription {
         val params = "?includeQueryResults=$includeQueryResults&keepAlive=$keepAlive"
         val encodedDbId = encode(databaseId)
         val encodedTable = encode(table)
         val path = "/data/$encodedDbId/query/stream/$encodedTable$params"
         val urlStr = "$baseUrl$path"
 
-        withContext(Dispatchers.IO) {
-            val url = URI(urlStr).toURL()
-            val conn = (url.openConnection() as HttpURLConnection)
+        val isActive = AtomicBoolean(true)
+        val connectionRef = AtomicReference<HttpURLConnection?>()
+        val errorRef = AtomicReference<Throwable?>()
+
+        val thread = Thread {
+            var conn: HttpURLConnection? = null
             try {
+                val url = URI(urlStr).toURL()
+                conn = (url.openConnection() as HttpURLConnection)
+                connectionRef.set(conn)
+
                 conn.requestMethod = "PUT"
                 conn.instanceFollowRedirects = true
                 conn.connectTimeout = Timeouts.CONNECT_TIMEOUT
@@ -459,16 +472,40 @@ class OnyxClient(
                 }
 
                 BufferedReader(InputStreamReader(conn.inputStream, StandardCharsets.UTF_8)).use { reader ->
-                    var line: String?
-                    while (true) {
-                        line = reader.readLine() ?: break
-                        emit(line)
+                    while (isActive.get() && !Thread.currentThread().isInterrupted) {
+                        val line = reader.readLine() ?: break
+                        if (!isActive.get()) {
+                            break
+                        }
+
+                        try {
+                            onLine(line)
+                        } catch (consumerError: Throwable) {
+                            errorRef.compareAndSet(null, consumerError)
+                            isActive.set(false)
+                            break
+                        }
                     }
                 }
+            } catch (ex: Throwable) {
+                if (isActive.get()) {
+                    errorRef.compareAndSet(null, ex)
+                }
             } finally {
-                conn.disconnect()
+                isActive.set(false)
+                connectionRef.getAndSet(null)?.disconnect()
+                conn?.disconnect()
             }
         }
+
+        thread.isDaemon = true
+        thread.start()
+
+        return StreamSubscription(thread, {
+            if (isActive.compareAndSet(true, false)) {
+                connectionRef.getAndSet(null)?.disconnect()
+            }
+        }, errorRef)
     }
 
     /**
@@ -477,9 +514,21 @@ class OnyxClient(
      * @param table Table name.
      * @param selectQuery Query body.
      * @param keepAlive Keep connection open for changes.
+     * @param onLine Callback invoked for each raw JSON line from the stream.
      */
-    fun streamEventsOnly(table: String, selectQuery: Any, keepAlive: Boolean = true): Flow<String> {
-        return stream(table, selectQuery, includeQueryResults = false, keepAlive = keepAlive)
+    fun streamEventsOnly(
+        table: String,
+        selectQuery: Any,
+        keepAlive: Boolean = true,
+        onLine: (String) -> Unit,
+    ): StreamSubscription {
+        return stream(
+            table,
+            selectQuery,
+            includeQueryResults = false,
+            keepAlive = keepAlive,
+            onLine = onLine,
+        )
     }
 
     /**
@@ -488,9 +537,21 @@ class OnyxClient(
      * @param table Table name.
      * @param selectQuery Query body.
      * @param keepAlive Keep connection open for changes.
+     * @param onLine Callback invoked for each raw JSON line from the stream.
      */
-    fun streamWithQueryResults(table: String, selectQuery: Any, keepAlive: Boolean = false): Flow<String> {
-        return stream(table, selectQuery, includeQueryResults = true, keepAlive = keepAlive)
+    fun streamWithQueryResults(
+        table: String,
+        selectQuery: Any,
+        keepAlive: Boolean = false,
+        onLine: (String) -> Unit,
+    ): StreamSubscription {
+        return stream(
+            table,
+            selectQuery,
+            includeQueryResults = true,
+            keepAlive = keepAlive,
+            onLine = onLine,
+        )
     }
 
     /**
@@ -1036,8 +1097,10 @@ class QueryBuilder internal constructor(
      * @param includeQueryResults Include initial results.
      * @param keepAlive Keep the stream open.
      */
-    inline fun <reified T : Any> stream(includeQueryResults: Boolean = true, keepAlive: Boolean = false): Job =
-        stream<T>(T::class, includeQueryResults, keepAlive)
+    inline fun <reified T : Any> stream(
+        includeQueryResults: Boolean = true,
+        keepAlive: Boolean = false,
+    ): StreamSubscription = stream<T>(T::class, includeQueryResults, keepAlive)
 
     /**
      * Starts streaming with optional initial results.
@@ -1047,33 +1110,46 @@ class QueryBuilder internal constructor(
      * @param includeQueryResults Include initial results.
      * @param keepAlive Keep the stream open.
      */
-    fun <T> stream(type: KClass<*>, includeQueryResults: Boolean = true, keepAlive: Boolean = false): Job {
+    fun <T> stream(
+        type: KClass<*>,
+        includeQueryResults: Boolean = true,
+        keepAlive: Boolean = false,
+    ): StreamSubscription {
         check(mode == Mode.SELECT) { "Streaming is only applicable in select mode." }
         val targetTable =
             table ?: throw IllegalStateException("Table name must be specified using from() before calling stream().")
         val queryPayload = buildSelectQueryPayload()
 
-        return CoroutineScope(Dispatchers.IO).launch {
-            client.stream(targetTable, queryPayload, includeQueryResults, keepAlive)
-                .transform { line ->
-                    val trimmed = line.trim()
-                    if (trimmed.isNotEmpty()) {
-                        try {
-                            val obj = trimmed.fromJson<StreamResponse>()!!
-                            emit(obj)
-                        } catch (_: Exception) {
-                        }
-                    }
-                }
-                .onEach { response ->
-                    when (response.action) {
-                        "CREATE" -> onItemAddedListener?.invoke(response.entity.toString().fromJson<T>(type) as Any)
-                        "UPDATE" -> onItemUpdatedListener?.invoke(response.entity.toString().fromJson<T>(type) as Any)
-                        "DELETE" -> onItemDeletedListener?.invoke(response.entity.toString().fromJson<T>(type) as Any)
-                        "QUERY_RESPONSE" -> onItemListener?.invoke(response.entity.toString().fromJson<T>(type) as Any)
-                    }
-                }
-                .collect()
+        return client.stream(
+            targetTable,
+            queryPayload,
+            includeQueryResults,
+            keepAlive,
+        ) onLine@{ line ->
+            val trimmed = line.trim()
+            if (trimmed.isEmpty()) {
+                return@onLine
+            }
+
+            val response = runCatching { trimmed.fromJson<StreamResponse>() }.getOrNull() ?: return@onLine
+            val entityJson = response.entity?.toString() ?: return@onLine
+
+            val entitySupplier = lazy {
+                runCatching { entityJson.fromJson<T>(type) }.getOrNull()
+            }
+
+            fun deliver(listener: ((Any) -> Unit)?) {
+                if (listener == null) return
+                val entity = entitySupplier.value ?: return
+                listener(entity as Any)
+            }
+
+            when (response.action?.uppercase(Locale.ROOT)) {
+                "CREATE" -> deliver(onItemAddedListener)
+                "UPDATE" -> deliver(onItemUpdatedListener)
+                "DELETE" -> deliver(onItemDeletedListener)
+                "QUERY_RESPONSE" -> deliver(onItemListener)
+            }
         }
     }
 
@@ -1613,6 +1689,53 @@ fun substring(attribute: String, from: Int, length: Int): String = "substring($a
  */
 fun replace(attribute: String, pattern: String, repl: String): String =
     "replace($attribute, '${pattern.replace("'", "''")}', '${repl.replace("'", "''")}')"
+
+/**
+ * Represents an active streaming subscription created via [OnyxClient.stream].
+ *
+ * The underlying stream executes on a daemon thread. Use [cancel], [join], or [cancelAndJoin]
+ * to control its lifecycle. Invoking [close] behaves the same as [cancel].
+ */
+class StreamSubscription internal constructor(
+    private val thread: Thread,
+    private val cancelAction: () -> Unit,
+    private val errorRef: AtomicReference<Throwable?>,
+) : AutoCloseable {
+    private val cancelled = AtomicBoolean(false)
+
+    /** Stops the stream without waiting for the background thread to finish. */
+    fun cancel() {
+        if (cancelled.compareAndSet(false, true)) {
+            cancelAction()
+            if (thread.isAlive) {
+                thread.interrupt()
+            }
+        }
+    }
+
+    /** Waits for the background thread to finish processing. */
+    fun join() {
+        try {
+            thread.join()
+        } catch (ex: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+    }
+
+    /** Convenience helper that cancels the stream and waits for it to finish. */
+    fun cancelAndJoin() {
+        cancel()
+        join()
+    }
+
+    /** Latest error observed while streaming, or `null` if none occurred. */
+    val error: Throwable?
+        get() = errorRef.get()
+
+    override fun close() {
+        cancel()
+    }
+}
 
 /**
  * Stream response envelope.
