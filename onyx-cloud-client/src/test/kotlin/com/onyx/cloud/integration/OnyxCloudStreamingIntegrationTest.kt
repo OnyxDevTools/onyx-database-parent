@@ -34,6 +34,7 @@ class OnyxCloudStreamingIntegrationTest {
 
     @Test
     fun streamIncludesQueryResults() {
+        client.from<User>().delete()
         val now = Date()
         val initialUser = newUser(now, isActive = true)
         val createdUser = newUser(now, isActive = true)
@@ -77,7 +78,9 @@ class OnyxCloudStreamingIntegrationTest {
             val added = mutableListOf<User>()
             subscription = client.from<User>()
                 .where("isActive" eq false)
-                .onItem<User> { initial.add(it) }
+                .onItem<User> {
+                    initial.add(it)
+                }
                 .onItemAdded<User> { added.add(it) }
                 .stream<User>(includeQueryResults = true, keepAlive = true)
 
@@ -131,6 +134,7 @@ class OnyxCloudStreamingIntegrationTest {
 
     @Test
     fun addDeleteListenerWithoutQueryResults() {
+        client.from<User>().delete()
         val now = Date()
         val toDelete = newUser(now, isActive = true)
         client.save(toDelete)
@@ -157,6 +161,7 @@ class OnyxCloudStreamingIntegrationTest {
 
     @Test
     fun addUpdateListenerWithoutQueryResults() {
+        client.from<User>().delete()
         val now = Date()
         val toUpdate = newUser(now, isActive = true)
         client.save(toUpdate)

@@ -446,23 +446,29 @@ class OnyxClient(
             var conn: HttpURLConnection? = null
             try {
                 val url = URI(urlStr).toURL()
-                conn = (url.openConnection() as HttpURLConnection)
-                connectionRef.set(conn)
+                conn = (url.openConnection() as HttpURLConnection).also { connectionRef.set(it) }
+
+                val payload = selectQuery.toJson()
+                val payloadBytes = payload.toByteArray(StandardCharsets.UTF_8)
 
                 conn.requestMethod = "PUT"
-                conn.instanceFollowRedirects = true
+                conn.instanceFollowRedirects = false // avoid silent body drop on 30x
                 conn.connectTimeout = Timeouts.CONNECT_TIMEOUT
                 conn.readTimeout = Timeouts.STREAM_READ_TIMEOUT
                 conn.doInput = true
                 conn.doOutput = true
                 conn.useCaches = false
-                conn.setChunkedStreamingMode(8 * 1024)
-                applyHeaders(conn, defaultHeaders())
 
-                val payload = selectQuery.toJson()
-                OutputStreamWriter(conn.outputStream, StandardCharsets.UTF_8).use {
-                    it.write(payload)
-                    it.flush()
+                applyHeaders(conn, defaultHeaders())
+                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                conn.setRequestProperty("Accept", "application/x-ndjson, application/json")
+
+                // send exact length (safer than chunked for small JSON)
+                conn.setFixedLengthStreamingMode(payloadBytes.size)
+
+                conn.outputStream.use { os ->
+                    os.write(payloadBytes)
+                    os.flush()
                 }
 
                 val code = conn.responseCode
@@ -474,10 +480,7 @@ class OnyxClient(
                 BufferedReader(InputStreamReader(conn.inputStream, StandardCharsets.UTF_8)).use { reader ->
                     while (isActive.get() && !Thread.currentThread().isInterrupted) {
                         val line = reader.readLine() ?: break
-                        if (!isActive.get()) {
-                            break
-                        }
-
+                        if (!isActive.get()) break
                         try {
                             onLine(line)
                         } catch (consumerError: Throwable) {
@@ -488,9 +491,7 @@ class OnyxClient(
                     }
                 }
             } catch (ex: Throwable) {
-                if (isActive.get()) {
-                    errorRef.compareAndSet(null, ex)
-                }
+                if (isActive.get()) errorRef.compareAndSet(null, ex)
             } finally {
                 isActive.set(false)
                 connectionRef.getAndSet(null)?.disconnect()
@@ -501,11 +502,15 @@ class OnyxClient(
         thread.isDaemon = true
         thread.start()
 
-        return StreamSubscription(thread, {
+        return StreamSubscription(
+            thread,
+            cancelAction = {
             if (isActive.compareAndSet(true, false)) {
                 connectionRef.getAndSet(null)?.disconnect()
             }
-        }, errorRef)
+            },
+            errorRef = errorRef
+        )
     }
 
     /**
