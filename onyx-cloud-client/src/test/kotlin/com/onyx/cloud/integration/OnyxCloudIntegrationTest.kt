@@ -172,22 +172,19 @@ class OnyxCloudIntegrationTest {
     @Test
     fun cascadeDeletesUser() {
         val now = Date()
-        var role = newRole(now)
-        var perm = newPermission(now)
-        var rolePerm = newRolePermission(role, perm, now)
-        var user = newUser(now)
-        var profile = newProfile(user.id!!, now)
-        var userRole = newUserRole(user.id!!, role.id!!, now)
-
-        role = client.save(role)
-        perm = client.save(perm)
-        rolePerm = client.save(rolePerm)
-        user = client.save(user)
-        profile = client.save(profile)
-        userRole = client.save(userRole)
+        val role = client.save(newRole(now))
+        val perm = client.save(newPermission(now))
+        val rolePerm = client.save(newRolePermission(role, perm, now))
+        val user = client.save(newUser(now))
+        val profile = client.save(newProfile(user.id!!, now))
+        val userRole = client.save(newUserRole(user.id!!, role.id!!, now))
 
         try {
-            client.delete("User", user.id!!)
+            // Delete user and cascade delete profile and userRoles
+            client.cascade(
+                "profile",
+                "userRoles"
+            ).delete("User", user.id!!)
             assertNull(client.findById<User>(user.id!!))
             assertNull(client.findById<UserProfile>(profile.id!!))
             assertNull(client.findById<UserRole>(userRole.id!!))
@@ -236,6 +233,58 @@ class OnyxCloudIntegrationTest {
             }
         } finally {
             users.forEach { user -> safeDelete("User", user.id!!) }
+        }
+    }
+
+    @Test
+    fun cascadeSavesUserWithProfileAndRoles() {
+        val now = Date()
+        val role = client.save(newRole(now))
+        try {
+            // Prepare nested payload for user with profile and roles
+            val userId = UUID.randomUUID().toString()
+            val userPayload = mapOf(
+                "id" to userId,
+                "email" to "cascade@example.com",
+                "userRoles" to listOf(mapOf("roleId" to role.id!!)),
+                "profile" to mapOf("firstName" to "Cascaded", "lastName" to "User")
+            )
+            client.cascade(
+                "userRoles:UserRole(userId,id)",
+                "profile:UserProfile(userId,id)"
+            ).save("User", userPayload)
+
+            // Verify nested entities were created
+            val profiles = client.from<UserProfile>()
+                .where("userId" eq userId)
+                .list<UserProfile>()
+            assertTrue(profiles.records.any { it.firstName == "Cascaded" })
+
+            val rolesAssigned = client.from<UserRole>()
+                .where("userId" eq userId)
+                .list<UserRole>()
+            assertTrue(rolesAssigned.records.any { it.roleId == role.id })
+        } finally {
+            // Clean up
+            client.run { from<User>().where("email" eq "cascade@example.com").delete() }
+            safeDelete("Role", role.id!!)
+        }
+    }
+
+    @Test
+    fun countUsersByEmail() {
+        val now = Date()
+        // Create a unique user for counting
+        val email = "count-${UUID.randomUUID()}@example.com"
+        val user = newUser(now).apply { this.email = email }
+        client.save(user)
+        try {
+            val cnt = client.from<User>()
+                .where("email" eq email)
+                .count()
+            assertEquals(1, cnt, "Expected exactly one user with the test email")
+        } finally {
+            safeDelete("User", user.id!!)
         }
     }
 

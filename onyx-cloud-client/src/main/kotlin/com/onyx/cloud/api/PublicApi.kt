@@ -470,14 +470,22 @@ interface IOnyxDatabase<Schema : Any> {
     /** Select specific fields for a query. */
     fun select(vararg fields: String): IQueryBuilder<Map<String, Any?>>
 
-    /** Include related records in the next save or delete. */
-    fun cascade(vararg relationships: String): ICascadeBuilder<Schema>
+    /**
+     * Include related entities for cascading when saving or deleting.
+     *
+     * @param relationships Relationship strings to cascade.
+     * @return Builder for cascading save or delete operations.
+     */
+    fun cascade(vararg relationships: String): ICascadeBuilder<Schema> =
+        CascadeBuilderImpl(this, relationships.toList())
 
-    /** Build cascade relationship strings programmatically. */
-    fun cascadeBuilder(): ICascadeRelationshipBuilder
-
-    /** Start a save builder for inserting or updating entities. */
-    fun save(table: String): ISaveBuilder<Any>
+    /**
+     * Start a save builder for inserting or updating entities with cascade support.
+     *
+     * @param table Table name to save entities into.
+     * @return Builder for save operations.
+     */
+    fun save(table: String): ISaveBuilder<Any> = SaveBuilderImpl(this as IOnyxDatabase<Any>, table)
 
     /** Save one or many entities immediately. */
     fun save(
@@ -829,4 +837,3 @@ const val sdkName: String = "@onyx.dev/onyx-database"
 
 /** SDK version. */
 const val sdkVersion: String = "0.1.0"
-

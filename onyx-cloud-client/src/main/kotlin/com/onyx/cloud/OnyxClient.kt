@@ -593,6 +593,35 @@ class OnyxClient(
      */
     fun encode(value: KClass<*>): String = encode(value.java.simpleName)
 
+    /**
+     * Saves an entity or list of entities with additional query options (e.g., cascade relationships).
+     *
+     * @param table Table name.
+     * @param entityOrEntities Single entity or list of entities to save.
+     * @param options Map of query parameters (e.g., "relationships").
+     * @return Saved entity or original list.
+     */
+    fun save(table: String, entityOrEntities: Any, options: Map<String, Any?>): Any? {
+        val queryString = buildQueryString(options)
+        val path = "/data/${encode(databaseId)}/${encode(table)}"
+        return if (entityOrEntities is List<*>) {
+            makeRequest(HttpMethod.Put, path, entityOrEntities, queryString = queryString)
+            entityOrEntities
+        } else {
+            makeRequest(HttpMethod.Put, path, entityOrEntities, queryString = queryString).fromJson(entityOrEntities::class)
+                ?: throw IllegalStateException("Failed to parse response for save single entity")
+        }
+    }
+
+    /**
+     * Begins a cascading save or delete operation that includes specified relationships.
+     *
+     * @param relationships Relationship graph strings to cascade.
+     * @return Builder to perform save or delete with cascade.
+     */
+    fun cascade(vararg relationships: String): CascadeClientBuilder =
+        CascadeClientBuilder(this, relationships.toList())
+
     private fun defaultHeaders(extra: Map<String, String> = emptyMap()): Map<String, String> =
         mapOf(
             "x-onyx-key" to apiKey,
@@ -619,16 +648,15 @@ class OnyxClient(
 
     private fun buildQueryString(options: Map<String, Any?>): String {
         val params = buildList {
-            options.forEach { (key, value) ->
-                when {
-                    value == null -> {}
-                    key == "fetch" && value is List<*> -> {
-                        val fetchList = value.filterNotNull().joinToString(",")
-                        if (fetchList.isNotEmpty()) add("$key=${encode(fetchList)}")
-                    }
-
-                    else -> add("$key=${encode(value.toString())}")
+        options.forEach { (key, value) ->
+            when {
+                value == null -> { /* skip */ }
+                (key == "fetch" || key == "relationships") && value is List<*> -> {
+                    val list = value.filterNotNull().joinToString(",")
+                    if (list.isNotEmpty()) add("$key=${encode(list)}")
                 }
+                else -> add("$key=${encode(value.toString())}")
+            }
             }
         }.joinToString("&")
         return if (params.isNotEmpty()) "?$params" else ""
@@ -650,7 +678,6 @@ class OnyxClient(
         if ((methodToUse == "POST" || methodToUse == "PUT") && body != null) {
             val payload = (body as? String) ?: body.toJson()
             bodyBytes = payload.toByteArray(StandardCharsets.UTF_8)
-            println("Payload: $payload")
         }
 
         while (true) {
@@ -712,8 +739,6 @@ class OnyxClient(
 
                 val stream = if (code >= 400) (conn.errorStream ?: conn.inputStream) else conn.inputStream
                 val text = stream?.use { String(it.readBytes(), StandardCharsets.UTF_8) } ?: ""
-
-                println("Response: $text")
 
                 if (code !in 200..299) {
                     val msg = "HTTP $code @ ${conn.url} → $text"
