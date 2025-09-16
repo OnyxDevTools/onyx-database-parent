@@ -74,8 +74,8 @@ class OnyxCloudIntegrationTest {
     @Test
     fun saveAndFindUser() {
         val now = Date()
-        val user = newUser(now)
-        client.save(user)
+        var user = newUser(now)
+        user = client.save(user)
         try {
             val found = client.findById<User>(user.id!!)
             assertNotNull(found)
@@ -172,19 +172,19 @@ class OnyxCloudIntegrationTest {
     @Test
     fun cascadeDeletesUser() {
         val now = Date()
-        val role = newRole(now)
-        val perm = newPermission(now)
-        val rolePerm = newRolePermission(role, perm, now)
-        val user = newUser(now)
-        val profile = newProfile(user.id!!, now)
-        val userRole = newUserRole(user.id!!, role.id!!, now)
+        var role = newRole(now)
+        var perm = newPermission(now)
+        var rolePerm = newRolePermission(role, perm, now)
+        var user = newUser(now)
+        var profile = newProfile(user.id!!, now)
+        var userRole = newUserRole(user.id!!, role.id!!, now)
 
-        client.save(role)
-        client.save(perm)
-        client.save(rolePerm)
-        client.save(user)
-        client.save(profile)
-        client.save(userRole)
+        role = client.save(role)
+        perm = client.save(perm)
+        rolePerm = client.save(rolePerm)
+        user = client.save(user)
+        profile = client.save(profile)
+        userRole = client.save(userRole)
 
         try {
             client.delete("User", user.id!!)
@@ -200,6 +200,7 @@ class OnyxCloudIntegrationTest {
 
     @Test
     fun groupByActiveUsers() {
+        client.from<User>().delete()
         val now = Date()
         val active1 = newUser(now, isActive = true)
         val active2 = newUser(now, isActive = true)

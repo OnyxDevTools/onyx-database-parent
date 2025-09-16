@@ -97,8 +97,10 @@ class OnyxClient(
      * @param entityOrEntities Entity or list of entities.
      * @return Saved entity or original list.
      */
+    @Suppress("UNCHECKED_CAST")
     fun <T : Any> save(table: KClass<*>, entityOrEntities: T): T {
         val path = "/data/${encode(databaseId)}/${encode(table)}"
+
         return if (entityOrEntities is List<*>) {
             makeRequest(HttpMethod.Put, path, entityOrEntities)
             entityOrEntities
@@ -563,6 +565,7 @@ class OnyxClient(
                         val fetchList = value.filterNotNull().joinToString(",")
                         if (fetchList.isNotEmpty()) add("$key=${encode(fetchList)}")
                     }
+
                     else -> add("$key=${encode(value.toString())}")
                 }
             }
@@ -577,41 +580,92 @@ class OnyxClient(
         extraHeaders: Map<String, String> = emptyMap(),
         queryString: String = ""
     ): String {
-        val urlStr = "$baseUrl$path$queryString"
-        val url = URI(urlStr).toURL()
-        val conn = (url.openConnection() as HttpURLConnection)
-        try {
-            conn.requestMethod = method.value
-            conn.instanceFollowRedirects = true
-            conn.connectTimeout = Timeouts.CONNECT_TIMEOUT
-            conn.readTimeout = Timeouts.REQUEST_TIMEOUT
-            conn.doInput = true
-            val willSendBody = (method.value == "POST" || method.value == "PUT") && body != null
-            conn.doOutput = willSendBody
-            conn.useCaches = false
-            applyHeaders(conn, defaultHeaders(extraHeaders))
+        var currentUrl = java.net.URL("$baseUrl$path$queryString")
+        var methodToUse = method.value
+        var redirects = 0
 
-            if (willSendBody) {
-                conn.setChunkedStreamingMode(8 * 1024)
-                val payload = body as? String ?: body.toJson()
-                OutputStreamWriter(conn.outputStream, StandardCharsets.UTF_8).use {
-                    it.write(payload)
-                    it.flush()
-                }
-            }
+        // Prepare body bytes up-front (if any)
+        var bodyBytes: ByteArray? = null
+        if ((methodToUse == "POST" || methodToUse == "PUT") && body != null) {
+            val payload = (body as? String) ?: body.toJson()
+            bodyBytes = payload.toByteArray(StandardCharsets.UTF_8)
+            println("Payload: $payload")
+        }
 
-            val code = conn.responseCode
-            val text = conn.bodyAsString()
-            if (code !in 200..299) {
-                val msg = "HTTP $code @ $urlStr → $text"
-                throw when (code) {
-                    404 -> NotFoundException(msg, RuntimeException("HTTP $code"))
-                    else -> RuntimeException(msg)
+        while (true) {
+            val conn = (currentUrl.openConnection() as HttpURLConnection)
+            try {
+                conn.instanceFollowRedirects = false
+                conn.connectTimeout = Timeouts.CONNECT_TIMEOUT
+                conn.readTimeout = Timeouts.REQUEST_TIMEOUT
+                conn.useCaches = false
+                conn.doInput = true
+                conn.doOutput = bodyBytes != null
+                conn.requestMethod = methodToUse
+
+                // Headers
+                applyHeaders(conn, defaultHeaders(extraHeaders))
+                if (conn.getRequestProperty("Accept").isNullOrEmpty()) {
+                    conn.setRequestProperty("Accept", "application/json")
                 }
+                if (bodyBytes != null && conn.getRequestProperty("Content-Type").isNullOrEmpty()) {
+                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                }
+
+                // Fixed-length streaming (avoid chunked TE)
+                if (bodyBytes != null) {
+                    conn.setFixedLengthStreamingMode(bodyBytes.size)
+                }
+
+                conn.connect()
+
+                if (bodyBytes != null) {
+                    conn.outputStream.use { os ->
+                        os.write(bodyBytes)
+                        os.flush()
+                    }
+                }
+
+                val code = conn.responseCode
+
+                // Follow only 307/308 (preserve method + body)
+                if (code == HttpURLConnection.HTTP_MOVED_TEMP || code == 308) {
+                    val location = conn.getHeaderField("Location")
+                    conn.disconnect()
+                    if (!location.isNullOrEmpty() && redirects < 5) {
+                        currentUrl = java.net.URL(currentUrl, location)
+                        redirects++
+                        continue
+                    } else {
+                        throw RuntimeException("Redirect ($code) without Location or too many redirects")
+                    }
+                }
+
+                // Refuse 301/302/303 on methods with bodies (they would drop the body)
+                if ((code == 301 || code == 302 || code == 303) && bodyBytes != null) {
+                    val location = conn.getHeaderField("Location")
+                    val txt = conn.errorStream?.use { String(it.readBytes(), StandardCharsets.UTF_8) } ?: ""
+                    conn.disconnect()
+                    throw RuntimeException("Refusing to follow $code redirect for ${methodToUse} with body to $location. Response: $txt")
+                }
+
+                val stream = if (code >= 400) (conn.errorStream ?: conn.inputStream) else conn.inputStream
+                val text = stream?.use { String(it.readBytes(), StandardCharsets.UTF_8) } ?: ""
+
+                println("Response: $text")
+
+                if (code !in 200..299) {
+                    val msg = "HTTP $code @ ${conn.url} → $text"
+                    throw when (code) {
+                        404 -> NotFoundException(msg, RuntimeException("HTTP $code"))
+                        else -> RuntimeException(msg)
+                    }
+                }
+
+                return text
+            } finally {
+                conn.disconnect()
             }
-            return text
-        } finally {
-            conn.disconnect()
         }
     }
 }
@@ -637,6 +691,7 @@ class QueryBuilder internal constructor(
     private var updates: Map<String, Any?>? = null
 
     private enum class Mode { SELECT, UPDATE, DELETE }
+
     private var mode: Mode = Mode.SELECT
 
     private var pageSizeValue: Int? = null
@@ -723,6 +778,7 @@ class QueryBuilder internal constructor(
             currentCondition == null -> conditionToAdd
             currentCondition is QueryCondition.CompoundCondition && currentCondition.operator == logicalOperator ->
                 currentCondition.copy(conditions = currentCondition.conditions + conditionToAdd)
+
             else -> QueryCondition.CompoundCondition(
                 operator = logicalOperator,
                 conditions = listOf(currentCondition, conditionToAdd)
@@ -869,7 +925,8 @@ class QueryBuilder internal constructor(
      */
     fun <T : Any> list(type: KClass<*>): QueryResults<T> {
         check(mode == Mode.SELECT) { "Cannot call list() when the builder is in ${mode.name} mode." }
-        val targetTable = table ?: throw IllegalStateException("Table name must be specified using from() before calling list().")
+        val targetTable =
+            table ?: throw IllegalStateException("Table name must be specified using from() before calling list().")
         val queryPayload = buildSelectQueryPayload()
         val requestOptions = buildCommonOptions()
         val jsonResponse = client.executeQuery(targetTable, queryPayload, requestOptions)
@@ -883,7 +940,8 @@ class QueryBuilder internal constructor(
      * Counts rows that match current conditions.
      */
     fun count(): Int {
-        val targetTable = table ?: throw IllegalStateException("Table name must be specified using from() before calling count().")
+        val targetTable =
+            table ?: throw IllegalStateException("Table name must be specified using from() before calling count().")
         val countQueryPayload = mapOf(
             "type" to "SelectQuery",
             "conditions" to conditions,
@@ -900,7 +958,8 @@ class QueryBuilder internal constructor(
      */
     fun delete(): Int {
         check(mode == Mode.SELECT || mode == Mode.DELETE) { "delete() can only be called after setting conditions (where/and/or/partition), not in update mode." }
-        val targetTable = table ?: throw IllegalStateException("Table name must be specified using from() before calling delete().")
+        val targetTable =
+            table ?: throw IllegalStateException("Table name must be specified using from() before calling delete().")
         mode = Mode.DELETE
         val queryPayload = buildDeleteQueryPayload()
         val requestOptions = mapOf("partition" to partitionValue).filterValues { it != null }
@@ -915,7 +974,8 @@ class QueryBuilder internal constructor(
     fun update(): Int {
         check(mode == Mode.UPDATE) { "Must call setUpdates(...) before calling update()." }
         check(updates != null) { "No updates specified. Call setUpdates(...) first." }
-        val targetTable = table ?: throw IllegalStateException("Table name must be specified using from() before calling update().")
+        val targetTable =
+            table ?: throw IllegalStateException("Table name must be specified using from() before calling update().")
         val queryPayload = buildUpdateQueryPayload()
         val requestOptions = mapOf("partition" to partitionValue).filterValues { it != null }
         return client.executeUpdateQuery(targetTable, queryPayload, requestOptions)
@@ -989,7 +1049,8 @@ class QueryBuilder internal constructor(
      */
     fun <T> stream(type: KClass<*>, includeQueryResults: Boolean = true, keepAlive: Boolean = false): Job {
         check(mode == Mode.SELECT) { "Streaming is only applicable in select mode." }
-        val targetTable = table ?: throw IllegalStateException("Table name must be specified using from() before calling stream().")
+        val targetTable =
+            table ?: throw IllegalStateException("Table name must be specified using from() before calling stream().")
         val queryPayload = buildSelectQueryPayload()
 
         return CoroutineScope(Dispatchers.IO).launch {
@@ -1000,7 +1061,8 @@ class QueryBuilder internal constructor(
                         try {
                             val obj = trimmed.fromJson<StreamResponse>()!!
                             emit(obj)
-                        } catch (_: Exception) { }
+                        } catch (_: Exception) {
+                        }
                     }
                 }
                 .onEach { response ->
@@ -1029,8 +1091,10 @@ class QueryBuilder internal constructor(
         val nextPage: String? = null,
         val totalResults: Int = 0,
     ) {
-        @Transient internal var query: QueryBuilder? = null
-        @Transient internal var classType: KClass<*>? = null
+        @Transient
+        internal var query: QueryBuilder? = null
+        @Transient
+        internal var classType: KClass<*>? = null
 
         /** Current page records. */
         val records: List<T> by lazy {

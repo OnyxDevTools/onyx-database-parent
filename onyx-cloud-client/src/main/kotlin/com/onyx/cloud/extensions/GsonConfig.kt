@@ -114,7 +114,7 @@ private val kotlinDelegateExclusionStrategy = object : ExclusionStrategy {
 val gson: Gson = GsonBuilder()
     .enableComplexMapKeySerialization() // Allow non-primitive map keys
     .serializeSpecialFloatingPointValues() // Handle NaN, Infinity
-    // Do not serialize nulls to prevent null relationship payloads
+    .serializeNulls()
     .addSerializationExclusionStrategy(kotlinDelegateExclusionStrategy)
     .addDeserializationExclusionStrategy(kotlinDelegateExclusionStrategy)
     .registerTypeAdapterFactory(CyclicTypeAdapterFactory()) // Handle cyclical references

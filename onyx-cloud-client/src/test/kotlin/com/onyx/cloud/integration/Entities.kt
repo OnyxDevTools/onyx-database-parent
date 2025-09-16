@@ -15,9 +15,9 @@ data class User(
     var updatedAt: Date? = null,
     var deletedAt: Date? = null,
     // Resolvers
-    @Transient var roles: List<Role>? = null,
-    @Transient var profile: UserProfile? = null,
-    @Transient var userRoles: List<UserRole>? = null,
+    var roles: List<Role>? = null,
+    var profile: UserProfile? = null,
+    var userRoles: List<UserRole>? = null,
 )
 
 data class UserProfile(
@@ -44,8 +44,8 @@ data class Role(
     var updatedAt: Date? = null,
     var deletedAt: Date? = null,
     // Resolvers
-    @Transient var permissions: List<Permission>? = null,
-    @Transient var rolePermissions: List<RolePermission>? = null,
+    var permissions: List<Permission>? = null,
+    var rolePermissions: List<RolePermission>? = null,
 )
 
 data class Permission(
@@ -63,7 +63,7 @@ data class UserRole(
     var roleId: String? = null,
     var createdAt: Date? = null,
     // Resolver
-    @Transient var role: Role? = null,
+    var role: Role? = null,
 )
 
 data class RolePermission(
@@ -72,6 +72,6 @@ data class RolePermission(
     var permissionId: String? = null,
     var createdAt: Date? = null,
     // Resolvers
-    @Transient var permission: Permission? = null,
-    @Transient var role: Role? = null,
+    var permission: Permission? = null,
+    var role: Role? = null,
 )
