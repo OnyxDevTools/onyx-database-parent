@@ -65,7 +65,7 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
             is List<*> -> first = (first as? List<Any?>)
 
             // Handle pairs for BETWEEN and NOT_BETWEEN
-            is Pair<*, *> -> first = first as? Pair<Any?, Any?>
+            is Pair<*, *> -> {}//first = first as? Pair<Any?, Any?>
             is BigInteger -> first = (first as? Number)?.toLong()?.let { BigInteger.valueOf(it) }
             is BigDecimal -> first = (first as? Number)?.toDouble()?.let { BigDecimal.valueOf(it) }
 
@@ -124,16 +124,19 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
             }
 
             QueryCriteriaOperator.BETWEEN -> {
-                if (first !is Pair<Any?, Any?>) false
-                else
-                    first.first.compare(second, QueryCriteriaOperator.GREATER_THAN_EQUAL) &&
-                            first.second.compare(second, QueryCriteriaOperator.LESS_THAN_EQUAL)
+                // support range pair on either side of the comparison
+                val range = (first as? Pair<Any?, Any?>) ?: (second as? Pair<Any?, Any?>) ?: return false
+                val value = if (first is Pair<*, *>) second else first
+                return range.first.compare(value, QueryCriteriaOperator.GREATER_THAN_EQUAL) &&
+                        range.second.compare(value, QueryCriteriaOperator.LESS_THAN_EQUAL)
             }
 
             QueryCriteriaOperator.NOT_BETWEEN -> {
-                if (first !is Pair<Any?, Any?>) false
-                else !(first.first.compare(second, QueryCriteriaOperator.GREATER_THAN_EQUAL) &&
-                        first.second.compare(second, QueryCriteriaOperator.LESS_THAN_EQUAL))
+                // support range pair on either side of the comparison
+                val range = (first as? Pair<Any?, Any?>) ?: (second as? Pair<Any?, Any?>) ?: return false
+                val value = if (first is Pair<*, *>) second else first
+                return !(value.compare(range.first, QueryCriteriaOperator.GREATER_THAN_EQUAL) &&
+                         value.compare(range.second, QueryCriteriaOperator.LESS_THAN_EQUAL))
             }
 
             QueryCriteriaOperator.NOT_EQUAL -> first != second
