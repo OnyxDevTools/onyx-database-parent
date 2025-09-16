@@ -17,7 +17,7 @@ import java.math.BigInteger
 @JvmOverloads
 fun Any?.forceCompare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteriaOperator.EQUAL): Boolean = try {
     this.compare(compareTo, operator)
-} catch (invalidDataTypeForOperator: InvalidDataTypeForOperator) {
+} catch (_: InvalidDataTypeForOperator) {
     false
 }
 

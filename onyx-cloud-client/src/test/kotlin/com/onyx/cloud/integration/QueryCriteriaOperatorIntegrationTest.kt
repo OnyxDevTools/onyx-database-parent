@@ -17,6 +17,7 @@ class QueryCriteriaOperatorIntegrationTest {
         apiSecret = "bEJiEsuE28z1XeT/MHujy+1/6sqFMsZ4WK7M/M8BS34="
     )
 
+    @Suppress("SameParameterValue")
     private fun safeDelete(table: String, id: String) {
         try {
             client.delete(table, id)

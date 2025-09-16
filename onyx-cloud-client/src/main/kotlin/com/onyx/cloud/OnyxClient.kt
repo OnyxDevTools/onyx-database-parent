@@ -684,7 +684,7 @@ class OnyxClient(
         extraHeaders: Map<String, String> = emptyMap(),
         queryString: String = ""
     ): String {
-        var currentUrl = java.net.URL("$baseUrl$path$queryString")
+        var currentUrl = URI("$baseUrl$path$queryString").toURL()
         var methodToUse = method.value
         var redirects = 0
 
@@ -736,7 +736,7 @@ class OnyxClient(
                     val location = conn.getHeaderField("Location")
                     conn.disconnect()
                     if (!location.isNullOrEmpty() && redirects < 5) {
-                        currentUrl = java.net.URL(currentUrl, location)
+                        currentUrl = URI(location).toURL()
                         redirects++
                         continue
                     } else {
@@ -745,11 +745,11 @@ class OnyxClient(
                 }
 
                 // Refuse 301/302/303 on methods with bodies (they would drop the body)
-                if ((code == 301 || code == 302 || code == 303) && bodyBytes != null) {
+                if ((code == 301 || code == 303) && bodyBytes != null) {
                     val location = conn.getHeaderField("Location")
                     val txt = conn.errorStream?.use { String(it.readBytes(), StandardCharsets.UTF_8) } ?: ""
                     conn.disconnect()
-                    throw RuntimeException("Refusing to follow $code redirect for ${methodToUse} with body to $location. Response: $txt")
+                    throw RuntimeException("Refusing to follow $code redirect for $methodToUse with body to $location. Response: $txt")
                 }
 
                 val stream = if (code >= 400) (conn.errorStream ?: conn.inputStream) else conn.inputStream
