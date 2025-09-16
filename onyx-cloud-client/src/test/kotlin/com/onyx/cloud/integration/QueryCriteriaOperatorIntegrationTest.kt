@@ -95,10 +95,11 @@ class QueryCriteriaOperatorIntegrationTest {
     fun likeOperator() {
         val now = Date()
         val user = newUser(now, suffix = "like-test")
+        user.username = "user-like-test"
         client.save(user)
         try {
             val results = client.from<User>()
-                .where("username".like("%like-test"))
+                .where("username".like("user-Like-test"))
                 .list<User>()
             assertTrue(results.records.any { it.id == user.id })
         } finally {
