@@ -199,6 +199,47 @@ class OnyxCloudIntegrationTest {
     }
 
     @Test
+    fun saveMultipleUsersInSingleRequest() {
+        val now = Date()
+        val users = List(3) { newUser(now) }
+
+        try {
+            client.save(User::class, users)
+            users.forEach { user ->
+                val fetched = client.findById<User>(user.id!!)
+                assertNotNull(fetched, "User ${user.id} should exist after batch save")
+                assertEquals(user.username, fetched.username)
+            }
+        } finally {
+            users.forEach { user -> safeDelete("User", user.id!!) }
+        }
+    }
+
+    @Test
+    fun updateMultipleUsersInSingleRequest() {
+        val now = Date()
+        val users = List(2) { newUser(now) }
+
+        try {
+            client.save(User::class, users)
+
+            users.forEach { user ->
+                user.username = "batch-updated-${UUID.randomUUID().toString().substring(0, 8)}"
+                user.updatedAt = Date()
+            }
+
+            client.save(User::class, users)
+            users.forEach { user ->
+                val fetched = client.findById<User>(user.id!!)
+                assertNotNull(fetched, "User ${user.id} should be updated after batch save")
+                assertEquals(user.username, fetched.username)
+            }
+        } finally {
+            users.forEach { user -> safeDelete("User", user.id!!) }
+        }
+    }
+
+    @Test
     fun groupByActiveUsers() {
         client.from<User>().delete()
         val now = Date()
