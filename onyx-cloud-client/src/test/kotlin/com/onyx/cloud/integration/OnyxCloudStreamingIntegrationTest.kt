@@ -65,6 +65,7 @@ class OnyxCloudStreamingIntegrationTest {
 
     @Test
     fun streamWithPredicate() {
+        client.from<User>().delete()
         val now = Date()
         val inactiveInitial = newUser(now, isActive = false)
         val inactiveCreated = newUser(now, isActive = false)
@@ -101,6 +102,7 @@ class OnyxCloudStreamingIntegrationTest {
 
     @Test
     fun addSaveListenerWithoutQueryResults() {
+        client.from<User>().delete()
         val now = Date()
         val toCreate = newUser(now, isActive = true)
         val initial = mutableListOf<User>()

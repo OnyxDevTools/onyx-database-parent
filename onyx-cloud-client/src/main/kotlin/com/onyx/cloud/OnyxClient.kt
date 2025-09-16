@@ -604,13 +604,28 @@ class OnyxClient(
     fun save(table: String, entityOrEntities: Any, options: Map<String, Any?>): Any? {
         val queryString = buildQueryString(options)
         val path = "/data/${encode(databaseId)}/${encode(table)}"
-        return if (entityOrEntities is List<*>) {
-            makeRequest(HttpMethod.Put, path, entityOrEntities, queryString = queryString)
-            entityOrEntities
-        } else {
-            makeRequest(HttpMethod.Put, path, entityOrEntities, queryString = queryString).fromJson(entityOrEntities::class)
-                ?: throw IllegalStateException("Failed to parse response for save single entity")
+        // Perform save request and capture raw response
+        val response = makeRequest(HttpMethod.Put, path, entityOrEntities, queryString = queryString)
+        // Handle cascade updates or batch save: server may return an array or a single object
+        if (entityOrEntities is List<*> || options.containsKey("relationships")) {
+            // Determine element type from payload or default to Any
+            val elementType = if (entityOrEntities is List<*>)
+                entityOrEntities.firstOrNull()?.javaClass
+            else
+                entityOrEntities.javaClass
+            // Fallback to Any
+            val actualType = elementType ?: Any::class.java
+            // Try parsing response as array
+            response.fromJsonList<Any>(actualType)?.let { return it }
+            // Fallback to single-object response wrapped in list
+            response.fromJson<Any>(actualType.kotlin).let { return listOf(it) }
+            throw IllegalStateException("Failed to parse response for save list of entities")
         }
+        // Handle saving a single entity: server may return an object or an array
+        val entityType = entityOrEntities::class.java
+        response.fromJson<Any>(entityType.kotlin).let { return it }
+        response.fromJsonList<Any>(entityType)?.firstOrNull()?.let { return it }
+        throw IllegalStateException("Failed to parse response for save single entity")
     }
 
     /**

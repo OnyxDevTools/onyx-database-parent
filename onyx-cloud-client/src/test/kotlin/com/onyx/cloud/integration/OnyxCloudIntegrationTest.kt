@@ -242,26 +242,27 @@ class OnyxCloudIntegrationTest {
         val role = client.save(newRole(now))
         try {
             // Prepare nested payload for user with profile and roles
-            val userId = UUID.randomUUID().toString()
-            val userPayload = mapOf(
-                "id" to userId,
-                "email" to "cascade@example.com",
-                "userRoles" to listOf(mapOf("roleId" to role.id!!)),
-                "profile" to mapOf("firstName" to "Cascaded", "lastName" to "User")
-            )
-            client.cascade(
+            val user = newUser(now)
+                .apply {
+                    id = ""
+                    email = "cascade@example.com"
+                    userRoles = listOf(newUserRole("", role.id!!, Date()))
+                    profile = UserProfile().apply { firstName = "Cascaded" }
+                }
+
+            val saved: List<*> = client.cascade(
                 "userRoles:UserRole(userId,id)",
                 "profile:UserProfile(userId,id)"
-            ).save("User", userPayload)
+            ).save("User", user) as List<*>
 
             // Verify nested entities were created
             val profiles = client.from<UserProfile>()
-                .where("userId" eq userId)
+                .where("userId" eq (saved.first() as User).id)
                 .list<UserProfile>()
             assertTrue(profiles.records.any { it.firstName == "Cascaded" })
 
             val rolesAssigned = client.from<UserRole>()
-                .where("userId" eq userId)
+                .where("userId" eq (saved.first() as User).id)
                 .list<UserRole>()
             assertTrue(rolesAssigned.records.any { it.roleId == role.id })
         } finally {

@@ -31,26 +31,64 @@ data class CascadeInstruction(
  * @throws IllegalArgumentException if the format of any entry is invalid.
  */
 fun String.toCascadeInstructions(): List<CascadeInstruction> {
-    val mappings = mutableListOf<CascadeInstruction>()
-    val entries = this.split(",")
+    val input = this.trim()
+    if (input.isEmpty()) return emptyList()
 
-    for (entry in entries) {
-        val decoded = URLDecoder.decode(entry, StandardCharsets.UTF_8.name())
-        val parts = decoded.split(":")
-        if (parts.size != 2) {
-            throw IllegalArgumentException("Invalid cascade mapping format: $entry")
-        }
-        val attribute = parts[0].trim()
-        val typeAndArgs = parts[1].trim()
+    val entries = splitTopLevelByComma(input)
+    val mappings = ArrayList<CascadeInstruction>(entries.size)
 
-        val matchResult = Regex("(\\w+)\\((.+?),\\s*(.+?)\\)").find(typeAndArgs)
-        if (matchResult != null) {
-            val (type, target, source) = matchResult.destructured
-            mappings.add(CascadeInstruction(attribute, type, target, source))
-        } else {
-            throw IllegalArgumentException("Invalid cascade mapping format: $decoded")
-        }
+    // type(arg1, arg2) with flexible spacing
+    val typeSig = Regex("""^([A-Za-z_][A-Za-z0-9_]*)\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)$""")
+
+    for (raw in entries) {
+        val entry = raw.decodeURI().trim()
+        if (entry.isEmpty()) continue
+
+        val colon = entry.indexOf(':')
+        require(colon > 0 && colon < entry.lastIndex) { "Invalid cascade mapping format: $raw" }
+
+        val attribute = entry.substring(0, colon).trim()
+        val typeAndArgs = entry.substring(colon + 1).trim()
+
+        val match = typeSig.matchEntire(typeAndArgs)
+            ?: throw IllegalArgumentException("Invalid type/args segment: $raw")
+
+        val (type, target, source) = match.destructured
+        mappings.add(CascadeInstruction(attribute, type, target, source))
     }
 
     return mappings
 }
+
+private fun splitTopLevelByComma(s: String): List<String> {
+    val out = mutableListOf<String>()
+    val buf = StringBuilder()
+    var depth = 0
+    for (ch in s) {
+        when (ch) {
+            '(' -> {
+                depth++
+                buf.append(ch)
+            }
+            ')' -> {
+                depth--
+                if (depth < 0) throw IllegalArgumentException("Unbalanced parentheses in: $s")
+                buf.append(ch)
+            }
+            ',' -> if (depth == 0) {
+                val piece = buf.toString().trim()
+                if (piece.isNotEmpty()) out.add(piece)
+                buf.setLength(0)
+            } else {
+                buf.append(ch)
+            }
+            else -> buf.append(ch)
+        }
+    }
+    val last = buf.toString().trim()
+    if (last.isNotEmpty()) out.add(last)
+    if (depth != 0) throw IllegalArgumentException("Unbalanced parentheses in: $s")
+    return out
+}
+
+fun String.decodeURI(): String = URLDecoder.decode(this, "UTF-8")

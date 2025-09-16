@@ -18,7 +18,7 @@ class CascadeClientBuilder(
      * @return Result from the server.
      */
     fun save(table: String, entityOrEntities: Any): Any? =
-        client.save(table, entityOrEntities, mapOf("relationships" to relationships))
+        client.save(table, entityOrEntities, mapOf("relationships" to relationships.joinToString(",")))
 
     /**
      * Deletes an entity by primary key, including cascade relationships.

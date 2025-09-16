@@ -8,7 +8,7 @@ import kotlin.test.*
 class CascadeExtensionsTest {
     @Test
     fun `toCascadeInstructions parses single mapping`() {
-        val raw = "rel:Type(field1,field2)"
+        val raw = "rel:Type(field1, field2)"
         val instructions = raw.toCascadeInstructions()
         assertEquals(1, instructions.size)
         with(instructions[0]) {
