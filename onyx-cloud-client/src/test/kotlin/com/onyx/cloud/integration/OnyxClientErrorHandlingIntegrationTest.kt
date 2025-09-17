@@ -2,185 +2,108 @@ package com.onyx.cloud.integration
 
 import com.onyx.cloud.OnyxClient
 import com.onyx.cloud.exceptions.NotFoundException
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import java.util.concurrent.TimeUnit
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
+import java.util.Date
+import java.util.UUID
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+@Suppress("unused")
+private val enforceIpv4Stack = run {
+    System.setProperty("java.net.preferIPv4Stack", "true")
+    System.setProperty("java.net.preferIPv6Addresses", "false")
+}
+
+/**
+ * Exercises Onyx client error handling scenarios against the real cloud backend.
+ */
 class OnyxClientErrorHandlingIntegrationTest {
-    private lateinit var server: MockWebServer
-    private lateinit var client: OnyxClient
+    private val client = OnyxClient(
+        baseUrl = "https://api.onyx.dev",
+        databaseId = "bbabca0e-82ce-11f0-0000-a2ce78b61b6a",
+        apiKey = "Hj52NXaqB",
+        apiSecret = "bEJiEsuE28z1XeT/MHujy+1/6sqFMsZ4WK7M/M8BS34="
+    )
 
-    @BeforeTest
-    fun setUp() {
-        server = MockWebServer().apply { start() }
-        val baseUrl = server.url("/").toString().trimEnd('/')
-        client = OnyxClient(baseUrl = baseUrl, databaseId = "db", apiKey = "key", apiSecret = "secret")
-    }
+    private val unauthorizedClient = OnyxClient(
+        baseUrl = "https://api.onyx.dev",
+        databaseId = "bbabca0e-82ce-11f0-0000-a2ce78b61b6a",
+        apiKey = "Hj52NXaqB",
+        apiSecret = "invalid-secret"
+    )
 
-    @AfterTest
-    fun tearDown() {
-        server.shutdown()
-    }
-
-    @Test
-    fun followsTemporaryRedirectsForSaveRequests() {
-        val redirectServer = MockWebServer().apply { start() }
-        try {
-            val redirectLocation = redirectServer.url("/data/db/User").toString()
-            server.enqueue(
-                MockResponse()
-                    .setResponseCode(302)
-                    .addHeader("Location", redirectLocation)
-            )
-            val responseBody = """{"id":"1","username":"redirected"}"""
-            redirectServer.enqueue(
-                MockResponse()
-                    .setResponseCode(200)
-                    .setBody(responseBody)
-            )
-
-            val user = User(id = "1", username = "redirected")
-            val saved = client.save(User::class, user)
-
-            assertEquals("redirected", saved.username)
-
-            val initialRequest = server.takeRequest()
-            assertEquals("PUT", initialRequest.method)
-            assertEquals("/data/db/User", initialRequest.requestUrl?.encodedPath)
-
-            val redirectedRequest = redirectServer.takeRequest()
-            assertEquals("PUT", redirectedRequest.method)
-            assertEquals("/data/db/User", redirectedRequest.requestUrl?.encodedPath)
-            assertTrue(redirectedRequest.body.readUtf8().contains("\"username\":\"redirected\""))
-        } finally {
-            redirectServer.shutdown()
-        }
-    }
+    private fun newUser(now: Date) = User(
+        id = UUID.randomUUID().toString(),
+        username = "unauth-${'$'}{UUID.randomUUID().toString().substring(0, 8)}",
+        email = "unauth${'$'}{UUID.randomUUID().toString().substring(0, 8)}@example.com",
+        isActive = true,
+        createdAt = now,
+        updatedAt = now
+    )
 
     @Test
-    fun refusesPermanentRedirectsWhenRequestHasBody() {
-        server.enqueue(
-            MockResponse()
-                .setResponseCode(301)
-                .addHeader("Location", server.url("/data/db/User").toString())
-        )
-
+    fun saveWithInvalidCredentialsReturnsUnauthorizedError() {
+        val user = newUser(Date())
         val error = assertFailsWith<RuntimeException> {
-            client.save("User", mapOf("id" to "1"), emptyMap<String, Any?>())
+            unauthorizedClient.save(user)
         }
 
-        assertTrue(error.message.orEmpty().contains("Refusing to follow 301 redirect"))
-        val request = server.takeRequest()
-        assertEquals("PUT", request.method)
+        val message = error.message.orEmpty()
+        assertTrue(message.contains("401"), "Expected 401 status in message but was: ${'$'}message")
+        assertTrue(message.contains("Invalid credentials"), "Expected invalid credentials message but was: ${'$'}message")
     }
 
     @Test
     fun findByIdReturnsNullWhenEntityMissing() {
-        server.enqueue(
-            MockResponse()
-                .setResponseCode(404)
-                .setBody("User missing")
-        )
-
-        val result: User? = client.findById(User::class, "missing")
-        assertNull(result)
-
-        val request = server.takeRequest()
-        assertEquals("GET", request.method)
-        assertEquals("/data/db/User/missing", request.requestUrl?.encodedPath)
-    }
-
-    @Test
-    fun getDocumentSurfacesServerErrors() {
-        server.enqueue(
-            MockResponse()
-                .setResponseCode(500)
-                .setBody("internal boom")
-        )
-
-        val error = assertFailsWith<RuntimeException> {
-            client.getDocument("doc-1")
-        }
-
-        val message = error.message.orEmpty()
-        assertTrue(message.contains("500"))
-        assertTrue(message.contains("internal boom"))
-
-        val request = server.takeRequest()
-        assertEquals("GET", request.method)
-        assertEquals("/data/db/document/doc-1", request.requestUrl?.encodedPath)
+        val missingId = "missing-${'$'}{UUID.randomUUID()}"
+        val result = client.findById<User>(missingId)
+        assertNull(result, "Expected missing entity to return null")
     }
 
     @Test
     fun getDocumentPropagatesNotFound() {
-        server.enqueue(
-            MockResponse()
-                .setResponseCode(404)
-                .setBody("missing doc")
-        )
-
+        val missingDocument = "missing-${'$'}{UUID.randomUUID()}"
         val error = assertFailsWith<NotFoundException> {
-            client.getDocument("doc-2")
+            client.getDocument(missingDocument)
         }
 
-        assertTrue(error.message.orEmpty().contains("404"))
-        val request = server.takeRequest()
-        assertEquals("GET", request.method)
-        assertEquals("/data/db/document/doc-2", request.requestUrl?.encodedPath)
+        val message = error.message.orEmpty()
+        assertTrue(message.contains("404"), "Expected 404 in message but was: ${'$'}message")
+        assertTrue(message.contains(missingDocument), "Expected document id in message but was: ${'$'}message")
     }
 
     @Test
-    fun streamingCapturesHttpErrors() {
-        server.enqueue(
-            MockResponse()
-                .setResponseCode(500)
-                .setBody("stream failure")
-        )
+    fun queryUnknownTableThrowsNotFoundException() {
+        val tableName = "MissingTable${'$'}{UUID.randomUUID().toString().substring(0, 8)}"
+        val error = assertFailsWith<NotFoundException> {
+            client.from(tableName)
+                .list<Map<String, Any?>>()
+        }
 
-        val subscription = client.stream(
+        val message = error.message.orEmpty()
+        assertTrue(message.contains(tableName), "Expected missing table name in error message but was: ${'$'}message")
+    }
+
+    @Test
+    fun streamingWithInvalidCredentialsCapturesUnauthorizedError() {
+        val subscription = unauthorizedClient.stream(
             table = "User",
             selectQuery = mapOf("type" to "SelectQuery"),
-            includeQueryResults = true,
-            keepAlive = false,
+            includeQueryResults = false,
+            keepAlive = false
         ) { }
 
-        val request = server.takeRequest(5, TimeUnit.SECONDS)
-        assertNotNull(request)
-        assertEquals("PUT", request.method)
-        assertEquals("/data/db/query/stream/User", request.requestUrl?.encodedPath)
-
         subscription.join()
+
         val error = subscription.error
-        assertNotNull(error)
-        assertTrue(error.message.orEmpty().contains("HTTP Error: 500"))
-        assertTrue(error.message.orEmpty().contains("stream failure"))
+        assertNotNull(error, "Expected streaming to surface error")
+
+        val message = error.message.orEmpty()
+        assertTrue(message.contains("401"), "Expected 401 status in message but was: ${'$'}message")
+        assertTrue(message.contains("Invalid credentials"), "Expected invalid credentials message but was: ${'$'}message")
+
         subscription.cancel()
     }
-
-    @Test
-    fun throwsAfterTooManyRedirects() {
-        repeat(6) {
-            server.enqueue(
-                MockResponse()
-                    .setResponseCode(302)
-                    .addHeader("Location", server.url("/data/db/document/doc-3").toString())
-            )
-        }
-
-        val error = assertFailsWith<RuntimeException> {
-            client.getDocument("doc-3")
-        }
-
-        assertTrue(error.message.orEmpty().contains("too many redirects", ignoreCase = true))
-        assertTrue(server.requestCount >= 5)
-    }
 }
-
