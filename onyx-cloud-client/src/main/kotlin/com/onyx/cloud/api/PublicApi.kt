@@ -266,7 +266,7 @@ interface IConditionBuilder {
      *
      * @return Built [QueryCondition].
      */
-    fun toCondition(): QueryCondition
+    fun toCondition(): QueryCondition?
 }
 
 /**

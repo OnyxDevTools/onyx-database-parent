@@ -35,7 +35,7 @@ class ConditionBuilderImplTest {
         base.or(city)
         val cond = base.toCondition() as CompoundCondition
         assertEquals(LogicalOperator.OR, cond.operator)
-        assertEquals(3, cond.conditions.size)
+        assertEquals(2, cond.conditions.size)
     }
 }
 

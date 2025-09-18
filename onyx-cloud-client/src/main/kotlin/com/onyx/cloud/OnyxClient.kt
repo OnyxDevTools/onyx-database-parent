@@ -3,7 +3,6 @@
 package com.onyx.cloud
 
 import com.google.gson.*
-import com.google.gson.reflect.TypeToken
 import com.onyx.cloud.api.CascadeBuilderImpl
 import com.onyx.cloud.api.DeleteOptions
 import com.onyx.cloud.api.DocumentOptions
@@ -17,7 +16,6 @@ import com.onyx.cloud.api.IStreamSubscription
 import com.onyx.cloud.api.LogicalOperator
 import com.onyx.cloud.api.OnyxDocument
 import com.onyx.cloud.api.QueryCriteria
-import com.onyx.cloud.api.QueryResultsImpl
 import com.onyx.cloud.api.SaveOptions
 import com.onyx.cloud.api.Sort
 import com.onyx.cloud.exceptions.NotFoundException
@@ -738,7 +736,7 @@ class QueryBuilder(
     }
 
     private fun addCondition(builderToAdd: IConditionBuilder, logicalOperator: LogicalOperator) {
-        val conditionToAdd = builderToAdd.toCondition()
+        val conditionToAdd = builderToAdd.toCondition() ?: return
         val currentCondition = this.conditions
         this.conditions = when {
             currentCondition == null -> conditionToAdd
@@ -747,7 +745,7 @@ class QueryBuilder(
 
             else -> QueryCondition.CompoundCondition(
                 operator = logicalOperator,
-                conditions = listOf(currentCondition, conditionToAdd)
+                conditions = listOfNotNull(currentCondition, conditionToAdd)
             )
         }
     }
