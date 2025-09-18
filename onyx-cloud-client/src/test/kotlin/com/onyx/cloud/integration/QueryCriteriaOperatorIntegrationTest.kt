@@ -1,7 +1,7 @@
 package com.onyx.cloud.integration
 
 import com.onyx.cloud.OnyxClient
-import com.onyx.cloud.*
+import com.onyx.cloud.api.*
 import java.util.Date
 import java.util.UUID
 import kotlin.test.*
@@ -46,7 +46,7 @@ class QueryCriteriaOperatorIntegrationTest {
             val results = client.from<User>()
                 .where("id" inOp listOf(user1.id!!, user2.id!!))
                 .list<User>()
-            val ids = results.records.map { it.id }
+            val ids = results.getAllRecords().map { it.id }
             assertTrue(ids.containsAll(listOf(user1.id, user2.id)))
         } finally {
             safeDelete("User", user1.id!!)
@@ -65,7 +65,7 @@ class QueryCriteriaOperatorIntegrationTest {
             val results = client.from<User>()
                 .where("id" notIn listOf(user1.id!!))
                 .list<User>()
-            val ids = results.records.map { it.id }
+            val ids = results.getAllRecords().map { it.id }
             assertFalse(ids.contains(user1.id))
             assertTrue(ids.contains(user2.id))
         } finally {
@@ -86,7 +86,7 @@ class QueryCriteriaOperatorIntegrationTest {
                 .where("createdAt".between(start, end))
                 .and("id" eq user.id!!)
                 .list<User>()
-            assertTrue(results.records.any { it.id == user.id })
+            assertTrue(results.getAllRecords().any { it.id == user.id })
         } finally {
             safeDelete("User", user.id!!)
         }
@@ -102,7 +102,7 @@ class QueryCriteriaOperatorIntegrationTest {
             val results = client.from<User>()
                 .where("username".like("user-Like-test"))
                 .list<User>()
-            assertTrue(results.records.any { it.id == user.id })
+            assertTrue(results.getAllRecords().any { it.id == user.id })
         } finally {
             safeDelete("User", user.id!!)
         }
@@ -117,7 +117,7 @@ class QueryCriteriaOperatorIntegrationTest {
             val results = client.from<User>()
                 .where("username".matches("user-regex-test.*"))
                 .list<User>()
-            assertTrue(results.records.any { it.id == user.id })
+            assertTrue(results.getAllRecords().any { it.id == user.id })
         } finally {
             safeDelete("User", user.id!!)
         }
@@ -132,7 +132,7 @@ class QueryCriteriaOperatorIntegrationTest {
             val results = client.from<User>()
                 .where("username".contains("contain"))
                 .list<User>()
-            assertTrue(results.records.any { it.id == user.id })
+            assertTrue(results.getAllRecords().any { it.id == user.id })
         } finally {
             safeDelete("User", user.id!!)
         }
@@ -147,7 +147,7 @@ class QueryCriteriaOperatorIntegrationTest {
             val results = client.from<User>()
                 .where("username".containsIgnoreCase("casetest"))
                 .list<User>()
-            assertTrue(results.records.any { it.id == user.id })
+            assertTrue(results.getAllRecords().any { it.id == user.id })
         } finally {
             safeDelete("User", user.id!!)
         }
@@ -163,7 +163,7 @@ class QueryCriteriaOperatorIntegrationTest {
                 .where("username".notContains("xyz"))
                 .and("id" eq user.id!!)
                 .list<User>()
-            assertTrue(results.records.any { it.id == user.id })
+            assertTrue(results.getAllRecords().any { it.id == user.id })
         } finally {
             safeDelete("User", user.id!!)
         }
@@ -179,7 +179,7 @@ class QueryCriteriaOperatorIntegrationTest {
                 .where("username".notContainsIgnoreCase("xyz"))
                 .and("id" eq user.id!!)
                 .list<User>()
-            assertTrue(results.records.any { it.id == user.id })
+            assertTrue(results.getAllRecords().any { it.id == user.id })
         } finally {
             safeDelete("User", user.id!!)
         }

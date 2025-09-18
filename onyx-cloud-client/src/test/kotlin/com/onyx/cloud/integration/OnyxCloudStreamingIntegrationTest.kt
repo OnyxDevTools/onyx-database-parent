@@ -2,7 +2,7 @@ package com.onyx.cloud.integration
 
 import com.onyx.cloud.OnyxClient
 import com.onyx.cloud.StreamSubscription
-import com.onyx.cloud.eq
+import com.onyx.cloud.api.*
 import java.util.Date
 import java.util.UUID
 import kotlin.test.Test
@@ -39,7 +39,7 @@ class OnyxCloudStreamingIntegrationTest {
         val initialUser = newUser(now, isActive = true)
         val createdUser = newUser(now, isActive = true)
         client.save(initialUser)
-        var subscription: StreamSubscription? = null
+        var subscription: IStreamSubscription? = null
         try {
             val initial = mutableListOf<User>()
             val added = mutableListOf<User>()
@@ -72,7 +72,7 @@ class OnyxCloudStreamingIntegrationTest {
         val inactiveCreated = newUser(now, isActive = false)
         val activeCreated = newUser(now, isActive = true)
         client.save(inactiveInitial)
-        var subscription: StreamSubscription? = null
+        var subscription: IStreamSubscription? = null
         try {
             val initial = mutableListOf<User>()
             val added = mutableListOf<User>()
@@ -110,7 +110,7 @@ class OnyxCloudStreamingIntegrationTest {
         val toCreate = newUser(now, isActive = true)
         val initial = mutableListOf<User>()
         val added = mutableListOf<User>()
-        var subscription: StreamSubscription? = null
+        var subscription: IStreamSubscription? = null
         try {
             subscription = client.from<User>()
                 .where("isActive" eq true)
@@ -138,7 +138,7 @@ class OnyxCloudStreamingIntegrationTest {
         val now = Date()
         val toDelete = newUser(now, isActive = true)
         client.save(toDelete)
-        var subscription: StreamSubscription? = null
+        var subscription: IStreamSubscription? = null
         try {
             val deleted = mutableListOf<User>()
             subscription = client.from<User>()
@@ -165,7 +165,7 @@ class OnyxCloudStreamingIntegrationTest {
         val now = Date()
         val toUpdate = newUser(now, isActive = true)
         client.save(toUpdate)
-        var subscription: StreamSubscription? = null
+        var subscription: IStreamSubscription? = null
         try {
             val updated = mutableListOf<User>()
             subscription = client.from<User>()

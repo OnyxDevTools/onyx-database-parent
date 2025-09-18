@@ -1,7 +1,7 @@
 package com.onyx.cloud.integration
 
 import com.onyx.cloud.OnyxClient
-import com.onyx.cloud.eq
+import com.onyx.cloud.api.eq
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import java.util.UUID

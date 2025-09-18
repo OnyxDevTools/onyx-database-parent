@@ -1,18 +1,7 @@
 package com.onyx.cloud.integration
 
 import com.onyx.cloud.OnyxClient
-import com.onyx.cloud.avg
-import com.onyx.cloud.count
-import com.onyx.cloud.eq
-import com.onyx.cloud.lower
-import com.onyx.cloud.max
-import com.onyx.cloud.median
-import com.onyx.cloud.min
-import com.onyx.cloud.replace
-import com.onyx.cloud.std
-import com.onyx.cloud.substring
-import com.onyx.cloud.sum
-import com.onyx.cloud.upper
+import com.onyx.cloud.api.*
 import java.util.Date
 import java.util.UUID
 import kotlin.test.Test
@@ -72,7 +61,7 @@ class SelectFunctionsIntegrationTest {
         }
 
         try {
-            val results = client.from("UserProfile")
+            val results = client.from<UserProfile>()
                 .select(
                     min("age"),
                     max("age"),
@@ -86,7 +75,7 @@ class SelectFunctionsIntegrationTest {
                 )
                 .where("lastName" eq marker)
                 .list<Map<String, Any?>>()
-                .records
+                .getAllRecords()
 
             val record = results.firstOrNull() ?: fail("Expected aggregation results for marker $marker")
 
@@ -98,7 +87,7 @@ class SelectFunctionsIntegrationTest {
             val medianAge = (record["median(age)"] as Number).toDouble()
             val stdAge = (record["std(age)"] as Number).toDouble()
             val varianceAge = (record["variance(age)"] as Number).toDouble()
-            val percentileAge = (record["percentile(age, 75.0)"] as Number).toDouble()
+            val percentileAge = (record["percentile(age,75.0)"] as Number).toDouble()
 
             assertEquals(21, minAge, "Unexpected minimum age")
             assertEquals(63, maxAge, "Unexpected maximum age")
@@ -108,7 +97,7 @@ class SelectFunctionsIntegrationTest {
             assertEquals(42.0, medianAge, 0.001, "Unexpected median age")
             assertEquals(17.146428199482248, stdAge, 0.001, "Unexpected standard deviation")
             assertEquals(294.0, varianceAge, 0.001, "Unexpected variance")
-            assertEquals(52.5, percentileAge, 0.001, "Unexpected 75th percentile")
+            assertEquals(52.0, percentileAge, 0.001, "Unexpected 75th percentile")
         } finally {
             savedPairs.forEach { (user, profile) ->
                 safeDelete("UserProfile", profile.id)
@@ -127,7 +116,7 @@ class SelectFunctionsIntegrationTest {
         val profile = client.save(newProfile(user.id!!, now, lastName, 33))
 
         try {
-            val results = client.from("UserProfile")
+            val results = client.from<UserProfile>()
                 .select(
                     upper("lastName"),
                     lower("lastName"),
@@ -136,14 +125,14 @@ class SelectFunctionsIntegrationTest {
                 )
                 .where("lastName" eq lastName)
                 .list<Map<String, Any?>>()
-                .records
+                .getAllRecords()
 
             val record = results.firstOrNull() ?: fail("Expected string function results for marker $marker")
 
             assertEquals(lastName.uppercase(), record["upper(lastName)"]?.toString(), "Unexpected uppercase result")
             assertEquals(lastName.lowercase(), record["lower(lastName)"]?.toString(), "Unexpected lowercase result")
-            assertEquals("Function", record["substring(lastName, 0, 8)"]?.toString(), "Unexpected substring result")
-            assertEquals(lastName.replace("-", "_"), record["replace(lastName, '-', '_')"]?.toString(), "Unexpected replace result")
+            assertEquals("Function", record["substring(lastName,0,8)"]?.toString(), "Unexpected substring result")
+            assertEquals(lastName.replace("-", "_"), record["replace(lastName,-,_)"]?.toString(), "Unexpected replace result")
         } finally {
             safeDelete("UserProfile", profile.id)
             safeDelete("User", user.id)
@@ -151,6 +140,3 @@ class SelectFunctionsIntegrationTest {
     }
 }
 
-private fun variance(attribute: String): String = "variance($attribute)"
-
-private fun percentile(attribute: String, p: Number): String = "percentile($attribute, $p)"

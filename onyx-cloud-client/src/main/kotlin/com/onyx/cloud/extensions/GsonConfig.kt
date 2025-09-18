@@ -5,6 +5,7 @@ import com.google.gson.*
 import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
+import com.onyx.cloud.api.QueryResultsImpl
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -118,6 +119,7 @@ val gson: Gson = GsonBuilder()
     .addSerializationExclusionStrategy(kotlinDelegateExclusionStrategy)
     .addDeserializationExclusionStrategy(kotlinDelegateExclusionStrategy)
     .registerTypeAdapterFactory(CyclicTypeAdapterFactory()) // Handle cyclical references
+    .registerTypeAdapter(QueryResultsImpl::class.java, QueryResultsImplAdapter())
     .registerTypeAdapter(Date::class.java, JsonSerializer<Date> { src, _, _ ->
         // Serialize Date using the thread-local formatter
         JsonPrimitive(threadLocalDateTimeFormat.get().format(src))

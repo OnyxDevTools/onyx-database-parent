@@ -9,7 +9,7 @@ package com.onyx.cloud.api
 internal class CascadeBuilderImpl<Schema : Any>(
     private val delegate: IOnyxDatabase<Schema>,
     relationships: List<String>
-) : ICascadeBuilder<Schema> {
+) : ICascadeBuilder {
     private val cascadeRelationships: MutableList<String> = relationships.toMutableList()
 
     /**
@@ -18,7 +18,7 @@ internal class CascadeBuilderImpl<Schema : Any>(
      * @param relationships Relationship strings to include.
      * @return This builder for chaining.
      */
-    override fun cascade(vararg relationships: String): ICascadeBuilder<Schema> {
+    override fun cascade(vararg relationships: String): ICascadeBuilder {
         cascadeRelationships.addAll(relationships.asList())
         return this
     }

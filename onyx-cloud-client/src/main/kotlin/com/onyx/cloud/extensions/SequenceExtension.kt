@@ -1,12 +1,13 @@
 package com.onyx.cloud.extensions
 
-import com.onyx.cloud.QueryBuilder
+import com.onyx.cloud.api.IQueryBuilder
+import com.onyx.cloud.api.IQueryResults
+import com.onyx.cloud.api.QueryResultsImpl
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
-import kotlin.reflect.KClass
 
 /**
  * Returns a Sequence that streams every record in every page,
@@ -15,7 +16,7 @@ import kotlin.reflect.KClass
  * ⚠️  The sequence WILL block at page boundaries if the next page isn’t ready yet.
  */
 @Suppress("unused")
-fun <T : Any, R> QueryBuilder.QueryResults<T>.asSequence(
+fun <T : Any, R> IQueryResults<T>.asSequence(
     executor: ExecutorService = Executors.newSingleThreadExecutor(),
     filter: (T) -> Boolean = { true },
     transform: (T) -> R = {
@@ -23,20 +24,16 @@ fun <T : Any, R> QueryBuilder.QueryResults<T>.asSequence(
         it as R
     },
 ): Sequence<R> = sequence {
-    var current: QueryBuilder.QueryResults<T>? = this@asSequence
+    var current: IQueryResults<T>? = this@asSequence
 
-    val qb = current!!.query ?: error("Missing query context")
+    val qb = (current!! as QueryResultsImpl).query ?: error("Missing query context")
 
-    @Suppress("UNCHECKED_CAST")
-    val clazz = current.classType as? KClass<T>
-        ?: error("Missing record type")
-
-    var nextFuture: Future<QueryBuilder.QueryResults<T>?>? =
-        current.nextPage?.let { token -> submitFetch(executor, qb, clazz, token) }
+    var nextFuture: Future<IQueryResults<T>?>? =
+        current.nextPage?.let { token -> submitFetch(executor, qb, token) }
 
     while (current != null) {
         // 1) yield every record in the current page
-        current.records
+        (current as QueryResultsImpl).records
             .asSequence()
             .filter(filter)
             .map(transform)
@@ -57,15 +54,14 @@ fun <T : Any, R> QueryBuilder.QueryResults<T>.asSequence(
         // 3) kick off the fetch for page N+2
         nextFuture = current
             ?.nextPage
-            ?.let { token -> submitFetch(executor, qb, clazz, token) }
+            ?.let { token -> submitFetch(executor, qb, token) }
     }
 }
 
 /* ───────────────────────── helper ───────────────────────── */
 private fun <T : Any> submitFetch(
     executor: ExecutorService,
-    qb: QueryBuilder,
-    clazz: KClass<T>,
+    qb: IQueryBuilder,
     token: String,
-): Future<QueryBuilder.QueryResults<T>?> =
-    executor.submit(Callable { qb.nextPage(token).list(clazz) })
+): Future<IQueryResults<T>?> =
+    executor.submit(Callable { qb.nextPage(token).list() })

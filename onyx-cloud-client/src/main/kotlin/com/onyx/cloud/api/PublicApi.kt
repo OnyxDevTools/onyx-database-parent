@@ -2,6 +2,8 @@
 
 package com.onyx.cloud.api
 
+import com.onyx.cloud.QueryBuilder
+import com.onyx.cloud.QueryCondition
 import java.math.BigInteger
 
 /**
@@ -111,18 +113,6 @@ data class QueryCriteria(
 )
 
 /**
- * Recursive condition structure used to express complex WHERE clauses.
- */
-sealed interface QueryCondition
-
-data class SingleCondition(val criteria: QueryCriteria) : QueryCondition
-
-data class CompoundCondition(
-    val operator: LogicalOperator,
-    val conditions: List<QueryCondition>
-) : QueryCondition
-
-/**
  * Wire format for select queries sent to the server.
  */
 data class SelectQuery(
@@ -150,18 +140,11 @@ data class UpdateQuery(
 )
 
 /**
- * A single page of query results.
- */
-data class QueryPage<T>(
-    val records: List<T>,
-    val nextPage: String? = null
-)
-
-/**
  * Array-like container for paginated query results.
  * Provides convenience methods for traversing and aggregating records.
  */
-interface QueryResults<T : Any> : List<T> {
+interface IQueryResults<T : Any> : List<T> {
+
     /** Token for the next page of results or `null` if no more pages. */
     val nextPage: String?
 
@@ -175,16 +158,17 @@ interface QueryResults<T : Any> : List<T> {
     fun forEachOnPage(action: (T) -> Unit)
 
     /**
+     *
      * Iterates over every record across all pages sequentially.
      * Returning `false` stops iteration early.
      */
-    fun forEachAll(action: (T) -> Boolean?)
+    fun forEachAll(action: (T) -> Boolean)
 
     /**
      * Iterates page by page across the result set.
      * Returning `false` stops iteration early.
      */
-    fun forEachPage(action: (List<T>) -> Boolean?)
+    fun forEachPage(action: (List<T>) -> Boolean)
 
     /** Collects all records from every page into a single list. */
     fun getAllRecords(): List<T>
@@ -288,99 +272,102 @@ interface IConditionBuilder {
 /**
  * Fluent query builder for constructing and executing operations.
  */
-interface IQueryBuilder<T : Any> {
-    /** Sets the table to query. */
-    fun from(table: String): IQueryBuilder<T>
+interface IQueryBuilder {
 
     /** Selects a subset of fields to return. */
-    fun selectFields(vararg fields: String): IQueryBuilder<T>
+    fun select(vararg fields: String): IQueryBuilder
 
     /** Resolves related values by name. */
-    fun resolve(vararg values: String): IQueryBuilder<T>
-
-    /** Adds a filter condition. */
-    fun where(condition: QueryCriteria): IQueryBuilder<T>
+    fun resolve(vararg values: String): IQueryBuilder
 
     /** Adds a filter using a builder. */
-    fun where(builder: IConditionBuilder): IQueryBuilder<T>
-
-    /** Adds an additional `AND` criteria. */
-    fun and(condition: QueryCriteria): IQueryBuilder<T>
+    fun where(builder: IConditionBuilder): IQueryBuilder
 
     /** Adds an additional `AND` builder. */
-    fun and(builder: IConditionBuilder): IQueryBuilder<T>
-
-    /** Adds an additional `OR` criteria. */
-    fun or(condition: QueryCriteria): IQueryBuilder<T>
+    fun and(builder: IConditionBuilder): IQueryBuilder
 
     /** Adds an additional `OR` builder. */
-    fun or(builder: IConditionBuilder): IQueryBuilder<T>
+    fun or(builder: IConditionBuilder): IQueryBuilder
 
     /** Orders results by the provided fields. */
-    fun orderBy(vararg sorts: Sort): IQueryBuilder<T>
+    fun orderBy(vararg sorts: Sort): IQueryBuilder
 
     /** Groups results by the provided fields. */
-    fun groupBy(vararg fields: String): IQueryBuilder<T>
+    fun groupBy(vararg fields: String): IQueryBuilder
 
     /** Ensures only distinct records are returned. */
-    fun distinct(): IQueryBuilder<T>
+    fun distinct(): IQueryBuilder
 
     /** Limits the number of records returned. */
-    fun limit(n: Int): IQueryBuilder<T>
+    fun limit(n: Int): IQueryBuilder
 
     /** Restricts the query to a specific partition. */
-    fun inPartition(partition: String): IQueryBuilder<T>
+    fun inPartition(partition: String): IQueryBuilder
 
     /** Sets the page size for subsequent `list` or `page` calls. */
-    fun pageSize(n: Int): IQueryBuilder<T>
+    fun pageSize(n: Int): IQueryBuilder
 
     /** Continues a paged query using a next-page token. */
-    fun nextPage(token: String): IQueryBuilder<T>
+    fun nextPage(token: String): IQueryBuilder
 
     /** Counts matching records. */
-    fun count(): Long
+    fun count(): Int
 
     /** Lists records with optional pagination. */
-    fun list(options: ListOptions? = null): QueryResults<T>
+    fun <T : Any> list(): IQueryResults<T>
 
     /** Retrieves the first record or null. */
-    fun firstOrNull(): T?
+    fun <T : Any> firstOrNull(): T?
 
     /** Retrieves exactly one record or null. */
-    fun one(): T?
-
-    /** Retrieves a single page of records with optional next token. */
-    fun page(options: ListOptions? = null): QueryPage<T>
+    fun <T : Any> one(): T?
 
     /** Sets field updates for an update query. */
-    fun setUpdates(updates: Map<String, Any?>): IQueryBuilder<T>
+    fun setUpdates(vararg updates: Pair<String, Any?>): IQueryBuilder
 
     /** Executes an update operation. */
-    fun update(): Any?
+    fun update(): Int
 
     /** Executes a delete operation. */
-    fun delete(): Any?
+    fun delete(): Int
 
     /** Registers a listener for added items on a stream. */
-    fun onItemAdded(listener: (T) -> Unit): IQueryBuilder<T>
+    fun <T : Any> onItemAdded(listener: (T) -> Unit): IQueryBuilder
 
     /** Registers a listener for updated items on a stream. */
-    fun onItemUpdated(listener: (T) -> Unit): IQueryBuilder<T>
+    fun <T : Any> onItemUpdated(listener: (T) -> Unit): IQueryBuilder
 
     /** Registers a listener for deleted items on a stream. */
-    fun onItemDeleted(listener: (T) -> Unit): IQueryBuilder<T>
+    fun <T : Any> onItemDeleted(listener: (T) -> Unit): IQueryBuilder
 
     /** Registers a listener for any stream item with its action. */
-    fun onItem(listener: (T?, StreamAction) -> Unit): IQueryBuilder<T>
+    fun <T : Any> onItem(listener: (T) -> Unit): IQueryBuilder
 
     /** Starts a stream including query results. */
-    fun stream(includeQueryResults: Boolean = false, keepAlive: Boolean = false): StreamHandle
+    fun <T> stream(includeQueryResults: Boolean = false, keepAlive: Boolean = false): IStreamSubscription
+}
 
-    /** Starts a stream emitting only events. */
-    fun streamEventsOnly(keepAlive: Boolean = false): StreamHandle
+/** Sets the table to query. */
+inline fun <reified T> IQueryBuilder.from(): IQueryBuilder {
+    (this as? QueryBuilder)?.apply {
+        this.table = T::class.simpleName!!
+        this.type = T::class
+    }
+    return this
+}
 
-    /** Starts a stream that returns events alongside query results. */
-    fun streamWithQueryResults(keepAlive: Boolean = false): StreamHandle
+interface IStreamSubscription : AutoCloseable {
+    /** Stops the stream without waiting for the background thread to finish. */
+    fun cancel()
+
+    /** Waits for the background thread to finish processing. */
+    fun join()
+
+    /** Convenience helper that cancels the stream and waits for it to finish. */
+    fun cancelAndJoin()
+
+    /** Latest error observed while streaming, or `null` if none occurred. */
+    val error: Throwable?
 }
 
 /**
@@ -390,13 +377,6 @@ interface IQueryBuilder<T : Any> {
  * @property nextPage Token for the next page.
  */
 data class ListOptions(val pageSize: Int? = null, val nextPage: String? = null)
-
-/**
- * Handle returned by streaming operations.
- *
- * @property cancel Cancels the active stream.
- */
-data class StreamHandle(val cancel: () -> Unit)
 
 /** Builder for save operations. */
 interface ISaveBuilder<T : Any> {
@@ -411,9 +391,9 @@ interface ISaveBuilder<T : Any> {
 }
 
 /** Builder for cascading save/delete operations across multiple tables. */
-interface ICascadeBuilder<Schema : Any> {
+interface ICascadeBuilder {
     /** Specifies relationships to cascade through. */
-    fun cascade(vararg relationships: String): ICascadeBuilder<Schema>
+    fun cascade(vararg relationships: String): ICascadeBuilder
 
     /** Saves one or many entities for a given table. */
     fun save(table: String, entityOrEntities: Any): Any?
@@ -464,11 +444,9 @@ data class OnyxConfig(
 
 /** Database client interface. */
 interface IOnyxDatabase<Schema : Any> {
-    /** Begin a query against a table. */
-    fun from(table: String): IQueryBuilder<Any>
 
     /** Select specific fields for a query. */
-    fun select(vararg fields: String): IQueryBuilder<Map<String, Any?>>
+    fun select(vararg fields: String): IQueryBuilder
 
     /**
      * Include related entities for cascading when saving or deleting.
@@ -476,31 +454,15 @@ interface IOnyxDatabase<Schema : Any> {
      * @param relationships Relationship strings to cascade.
      * @return Builder for cascading save or delete operations.
      */
-    fun cascade(vararg relationships: String): ICascadeBuilder<Schema> =
+    fun cascade(vararg relationships: String): ICascadeBuilder =
         CascadeBuilderImpl(this, relationships.toList())
 
-    /**
-     * Start a save builder for inserting or updating entities with cascade support.
-     *
-     * @param table Table name to save entities into.
-     * @return Builder for save operations.
-     */
-    fun save(table: String): ISaveBuilder<Any> = SaveBuilderImpl(this as IOnyxDatabase<Any>, table)
-
     /** Save one or many entities immediately. */
-    fun save(
+    fun <T> save(
         table: String,
-        entityOrEntities: Any,
+        entityOrEntities: T,
         options: SaveOptions? = null
-    ): Any?
-
-    /** Save many entities in configurable batches. */
-    fun batchSave(
-        table: String,
-        entities: List<Any>,
-        batchSize: Int = 1000,
-        options: SaveOptions? = null
-    )
+    ): T
 
     /** Retrieve an entity by its primary key. */
     fun findById(
@@ -592,147 +554,203 @@ fun desc(field: String): Sort = Sort(field, SortOrder.DESC)
 /**
  * Equality condition.
  *
- * @param field Field to compare.
+ * @receiver Field to compare.
  * @param value Value to match.
  */
-fun eq(field: String, value: Any?): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.EQUAL, value))
+infix fun String.eq(value: Any?): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.EQUAL, value))
 
 /**
  * Inequality condition.
  *
- * @param field Field to compare.
+ * @receiver Field to compare.
  * @param value Value that should not match.
  */
-fun neq(field: String, value: Any?): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.NOT_EQUAL, value))
+infix fun String.neq(value: Any?): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.NOT_EQUAL, value))
 
 /**
  * In condition.
  *
- * @param field Field to compare.
+ * @receiver Field to compare.
  * @param values Allowed values or comma-delimited string.
  */
-fun inOp(field: String, values: Any): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.IN, values))
+infix fun String.inOp(values: Any): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.IN, values))
 
 /**
  * Not in condition.
  *
- * @param field Field to compare.
+ * @receiver Field to compare.
  * @param values Disallowed values.
  */
-fun notIn(field: String, values: Any): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.NOT_IN, values))
+infix fun String.notIn(values: Any): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.NOT_IN, values))
 
 /**
  * Between condition.
  *
- * @param field Field to compare.
- * @param lower Lower bound.
- * @param upper Upper bound.
+ * @receiver Field to compare.
+ * @param bounds Lower and upper bounds as a pair.
+ *
+ * Usage: `"age" between (18 to 30)`
  */
-fun between(field: String, lower: Any, upper: Any): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.BETWEEN, listOf(lower, upper)))
+infix fun <T : Any> String.between(bounds: Pair<T, T>): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.BETWEEN, listOf(bounds.first, bounds.second)))
+
+/**
+ * Between condition.
+ *
+ * @receiver Field to compare.
+ * @param from Lower bound
+ * @param to Upper bound
+ *
+ * Usage: `"age" between (18 to 30)`
+ */
+fun <T : Any> String.between(from: T, to: T): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.BETWEEN, listOf(from, to)))
 
 /**
  * Greater than condition.
  *
- * @param field Field to compare.
+ * @receiver Field to compare.
  * @param value Value that must be exceeded.
  */
-fun gt(field: String, value: Any): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.GREATER_THAN, value))
+infix fun String.gt(value: Any): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.GREATER_THAN, value))
 
 /**
  * Greater than or equal condition.
+ *
+ * @receiver Field to compare.
+ * @param value Value that must be met or exceeded.
  */
-fun gte(field: String, value: Any): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.GREATER_THAN_EQUAL, value))
+infix fun String.gte(value: Any): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.GREATER_THAN_EQUAL, value))
 
 /**
  * Less than condition.
+ *
+ * @receiver Field to compare.
+ * @param value Upper bound (exclusive).
  */
-fun lt(field: String, value: Any): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.LESS_THAN, value))
+infix fun String.lt(value: Any): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.LESS_THAN, value))
 
 /**
  * Less than or equal condition.
+ *
+ * @receiver Field to compare.
+ * @param value Upper bound (inclusive).
  */
-fun lte(field: String, value: Any): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.LESS_THAN_EQUAL, value))
+infix fun String.lte(value: Any): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.LESS_THAN_EQUAL, value))
 
 /**
  * Regex match condition.
+ *
+ * @receiver Field to compare.
+ * @param regex Regular expression to match.
  */
-fun matches(field: String, regex: String): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.MATCHES, regex))
+infix fun String.matches(regex: String): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.MATCHES, regex))
 
 /**
  * Negative regex match condition.
+ *
+ * @receiver Field to compare.
+ * @param regex Regular expression that must not match.
  */
-fun notMatches(field: String, regex: String): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.NOT_MATCHES, regex))
+infix fun String.notMatches(regex: String): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.NOT_MATCHES, regex))
 
 /**
  * Like condition.
+ *
+ * @receiver Field to compare.
+ * @param pattern Pattern for LIKE comparison.
  */
-fun like(field: String, pattern: String): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.LIKE, pattern))
+infix fun String.like(pattern: String): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.LIKE, pattern))
 
 /**
  * Not like condition.
+ *
+ * @receiver Field to compare.
+ * @param pattern Pattern that must not match.
  */
-fun notLike(field: String, pattern: String): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.NOT_LIKE, pattern))
+infix fun String.notLike(pattern: String): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.NOT_LIKE, pattern))
 
 /**
  * Contains condition.
+ *
+ * @receiver Field to compare.
+ * @param value Value that must be contained.
  */
-fun contains(field: String, value: Any): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.CONTAINS, value))
+infix fun String.contains(value: Any): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.CONTAINS, value))
 
 /**
  * Case-insensitive contains condition.
+ *
+ * @receiver Field to compare.
+ * @param value Value that must be contained (case-insensitive).
  */
-fun containsIgnoreCase(field: String, value: Any): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.CONTAINS_IGNORE_CASE, value))
+infix fun String.containsIgnoreCase(value: Any): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.CONTAINS_IGNORE_CASE, value))
 
 /**
  * Not contains condition.
+ *
+ * @receiver Field to compare.
+ * @param value Value that must not be contained.
  */
-fun notContains(field: String, value: Any): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.NOT_CONTAINS, value))
+infix fun String.notContains(value: Any): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.NOT_CONTAINS, value))
 
 /**
  * Case-insensitive not contains condition.
+ *
+ * @receiver Field to compare.
+ * @param value Value that must not be contained (case-insensitive).
  */
-fun notContainsIgnoreCase(field: String, value: Any): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.NOT_CONTAINS_IGNORE_CASE, value))
+infix fun String.notContainsIgnoreCase(value: Any): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.NOT_CONTAINS_IGNORE_CASE, value))
 
 /**
  * Starts with condition.
+ *
+ * @receiver Field to compare.
+ * @param prefix Required prefix.
  */
-fun startsWith(field: String, prefix: String): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.STARTS_WITH, prefix))
+infix fun String.startsWith(prefix: String): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.STARTS_WITH, prefix))
 
 /**
  * Not starts with condition.
+ *
+ * @receiver Field to compare.
+ * @param prefix Disallowed prefix.
  */
-fun notStartsWith(field: String, prefix: String): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.NOT_STARTS_WITH, prefix))
+infix fun String.notStartsWith(prefix: String): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.NOT_STARTS_WITH, prefix))
 
 /**
  * Is null condition.
+ *
+ * @receiver Field to compare.
  */
-fun isNull(field: String): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.IS_NULL, null))
+fun String.isNull(): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.IS_NULL, null))
 
 /**
  * Not null condition.
+ *
+ * @receiver Field to compare.
  */
-fun notNull(field: String): ConditionBuilderImpl =
-    ConditionBuilderImpl(QueryCriteria(field, QueryCriteriaOperator.NOT_NULL, null))
+fun String.notNull(): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.NOT_NULL, null))
 
 /**
  * Average aggregation helper.

@@ -1,7 +1,7 @@
 package com.onyx.cloud.integration
 
 import com.onyx.cloud.OnyxClient
-import com.onyx.cloud.*
+import com.onyx.cloud.api.*
 import java.util.Date
 import java.util.UUID
 import kotlin.test.Test
@@ -56,7 +56,7 @@ class QuerySortOrderIntegrationTest {
                 .orderBy(asc("username"))
                 .list<User>()
 
-            val actualOrder = results.records.mapNotNull { it.username }
+            val actualOrder = results.getAllRecords().mapNotNull { it.username }
             assertEquals(expectedOrder, actualOrder)
         } finally {
             savedUsers.forEach { user ->
@@ -79,7 +79,7 @@ class QuerySortOrderIntegrationTest {
                 .orderBy(desc("username"))
                 .list<User>()
 
-            val actualOrder = results.records.mapNotNull { it.username }
+            val actualOrder = results.getAllRecords().mapNotNull { it.username }
             assertEquals(expectedOrder, actualOrder)
         } finally {
             savedUsers.forEach { user ->

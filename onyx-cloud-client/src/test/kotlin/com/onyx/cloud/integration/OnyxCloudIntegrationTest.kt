@@ -1,7 +1,7 @@
 package com.onyx.cloud.integration
 
 import com.onyx.cloud.OnyxClient
-import com.onyx.cloud.eq
+import com.onyx.cloud.api.*
 import kotlin.test.*
 import java.util.Date
 import java.util.UUID
@@ -102,7 +102,7 @@ class OnyxCloudIntegrationTest {
             val results = client.from<User>()
                 .where("isActive" eq true)
                 .list<User>()
-            assertTrue(results.records.any { it.id == user.id })
+            assertTrue(results.getAllRecords().any { it.id == user.id })
         } finally {
             safeDelete("User", user.id!!)
         }
@@ -118,7 +118,7 @@ class OnyxCloudIntegrationTest {
                 .where("username" eq user.username!!)
                 .or("email" eq user.email!!)
                 .list<User>()
-            assertTrue(results.records.any { it.id == user.id })
+            assertTrue(results.getAllRecords().any { it.id == user.id })
         } finally {
             safeDelete("User", user.id!!)
         }
@@ -267,12 +267,12 @@ class OnyxCloudIntegrationTest {
             val profiles = client.from<UserProfile>()
                 .where("userId" eq (saved.first() as User).id)
                 .list<UserProfile>()
-            assertTrue(profiles.records.any { it.firstName == "Cascaded" })
+            assertTrue(profiles.getAllRecords().any { it.firstName == "Cascaded" })
 
             val rolesAssigned = client.from<UserRole>()
                 .where("userId" eq (saved.first() as User).id)
                 .list<UserRole>()
-            assertTrue(rolesAssigned.records.any { it.roleId == role.id })
+            assertTrue(rolesAssigned.getAllRecords().any { it.roleId == role.id })
         } finally {
             // Clean up
             client.run { from<User>().where("email" eq "cascade@example.com").delete() }
@@ -310,12 +310,12 @@ class OnyxCloudIntegrationTest {
         client.save(inactive)
 
         try {
-            val results = client.from("User")
-                .select("isActive", "count(id)")
+            val results = client.from<User>()
+                .select("isActive", count("id"))
                 .groupBy("isActive")
                 .list<Map<String, Any>>()
 
-            val counts = results.records.associate {
+            val counts = results.getAllRecords().associate {
                 (it["isActive"] as Boolean) to (it["count(id)"] as Number).toInt()
             }
 
@@ -376,7 +376,7 @@ class OnyxCloudIntegrationTest {
                 .inPartition(user.id!!)
                 .where("id" eq profile.id!!)
                 .list<UserProfile>()
-            assertTrue(results.records.any { it.id == profile.id })
+            assertTrue(results.getAllRecords().any { it.id == profile.id })
         } finally {
             safeDeleteInPartition("UserProfile", profile.id!!, user.id!!)
             safeDelete("User", user.id!!)

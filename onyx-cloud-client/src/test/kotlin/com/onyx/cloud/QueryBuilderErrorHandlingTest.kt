@@ -1,7 +1,9 @@
 package com.onyx.cloud
 
 import com.google.gson.JsonParser
+import com.onyx.cloud.api.matches
 import com.onyx.cloud.exceptions.NotFoundException
+import com.onyx.cloud.integration.User
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import kotlin.test.AfterTest
@@ -38,7 +40,7 @@ class QueryBuilderErrorHandlingTest {
         )
 
         val error = assertFailsWith<RuntimeException> {
-            client.from("Users")
+            client.from<User>()
                 .select("id", "favoriteColor")
                 .list<Map<String, Any?>>()
         }
@@ -48,7 +50,7 @@ class QueryBuilderErrorHandlingTest {
 
         val request = server.takeRequest()
         assertEquals("PUT", request.method)
-        assertEquals("/data/db/query/Users", request.requestUrl?.encodedPath)
+        assertEquals("/data/db/query/User", request.requestUrl?.encodedPath)
 
         val payload = JsonParser.parseString(request.body.readUtf8()).asJsonObject
         val fields = payload["fields"]?.asJsonArray?.map { it.asString } ?: emptyList()
@@ -64,7 +66,7 @@ class QueryBuilderErrorHandlingTest {
         )
 
         val error = assertFailsWith<RuntimeException> {
-            client.from("Users")
+            client.from<Users>()
                 .resolve("friends", "ghost")
                 .list<Map<String, Any?>>()
         }
@@ -87,7 +89,7 @@ class QueryBuilderErrorHandlingTest {
         )
 
         val error = assertFailsWith<NotFoundException> {
-            client.from("MissingEntity")
+            client.from<MissingEntity>()
                 .list<Map<String, Any?>>()
         }
 
@@ -107,7 +109,7 @@ class QueryBuilderErrorHandlingTest {
         )
 
         val error = assertFailsWith<RuntimeException> {
-            client.from("Users")
+            client.from<Users>()
                 .where("status".matches(".*active.*"))
                 .list<Map<String, Any?>>()
         }
@@ -133,3 +135,5 @@ class QueryBuilderErrorHandlingTest {
     }
 }
 
+data class Users(val id: String, val name: String, val email: String)
+data class MissingEntity(val id: String, val name: String, val email: String)

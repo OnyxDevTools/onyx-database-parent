@@ -1,5 +1,6 @@
 package com.onyx.cloud.api
 
+import com.onyx.cloud.QueryCondition.CompoundCondition
 import kotlin.test.*
 
 /**

@@ -1,9 +1,16 @@
 package com.onyx.cloud
 
+import com.onyx.cloud.api.ConditionBuilderImpl
+import com.onyx.cloud.api.LogicalOperator
+import com.onyx.cloud.api.QueryCriteriaOperator
+import com.onyx.cloud.api.between
+import com.onyx.cloud.api.eq
+import com.onyx.cloud.api.gt
+import com.onyx.cloud.api.inOp
 import kotlin.test.*
 
 /**
- * Validates logical composition and helper functions provided by [ConditionBuilder].
+ * Validates logical composition and helper functions provided by [ConditionBuilderImpl].
  */
 class ConditionBuilderTest {
     @Test
@@ -64,8 +71,8 @@ class ConditionBuilderTest {
 
     @Test
     fun combiningWithEmptyBuildersSkipsNullConditions() {
-        val empty = ConditionBuilder()
-        empty.and(ConditionBuilder())
+        val empty = ConditionBuilderImpl()
+        empty.and(ConditionBuilderImpl())
         assertNull(empty.toCondition())
 
         empty.or("name".eq("Alice"))
@@ -77,7 +84,7 @@ class ConditionBuilderTest {
 
     @Test
     fun helperFunctionsProduceExpectedValues() {
-        val between = "age".between(18, 30)
+        val between = "age".between(18 to 30)
         val betweenCondition = assertIs<QueryCondition.SingleCondition>(between.toCondition())
         assertEquals(QueryCriteriaOperator.BETWEEN, betweenCondition.criteria.operator)
         assertEquals(listOf(18, 30), betweenCondition.criteria.value)
@@ -85,6 +92,6 @@ class ConditionBuilderTest {
         val inOpBuilder = "tags".inOp(listOf("a", "b", 3))
         val inCondition = assertIs<QueryCondition.SingleCondition>(inOpBuilder.toCondition())
         assertEquals(QueryCriteriaOperator.IN, inCondition.criteria.operator)
-        assertEquals("a,b,3", inCondition.criteria.value)
+        assertEquals(listOf("a","b","3").toString(), inCondition.criteria.value.toString())
     }
 }

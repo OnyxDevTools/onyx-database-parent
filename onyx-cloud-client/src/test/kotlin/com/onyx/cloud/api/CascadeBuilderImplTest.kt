@@ -13,24 +13,18 @@ class CascadeBuilderImplTest {
     fun `save() invokes underlying save with configured cascade relationships`() {
         val saveCalls = mutableListOf<SaveCaptured>()
         val stubDb = object : IOnyxDatabase<Any> {
-            override fun save(
-                table: String,
-                entityOrEntities: Any,
-                options: SaveOptions?
-            ): Any? {
-                saveCalls.add(SaveCaptured(table, entityOrEntities, options))
-                return "saved"
-            }
-            // Unused
-            override fun from(table: String) = throw UnsupportedOperationException()
+
             override fun select(vararg fields: String) = throw UnsupportedOperationException()
             override fun cascade(vararg relationships: String) = throw UnsupportedOperationException()
-            override fun batchSave(
+            override fun <T> save(
                 table: String,
-                entities: List<Any>,
-                batchSize: Int,
+                entityOrEntities: T,
                 options: SaveOptions?
-            ) = throw UnsupportedOperationException()
+            ): T {
+                saveCalls.add(SaveCaptured(table, entityOrEntities as Any, options))
+                @Suppress("UNCHECKED_CAST")
+                return entityOrEntities as T
+            }
             override fun findById(
                 table: String,
                 primaryKey: String,
@@ -50,7 +44,8 @@ class CascadeBuilderImplTest {
             .cascade("r2", "r3")
         val entity = mapOf("id" to 10)
         val result = builder.save("Entity", entity)
-        assertEquals("saved", result)
+        assertEquals(entity, result)
+        @Suppress("KotlinConstantConditions")
         assertEquals(1, saveCalls.size)
         with(saveCalls.first()) {
             assertEquals("Entity", table)
@@ -72,21 +67,17 @@ class CascadeBuilderImplTest {
                 return "deleted"
             }
             // Unused
-            override fun from(table: String) = throw UnsupportedOperationException()
             override fun select(vararg fields: String) = throw UnsupportedOperationException()
             override fun cascade(vararg relationships: String) = throw UnsupportedOperationException()
-            override fun save(table: String) = throw UnsupportedOperationException()
-            override fun save(
+
+            override fun <T> save(
                 table: String,
-                entityOrEntities: Any,
+                entityOrEntities: T,
                 options: SaveOptions?
-            ) = throw UnsupportedOperationException()
-            override fun batchSave(
-                table: String,
-                entities: List<Any>,
-                batchSize: Int,
-                options: SaveOptions?
-            ) = throw UnsupportedOperationException()
+            ): T {
+                @Suppress("UNCHECKED_CAST")
+                return entityOrEntities as T
+            }
             override fun findById(
                 table: String,
                 primaryKey: String,

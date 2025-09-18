@@ -2,7 +2,10 @@ package com.onyx.cloud.extensions
 
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
+import com.onyx.cloud.api.QueryResultsImpl
 import kotlin.reflect.KClass
+import com.google.gson.*
+import java.lang.reflect.Type
 
 /**
  * Serializes the receiving object into its equivalent JSON representation.
@@ -28,7 +31,7 @@ fun Any.toJson(): String = gson.toJson(this)
 inline fun <reified T> String.fromJson(): T? {
     return try {
         gson.fromJson(this, object : TypeToken<T>() {}.type)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         // Log error or handle specific exceptions if needed, but avoid printStackTrace in library code
         // e.g., Log.e("JsonExtensions", "Failed to deserialize JSON string", e)
         null // Return null on any deserialization error
@@ -72,12 +75,32 @@ fun <T> String.fromJsonList(elementType: Class<*>): List<T>? {
     return try {
         val listType = TypeToken.getParameterized(List::class.java, elementType).type
         gson.fromJson(this, listType)
-    } catch (e: JsonSyntaxException) {
+    } catch (_: JsonSyntaxException) {
         // Return null specifically if the JSON syntax is wrong (e.g., not an array)
         null
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         // Catch other potential errors during deserialization
         // Log error if needed
         null
     }
+}
+
+class QueryResultsImplAdapter : JsonDeserializer<QueryResultsImpl<*>> {
+    override fun deserialize(json: JsonElement, typeOfT: Type, ctx: JsonDeserializationContext): QueryResultsImpl<*> {
+        val obj = json.asJsonObject
+        val records = obj.getAsJsonArray("records") ?: JsonArray()
+        val next = obj.get("nextPage")?.takeIf { !it.isJsonNull }?.asString
+        val total = obj.get("totalResults")?.asInt
+            ?: obj.get("totalRecords")?.asInt
+            ?: 0
+        return QueryResultsImpl<Any>(recordText = records, nextPage = next, totalResults = total)
+    }
+}
+
+// usage without reified:
+fun <T: Any> String.toQueryResults(gson: Gson, entityType: KClass<*>): QueryResultsImpl<T> {
+    val type = TypeToken.getParameterized(QueryResultsImpl::class.java, entityType.java).type
+    val page = gson.fromJson(this, type) as QueryResultsImpl<T>
+    page.classType = entityType
+    return page
 }

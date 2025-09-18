@@ -3,25 +3,40 @@
 package com.onyx.cloud
 
 import com.google.gson.*
-import com.google.gson.annotations.SerializedName
+import com.google.gson.reflect.TypeToken
+import com.onyx.cloud.api.CascadeBuilderImpl
 import com.onyx.cloud.api.DeleteOptions
+import com.onyx.cloud.api.DocumentOptions
+import com.onyx.cloud.api.FindOptions
+import com.onyx.cloud.api.ICascadeBuilder
+import com.onyx.cloud.api.IConditionBuilder
+import com.onyx.cloud.api.IOnyxDatabase
+import com.onyx.cloud.api.IQueryBuilder
+import com.onyx.cloud.api.IQueryResults
+import com.onyx.cloud.api.IStreamSubscription
+import com.onyx.cloud.api.LogicalOperator
+import com.onyx.cloud.api.OnyxDocument
+import com.onyx.cloud.api.QueryCriteria
+import com.onyx.cloud.api.QueryResultsImpl
+import com.onyx.cloud.api.SaveOptions
+import com.onyx.cloud.api.Sort
 import com.onyx.cloud.exceptions.NotFoundException
 import com.onyx.cloud.extensions.fromJson
 import com.onyx.cloud.extensions.fromJsonList
+import com.onyx.cloud.extensions.gson
 import com.onyx.cloud.extensions.toJson
+import com.onyx.cloud.extensions.toQueryResults
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
-import java.io.OutputStreamWriter
-import java.math.BigDecimal
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.*
-import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import javax.xml.validation.Schema
 import kotlin.reflect.KClass
 
 /**
@@ -37,7 +52,7 @@ class OnyxClient(
     private val databaseId: String,
     private val apiKey: String,
     private val apiSecret: String
-) {
+) : IOnyxDatabase<Schema> {
     private val baseUrl: String = baseUrl.replace(Regex("/+$"), "")
 
     private class HttpMethod private constructor(val value: String) {
@@ -74,7 +89,7 @@ class OnyxClient(
      * @param options Optional query parameters such as image sizing.
      * @return Raw document payload as a string.
      */
-    fun getDocument(documentId: String, options: Map<String, Any?> = emptyMap()): String {
+    override fun getDocument(documentId: String, options: DocumentOptions?): Any? {
         val queryString = buildQueryString(options)
         val path = "/data/${encode(databaseId)}/document/${encode(documentId)}"
         return makeRequest(HttpMethod.Get, path, queryString = queryString)
@@ -86,9 +101,13 @@ class OnyxClient(
      * @param documentId Document identifier.
      * @return True if deletion succeeded.
      */
-    fun deleteDocument(documentId: String): Boolean {
+    override fun deleteDocument(documentId: String): Boolean {
         val path = "/data/${encode(databaseId)}/document/${encode(documentId)}"
         return makeRequest(HttpMethod.Delete, path).equals("true", ignoreCase = true)
+    }
+
+    override fun close() {
+        TODO("Not yet implemented")
     }
 
     /**
@@ -194,14 +213,18 @@ class OnyxClient(
      * @param primaryKey Key value.
      * @param options Optional delete options such as partition or cascade relationships.
      */
-    fun delete(
+    override fun delete(
         table: String,
         primaryKey: String,
-        options: DeleteOptions? = null
+        options: DeleteOptions?
     ): Any? {
         val queryString = buildQueryString(options)
         val path = "/data/${encode(databaseId)}/${encode(table)}/${encode(primaryKey)}"
         return makeRequest(HttpMethod.Delete, path, queryString = queryString).equals("true", ignoreCase = true)
+    }
+
+    override fun saveDocument(doc: OnyxDocument): Any? {
+        TODO("Not yet implemented")
     }
 
     /**
@@ -213,7 +236,7 @@ class OnyxClient(
      */
     fun deleteInPartition(table: String, primaryKey: String, partition: String): Boolean {
         val result = delete(table, primaryKey, DeleteOptions(partition = partition))
-        return result as? Boolean ?: false
+        return result as? Boolean == true
     }
 
     /**
@@ -381,35 +404,28 @@ class OnyxClient(
         return StreamSubscription(
             thread,
             cancelAction = {
-            if (isActive.compareAndSet(true, false)) {
-                connectionRef.getAndSet(null)?.disconnect()
-            }
+                if (isActive.compareAndSet(true, false)) {
+                    connectionRef.getAndSet(null)?.disconnect()
+                }
             },
             errorRef = errorRef
         )
     }
 
     /**
-     * Creates a [QueryBuilder] for a table name.
-     *
-     * @param tableName Table name.
-     */
-    fun from(tableName: String): QueryBuilder = QueryBuilder(this, tableName)
-
-    /**
      * Creates a [QueryBuilder] inferring the table from [T].
      *
      * @param T Entity type.
      */
-    inline fun <reified T> from(): QueryBuilder = this.from(T::class.java.simpleName)
+    inline fun <reified T> from(): IQueryBuilder = QueryBuilder(this, T::class)
 
     /**
      * Creates a [QueryBuilder] with selected fields.
      *
      * @param fields Field names or aggregate expressions.
      */
-    fun select(vararg fields: String): QueryBuilder {
-        val qb = QueryBuilder(this, null)
+    override fun select(vararg fields: String): IQueryBuilder {
+        val qb = QueryBuilder(this)
         qb.select(*fields)
         return qb
     }
@@ -436,7 +452,7 @@ class OnyxClient(
      * @param options Map of query parameters (e.g., "relationships").
      * @return Saved entity or original list.
      */
-    fun save(table: String, entityOrEntities: Any, options: Map<String, Any?>): Any? {
+    fun <T> save(table: String, entityOrEntities: T, options: Map<String, Any?>): Any? {
         val queryString = buildQueryString(options)
         val path = "/data/${encode(databaseId)}/${encode(table)}"
         // Perform save request and capture raw response
@@ -447,7 +463,7 @@ class OnyxClient(
             val elementType = if (entityOrEntities is List<*>)
                 entityOrEntities.firstOrNull()?.javaClass
             else
-                entityOrEntities.javaClass
+                entityOrEntities!!.javaClass
             // Fallback to Any
             val actualType = elementType ?: Any::class.java
             // Try parsing response as array
@@ -457,7 +473,7 @@ class OnyxClient(
             throw IllegalStateException("Failed to parse response for save list of entities")
         }
         // Handle saving a single entity: server may return an object or an array
-        val entityType = entityOrEntities::class.java
+        val entityType = entityOrEntities!!::class.java
         response.fromJson<Any>(entityType.kotlin).let { return it }
         response.fromJsonList<Any>(entityType)?.firstOrNull()?.let { return it }
         throw IllegalStateException("Failed to parse response for save single entity")
@@ -469,8 +485,29 @@ class OnyxClient(
      * @param relationships Relationship graph strings to cascade.
      * @return Builder to perform save or delete with cascade.
      */
-    fun cascade(vararg relationships: String): CascadeClientBuilder =
-        CascadeClientBuilder(this, relationships.toList())
+    override fun cascade(vararg relationships: String): ICascadeBuilder =
+        CascadeBuilderImpl(this, relationships.toList())
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <T> save(
+        table: String,
+        entityOrEntities: T,
+        options: SaveOptions?
+    ): T {
+        return save(
+            table, entityOrEntities, hashMapOf<String, List<String>?>(
+                "relationships" to options?.relationships
+            )
+        ) as T
+    }
+
+    override fun findById(
+        table: String,
+        primaryKey: String,
+        options: FindOptions?
+    ): Any? {
+        TODO("Not yet implemented")
+    }
 
     private fun defaultHeaders(extra: Map<String, String> = emptyMap()): Map<String, String> =
         mapOf(
@@ -504,15 +541,26 @@ class OnyxClient(
         return buildQueryString(params)
     }
 
+    private fun buildQueryString(options: DocumentOptions?): String {
+        if (options == null) return ""
+        val params = mutableMapOf<String, Any?>()
+        options.height?.let { params["height"] = it }
+        options.width?.let { params["width"] = it }
+        return buildQueryString(params)
+    }
+
     private fun buildQueryString(options: Map<String, Any?>): String {
         val params = buildList {
             options.forEach { (key, value) ->
                 when {
-                    value == null -> { /* skip */ }
+                    value == null -> { /* skip */
+                    }
+
                     (key == "fetch" || key == "relationships") && value is List<*> -> {
                         val list = value.filterNotNull().joinToString(",")
                         if (list.isNotEmpty()) add("$key=${encode(list)}")
                     }
+
                     else -> add("$key=${encode(value.toString())}")
                 }
             }
@@ -620,13 +668,15 @@ class OnyxClient(
  * @property client Backing [OnyxClient].
  * @property table Optional table name; must be set before execution.
  */
-class QueryBuilder internal constructor(
+class QueryBuilder(
     private val client: OnyxClient,
-    private var table: String?
-) {
+    var type: KClass<*>? = null,
+    var table: String? = type?.simpleName
+) : IQueryBuilder {
+
     private var fields: List<String>? = null
     private var conditions: QueryCondition? = null
-    private var sort: List<SortOrder>? = null
+    private var sort: List<Sort>? = null
     private var limitValue: Int? = null
     private var distinctValue: Boolean = false
     private var groupByValues: List<String>? = null
@@ -647,40 +697,12 @@ class QueryBuilder internal constructor(
     private var onItemListener: ((entity: Any) -> Unit)? = null
 
     /**
-     * Sets the table.
-     *
-     * @param table Table name.
-     */
-    fun from(table: String): QueryBuilder {
-        this.table = table
-        return this
-    }
-
-    /**
-     * Sets the table inferred from [T].
-     *
-     * @param T Entity type.
-     */
-    inline fun <reified T> from(): QueryBuilder = this.from(T::class.java.simpleName)
-
-    /**
      * Selects fields.
      *
      * @param fields Field names or expressions.
      */
-    fun select(vararg fields: String): QueryBuilder {
+    override fun select(vararg fields: String): QueryBuilder {
         this.fields = fields.toList().ifEmpty { null }
-        this.mode = Mode.SELECT
-        return this
-    }
-
-    /**
-     * Selects fields with a list.
-     *
-     * @param fields Field names or expressions.
-     */
-    fun selectFields(fields: List<String>): QueryBuilder {
-        this.fields = fields.ifEmpty { null }
         this.mode = Mode.SELECT
         return this
     }
@@ -690,7 +712,7 @@ class QueryBuilder internal constructor(
      *
      * @param condition Root condition.
      */
-    fun where(condition: ConditionBuilder): QueryBuilder {
+    override fun where(condition: IConditionBuilder): IQueryBuilder {
         this.conditions = condition.toCondition()
         return this
     }
@@ -700,7 +722,7 @@ class QueryBuilder internal constructor(
      *
      * @param condition Condition to add.
      */
-    fun and(condition: ConditionBuilder): QueryBuilder {
+    override fun and(condition: IConditionBuilder): IQueryBuilder {
         addCondition(condition, LogicalOperator.AND)
         return this
     }
@@ -710,13 +732,13 @@ class QueryBuilder internal constructor(
      *
      * @param condition Condition to add.
      */
-    fun or(condition: ConditionBuilder): QueryBuilder {
+    override fun or(condition: IConditionBuilder): QueryBuilder {
         addCondition(condition, LogicalOperator.OR)
         return this
     }
 
-    private fun addCondition(builderToAdd: ConditionBuilder, logicalOperator: LogicalOperator) {
-        val conditionToAdd = builderToAdd.toCondition() ?: return
+    private fun addCondition(builderToAdd: IConditionBuilder, logicalOperator: LogicalOperator) {
+        val conditionToAdd = builderToAdd.toCondition()
         val currentCondition = this.conditions
         this.conditions = when {
             currentCondition == null -> conditionToAdd
@@ -735,7 +757,7 @@ class QueryBuilder internal constructor(
      *
      * @param limit Maximum rows.
      */
-    fun limit(limit: Int): QueryBuilder {
+    override fun limit(limit: Int): QueryBuilder {
         limitValue = limit
         return this
     }
@@ -743,7 +765,7 @@ class QueryBuilder internal constructor(
     /**
      * Enforces distinct results.
      */
-    fun distinct(): QueryBuilder {
+    override fun distinct(): QueryBuilder {
         distinctValue = true
         return this
     }
@@ -753,7 +775,7 @@ class QueryBuilder internal constructor(
      *
      * @param fields Fields to group by.
      */
-    fun groupBy(vararg fields: String): QueryBuilder {
+    override fun groupBy(vararg fields: String): QueryBuilder {
         groupByValues = fields.toList().ifEmpty { null }
         return this
     }
@@ -763,7 +785,7 @@ class QueryBuilder internal constructor(
      *
      * @param orders Sort orders.
      */
-    fun orderBy(vararg orders: SortOrder): QueryBuilder {
+    override fun orderBy(vararg orders: Sort): IQueryBuilder {
         sort = orders.toList().ifEmpty { null }
         return this
     }
@@ -773,7 +795,7 @@ class QueryBuilder internal constructor(
      *
      * @param partition Partition value.
      */
-    fun inPartition(partition: String): QueryBuilder {
+    override fun inPartition(partition: String): QueryBuilder {
         partitionValue = partition
         return this
     }
@@ -783,7 +805,7 @@ class QueryBuilder internal constructor(
      *
      * @param resolvers Relationships to resolve.
      */
-    fun resolve(vararg resolvers: String): QueryBuilder {
+    override fun resolve(vararg resolvers: String): QueryBuilder {
         this.resolvers = resolvers.toList()
         return this
     }
@@ -793,7 +815,7 @@ class QueryBuilder internal constructor(
      *
      * @param updates Field/value pairs.
      */
-    fun setUpdates(vararg updates: Pair<String, Any?>): QueryBuilder {
+    override fun setUpdates(vararg updates: Pair<String, Any?>): QueryBuilder {
         this.mode = Mode.UPDATE
         this.updates = updates.toMap()
         return this
@@ -804,7 +826,7 @@ class QueryBuilder internal constructor(
      *
      * @param size Items per page.
      */
-    fun pageSize(size: Int): QueryBuilder {
+    override fun pageSize(size: Int): QueryBuilder {
         pageSizeValue = size
         return this
     }
@@ -814,7 +836,7 @@ class QueryBuilder internal constructor(
      *
      * @param token Next page token.
      */
-    fun nextPage(token: String): QueryBuilder {
+    override fun nextPage(token: String): QueryBuilder {
         nextPageValue = token
         return this
     }
@@ -858,32 +880,28 @@ class QueryBuilder internal constructor(
      * Executes the query and returns the first page of results.
      *
      * @param T Result type.
-     */
-    inline fun <reified T : Any> list(): QueryResults<T> = list(T::class)
-
-    /**
-     * Executes the query and returns the first page of results.
-     *
-     * @param T Result type.
      * @param type Class token for deserialization.
      */
-    fun <T : Any> list(type: KClass<*>): QueryResults<T> {
+    override fun <T : Any> list(): IQueryResults<T> {
         check(mode == Mode.SELECT) { "Cannot call list() when the builder is in ${mode.name} mode." }
         val targetTable =
             table ?: throw IllegalStateException("Table name must be specified using from() before calling list().")
         val queryPayload = buildSelectQueryPayload()
         val requestOptions = buildCommonOptions()
         val jsonResponse = client.executeQuery(targetTable, queryPayload, requestOptions)
-        val results = (jsonResponse.fromJson(QueryResults::class) as? QueryResults<T>) ?: QueryResults()
+        val results = jsonResponse.toQueryResults<T>(gson, if (fields?.isNotEmpty() == true) HashMap::class else this.type!!)
         results.query = this
-        results.classType = type
+        results.classType = if (fields?.isNotEmpty() == true) HashMap::class else this.type!!
         return results
     }
+
+    override fun <T : Any> firstOrNull(): T? = this.list<T>().firstOrNull()
+    override fun <T : Any> one(): T? = this.list<T>().firstOrNull()
 
     /**
      * Counts rows that match current conditions.
      */
-    fun count(): Int {
+    override fun count(): Int {
         val targetTable =
             table ?: throw IllegalStateException("Table name must be specified using from() before calling count().")
         val countQueryPayload = mapOf(
@@ -900,7 +918,7 @@ class QueryBuilder internal constructor(
      *
      * @return Rows deleted.
      */
-    fun delete(): Int {
+    override fun delete(): Int {
         check(mode == Mode.SELECT || mode == Mode.DELETE) { "delete() can only be called after setting conditions (where/and/or/partition), not in update mode." }
         val targetTable =
             table ?: throw IllegalStateException("Table name must be specified using from() before calling delete().")
@@ -915,7 +933,7 @@ class QueryBuilder internal constructor(
      *
      * @return Rows updated.
      */
-    fun update(): Int {
+    override fun update(): Int {
         check(mode == Mode.UPDATE) { "Must call setUpdates(...) before calling update()." }
         check(updates != null) { "No updates specified. Call setUpdates(...) first." }
         val targetTable =
@@ -931,7 +949,7 @@ class QueryBuilder internal constructor(
      * @param T Entity type.
      * @param listener Callback for created items.
      */
-    fun <T : Any> onItemAdded(listener: (entity: T) -> Unit): QueryBuilder {
+    override fun <T : Any> onItemAdded(listener: (entity: T) -> Unit): QueryBuilder {
         @Suppress("UNCHECKED_CAST")
         onItemAddedListener = listener as (Any) -> Unit
         return this
@@ -943,7 +961,7 @@ class QueryBuilder internal constructor(
      * @param T Entity type.
      * @param listener Callback for deleted items.
      */
-    fun <T : Any> onItemDeleted(listener: (entity: T) -> Unit): QueryBuilder {
+    override fun <T : Any> onItemDeleted(listener: (entity: T) -> Unit): QueryBuilder {
         @Suppress("UNCHECKED_CAST")
         onItemDeletedListener = listener as (Any) -> Unit
         return this
@@ -955,7 +973,7 @@ class QueryBuilder internal constructor(
      * @param T Entity type.
      * @param listener Callback for updated items.
      */
-    fun <T : Any> onItemUpdated(listener: (entity: T) -> Unit): QueryBuilder {
+    override fun <T : Any> onItemUpdated(listener: (entity: T) -> Unit): QueryBuilder {
         @Suppress("UNCHECKED_CAST")
         onItemUpdatedListener = listener as (Any) -> Unit
         return this
@@ -967,7 +985,7 @@ class QueryBuilder internal constructor(
      * @param T Entity type.
      * @param listener Callback for initial results.
      */
-    fun <T : Any> onItem(listener: (entity: T) -> Unit): QueryBuilder {
+    override fun <T : Any> onItem(listener: (entity: T) -> Unit): IQueryBuilder {
         @Suppress("UNCHECKED_CAST")
         onItemListener = listener as (Any) -> Unit
         return this
@@ -977,27 +995,14 @@ class QueryBuilder internal constructor(
      * Starts streaming with optional initial results.
      *
      * @param T Entity type.
-     * @param includeQueryResults Include initial results.
-     * @param keepAlive Keep the stream open.
-     */
-    inline fun <reified T : Any> stream(
-        includeQueryResults: Boolean = true,
-        keepAlive: Boolean = false,
-    ): StreamSubscription = stream<T>(T::class, includeQueryResults, keepAlive)
-
-    /**
-     * Starts streaming with optional initial results.
-     *
-     * @param T Entity type.
      * @param type Class token for deserialization.
      * @param includeQueryResults Include initial results.
      * @param keepAlive Keep the stream open.
      */
-    fun <T> stream(
-        type: KClass<*>,
-        includeQueryResults: Boolean = true,
-        keepAlive: Boolean = false,
-    ): StreamSubscription {
+    override fun <T> stream(
+        includeQueryResults: Boolean,
+        keepAlive: Boolean,
+    ): IStreamSubscription {
         check(mode == Mode.SELECT) { "Streaming is only applicable in select mode." }
         val targetTable =
             table ?: throw IllegalStateException("Table name must be specified using from() before calling stream().")
@@ -1018,7 +1023,7 @@ class QueryBuilder internal constructor(
             val entityJson = response.entity?.toString() ?: return@onLine
 
             val entitySupplier = lazy {
-                runCatching { entityJson.fromJson<T>(type) }.getOrNull()
+                runCatching { entityJson.fromJson<T>(type!!) }.getOrNull()
             }
 
             fun deliver(listener: ((Any) -> Unit)?) {
@@ -1035,253 +1040,7 @@ class QueryBuilder internal constructor(
             }
         }
     }
-
-    /**
-     * Page of results with helpers for iteration and aggregation.
-     *
-     * @param T Record type.
-     * @property recordText Raw JSON array of records.
-     * @property nextPage Next page token.
-     * @property totalResults Total matches if provided.
-     */
-    data class QueryResults<T : Any>(
-        @SerializedName("records")
-        internal val recordText: JsonArray = JsonArray(),
-        val nextPage: String? = null,
-        val totalResults: Int = 0,
-    ) {
-        @Transient
-        internal var query: QueryBuilder? = null
-        @Transient
-        internal var classType: KClass<*>? = null
-
-        /** Current page records. */
-        val records: List<T> by lazy {
-            try {
-                val javaType = classType?.java ?: error("Class type not set for deserialization")
-                recordText.toString().fromJsonList(javaType) ?: emptyList()
-            } catch (_: Exception) {
-                emptyList()
-            }
-        }
-
-        /** First record on the current page. */
-        fun first(): T = records.first()
-
-        /** First record or null when empty. */
-        fun firstOrNull(): T? = records.firstOrNull()
-
-        /** True when current page has no records. */
-        fun isEmpty(): Boolean = records.isEmpty()
-
-        /** Count of records on the current page. */
-        fun size(): Int = records.size
-
-        /**
-         * Iterates over current page records.
-         *
-         * @param action Action to invoke for each record.
-         */
-        fun forEachOnPage(action: (T) -> Unit) {
-            records.forEach(action)
-        }
-
-        /**
-         * Iterates across all pages and records until the action returns false.
-         *
-         * @param action Return false to stop iteration.
-         */
-        fun forEach(action: (T) -> Boolean) {
-            var continueAll = true
-            forEachPage { page ->
-                for (item in page) {
-                    if (!action(item)) {
-                        continueAll = false
-                        break
-                    }
-                }
-                continueAll
-            }
-        }
-
-        /**
-         * Iterates page-by-page until the action returns false.
-         *
-         * @param action Return false to stop paging.
-         */
-        fun forEachPage(action: (pageRecords: List<T>) -> Boolean) {
-            var currentPage: QueryResults<T>? = this
-            val currentQuery = query ?: error("Query context is missing for pagination.")
-            val currentClassType = classType ?: error("Class type is missing for pagination.")
-            var continuePaging = true
-
-            while (currentPage != null) {
-                val recordsOnPage = currentPage.records
-                if (recordsOnPage.isNotEmpty()) {
-                    continuePaging = action(recordsOnPage)
-                }
-                val nextPageToken = currentPage.nextPage
-                currentPage = if (continuePaging && !nextPageToken.isNullOrBlank()) {
-                    currentQuery.nextPage(nextPageToken).list(currentClassType)
-                } else {
-                    null
-                }
-            }
-        }
-
-        /**
-         * Loads all pages and returns all records as a list.
-         */
-        fun getAllRecords(): List<T> {
-            val all = mutableListOf<T>()
-            forEachPage { page ->
-                all.addAll(page)
-                true
-            }
-            return all
-        }
-
-        /** Filters all records (loads into memory). */
-        fun filter(predicate: (T) -> Boolean): List<T> = getAllRecords().filter(predicate)
-
-        /** Maps all records (loads into memory). */
-        fun <R> map(transform: (T) -> R): List<R> = getAllRecords().map(transform)
-
-        /** Max of a Double selector across all records. */
-        fun maxOfDouble(selector: (T) -> Double): Double = getAllRecords().maxOfOrNull(selector) ?: Double.NaN
-
-        /** Min of a Double selector across all records. */
-        fun minOfDouble(selector: (T) -> Double): Double = getAllRecords().minOfOrNull(selector) ?: Double.NaN
-
-        /** Sum of a Double selector across all records. */
-        fun sumOfDouble(selector: (T) -> Double): Double = getAllRecords().sumOf(selector)
-
-        /** Max of a Float selector across all records. */
-        fun maxOfFloat(selector: (T) -> Float): Float = getAllRecords().maxOfOrNull(selector) ?: Float.NaN
-
-        /** Min of a Float selector across all records. */
-        fun minOfFloat(selector: (T) -> Float): Float = getAllRecords().minOfOrNull(selector) ?: Float.NaN
-
-        /** Max of an Int selector across all records. */
-        fun maxOfInt(selector: (T) -> Int): Int = getAllRecords().maxOfOrNull(selector) ?: Int.MIN_VALUE
-
-        /** Min of an Int selector across all records. */
-        fun minOfInt(selector: (T) -> Int): Int = getAllRecords().minOfOrNull(selector) ?: Int.MAX_VALUE
-
-        /** Sum of an Int selector across all records. */
-        fun sumOfInt(selector: (T) -> Int): Int = getAllRecords().sumOf(selector)
-
-        /** Max of a Long selector across all records. */
-        fun maxOfLong(selector: (T) -> Long): Long = getAllRecords().maxOfOrNull(selector) ?: Long.MIN_VALUE
-
-        /** Min of a Long selector across all records. */
-        fun minOfLong(selector: (T) -> Long): Long = getAllRecords().minOfOrNull(selector) ?: Long.MAX_VALUE
-
-        /** Sum of a Long selector across all records. */
-        fun sumOfLong(selector: (T) -> Long): Long = getAllRecords().sumOf(selector)
-
-        /** Sum of BigDecimals across all records. */
-        fun sumOfBigDecimal(selector: (T) -> BigDecimal): BigDecimal =
-            getAllRecords().map(selector).fold(BigDecimal.ZERO, BigDecimal::add)
-
-        /**
-         * Processes each page sequentially and items within a page in parallel.
-         *
-         * @param action Action executed in parallel per item.
-         */
-        fun forEachPageParallel(action: (T) -> Unit) {
-            val fetchExecutor = Executors.newSingleThreadExecutor()
-            var currentPage: QueryResults<T>? = this
-            val currentQuery = query ?: error("Query context is missing for pagination.")
-            val currentClassType = classType ?: error("Class type is missing for pagination.")
-
-            try {
-                while (currentPage != null) {
-                    val recordsOnPage = currentPage.records
-                    val nextPageToken = currentPage.nextPage
-                    if (recordsOnPage.isNotEmpty()) {
-                        recordsOnPage.parallelStream().forEach(action)
-                    }
-                    val future = if (!nextPageToken.isNullOrBlank()) {
-                        fetchExecutor.submit<QueryResults<T>?> {
-                            try {
-                                currentQuery.nextPage(nextPageToken).list(currentClassType)
-                            } catch (_: Exception) {
-                                null
-                            }
-                        }
-                    } else null
-                    currentPage = future?.get()
-                }
-            } finally {
-                fetchExecutor.shutdown()
-            }
-        }
-    }
 }
-
-/**
- * Sort order for a field.
- *
- * @param field Field name.
- * @param order "ASC" or "DESC".
- */
-data class SortOrder(val field: String, val order: String = "ASC") {
-    init {
-        require(order.uppercase() == "ASC" || order.uppercase() == "DESC") {
-            "Order must be 'ASC' or 'DESC', but was '$order'"
-        }
-    }
-}
-
-/**
- * Ascending sort helper.
- *
- * @param attribute Field name.
- */
-fun asc(attribute: String) = SortOrder(attribute, order = "ASC")
-
-/**
- * Descending sort helper.
- *
- * @param attribute Field name.
- */
-fun desc(attribute: String) = SortOrder(attribute, order = "DESC")
-
-/**
- * Logical operator for compound conditions.
- */
-enum class LogicalOperator { AND, OR }
-
-/**
- * Query criteria operators.
- */
-enum class QueryCriteriaOperator {
-    EQUAL, NOT_EQUAL,
-    IN, NOT_IN,
-    GREATER_THAN, GREATER_THAN_EQUAL,
-    LESS_THAN, LESS_THAN_EQUAL,
-    MATCHES, NOT_MATCHES,
-    BETWEEN,
-    LIKE, NOT_LIKE,
-    CONTAINS, CONTAINS_IGNORE_CASE,
-    NOT_CONTAINS, NOT_CONTAINS_IGNORE_CASE,
-    STARTS_WITH, NOT_STARTS_WITH,
-    IS_NULL, NOT_NULL
-}
-
-/**
- * Single query criterion.
- *
- * @param field Field name.
- * @param operator Operator type.
- * @param value Value or list value depending on operator.
- */
-data class QueryCriteria(
-    val field: String,
-    val operator: QueryCriteriaOperator,
-    val value: Any? = null
-)
 
 /**
  * Discriminated union for query conditions.
@@ -1318,229 +1077,6 @@ data class Document(
 )
 
 /**
- * Builder for creating complex where-clauses.
- */
-class ConditionBuilder internal constructor(criteria: QueryCriteria? = null) {
-    private var condition: QueryCondition? = criteria?.let { QueryCondition.SingleCondition(it) }
-
-    /**
-     * AND combine with another builder.
-     */
-    fun and(other: ConditionBuilder): ConditionBuilder {
-        combine(LogicalOperator.AND, other.toCondition()); return this
-    }
-
-    /**
-     * OR combine with another builder.
-     */
-    fun or(other: ConditionBuilder): ConditionBuilder {
-        combine(LogicalOperator.OR, other.toCondition()); return this
-    }
-
-    private fun combine(operator: LogicalOperator, newCondition: QueryCondition?) {
-        val currentCondition = condition
-        if (newCondition == null) return
-        condition = when (currentCondition) {
-            null -> newCondition
-            is QueryCondition.SingleCondition, is QueryCondition.CompoundCondition -> {
-                if (currentCondition is QueryCondition.CompoundCondition && currentCondition.operator == operator) {
-                    currentCondition.copy(conditions = currentCondition.conditions + newCondition)
-                } else {
-                    QueryCondition.CompoundCondition(
-                        operator = operator,
-                        conditions = listOfNotNull(currentCondition, newCondition)
-                    )
-                }
-            }
-        }
-    }
-
-    internal fun toCondition(): QueryCondition? = condition
-}
-
-/**
- * Equals criterion.
- */
-infix fun String.eq(value: Any?): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.EQUAL, value))
-
-/**
- * Not-equals criterion.
- */
-infix fun String.neq(value: Any?): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.NOT_EQUAL, value))
-
-/**
- * In-list criterion.
- */
-infix fun String.inOp(values: List<Any?>): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.IN, values.joinToString(",") { it.toString() }))
-
-/**
- * Not-in-list criterion.
- */
-infix fun String.notIn(values: List<Any?>): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.NOT_IN, values))
-
-/**
- * Greater-than criterion.
- */
-infix fun String.gt(value: Any?): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.GREATER_THAN, value))
-
-/**
- * Greater-than-or-equal criterion.
- */
-infix fun String.gte(value: Any?): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.GREATER_THAN_EQUAL, value))
-
-/**
- * Less-than criterion.
- */
-infix fun String.lt(value: Any?): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.LESS_THAN, value))
-
-/**
- * Less-than-or-equal criterion.
- */
-infix fun String.lte(value: Any?): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.LESS_THAN_EQUAL, value))
-
-/**
- * Regex match criterion.
- */
-infix fun String.matches(regex: String): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.MATCHES, regex))
-
-/**
- * Regex not-match criterion.
- */
-infix fun String.notMatches(regex: String): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.NOT_MATCHES, regex))
-
-/**
- * Between inclusive criterion.
- */
-fun String.between(lower: Any?, upper: Any?): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.BETWEEN, listOf(lower, upper)))
-
-/**
- * SQL-like pattern match criterion.
- */
-infix fun String.like(pattern: String): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.LIKE, pattern))
-
-/**
- * SQL-like negative pattern match criterion.
- */
-infix fun String.notLike(pattern: String): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.NOT_LIKE, pattern))
-
-/**
- * Contains criterion.
- */
-infix fun String.contains(value: Any?): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.CONTAINS, value))
-
-/**
- * Contains ignore-case criterion.
- */
-infix fun String.containsIgnoreCase(value: Any?): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.CONTAINS_IGNORE_CASE, value))
-
-/**
- * Not contains ignore-case criterion.
- */
-infix fun String.notContainsIgnoreCase(value: Any?): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.NOT_CONTAINS_IGNORE_CASE, value))
-
-/**
- * Not contains criterion.
- */
-infix fun String.notContains(value: Any?): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.NOT_CONTAINS, value))
-
-/**
- * Starts-with criterion.
- */
-infix fun String.startsWith(prefix: String): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.STARTS_WITH, prefix))
-
-/**
- * Not-starts-with criterion.
- */
-infix fun String.notStartsWith(prefix: String): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.NOT_STARTS_WITH, prefix))
-
-/**
- * Is-null criterion.
- */
-fun String.isNull(): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.IS_NULL))
-
-/**
- * Not-null criterion.
- */
-fun String.notNull(): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.NOT_NULL))
-
-/**
- * Average aggregate expression string.
- */
-fun avg(attribute: String): String = "avg($attribute)"
-
-/**
- * Sum aggregate expression string.
- */
-fun sum(attribute: String): String = "sum($attribute)"
-
-/**
- * Count aggregate expression string.
- */
-fun count(attribute: String): String = "count($attribute)"
-
-/**
- * Min aggregate expression string.
- */
-fun min(attribute: String): String = "min($attribute)"
-
-/**
- * Max aggregate expression string.
- */
-fun max(attribute: String): String = "max($attribute)"
-
-/**
- * Median aggregate expression string.
- */
-fun median(attribute: String): String = "median($attribute)"
-
-/**
- * Standard deviation aggregate expression string.
- */
-fun std(attribute: String): String = "std($attribute)"
-
-/**
- * Uppercase function expression string.
- */
-fun upper(attribute: String): String = "upper($attribute)"
-
-/**
- * Lowercase function expression string.
- */
-fun lower(attribute: String): String = "lower($attribute)"
-
-/**
- * Substring function expression string.
- */
-fun substring(attribute: String, from: Int, length: Int): String = "substring($attribute,$from,$length)"
-
-/**
- * Replace function expression string with basic quote escaping.
- */
-fun replace(attribute: String, pattern: String, repl: String): String =
-    "replace($attribute, '${pattern.replace("'", "''")}', '${repl.replace("'", "''")}')"
-
-/**
  * Represents an active streaming subscription created via [OnyxClient.stream].
  *
  * The underlying stream executes on a daemon thread. Use [cancel], [join], or [cancelAndJoin]
@@ -1550,11 +1086,11 @@ class StreamSubscription internal constructor(
     private val thread: Thread,
     private val cancelAction: () -> Unit,
     private val errorRef: AtomicReference<Throwable?>,
-) : AutoCloseable {
+) : IStreamSubscription {
     private val cancelled = AtomicBoolean(false)
 
     /** Stops the stream without waiting for the background thread to finish. */
-    fun cancel() {
+    override fun cancel() {
         if (cancelled.compareAndSet(false, true)) {
             cancelAction()
             if (thread.isAlive) {
@@ -1564,7 +1100,7 @@ class StreamSubscription internal constructor(
     }
 
     /** Waits for the background thread to finish processing. */
-    fun join() {
+    override fun join() {
         try {
             thread.join()
         } catch (ex: InterruptedException) {
@@ -1573,13 +1109,13 @@ class StreamSubscription internal constructor(
     }
 
     /** Convenience helper that cancels the stream and waits for it to finish. */
-    fun cancelAndJoin() {
+    override fun cancelAndJoin() {
         cancel()
         join()
     }
 
     /** Latest error observed while streaming, or `null` if none occurred. */
-    val error: Throwable?
+    override val error: Throwable?
         get() = errorRef.get()
 
     override fun close() {

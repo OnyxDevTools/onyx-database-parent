@@ -1,8 +1,7 @@
 package com.onyx.cloud.integration
 
 import com.onyx.cloud.OnyxClient
-import com.onyx.cloud.asc
-import com.onyx.cloud.startsWith
+import com.onyx.cloud.api.*
 import java.util.Date
 import java.util.UUID
 import kotlin.test.Test
@@ -61,7 +60,7 @@ class QueryPagingIntegrationTest {
                 .pageSize(2)
                 .list<User>()
 
-            val firstPageUsernames = results.records.mapNotNull { it.username }
+            val firstPageUsernames = results.mapNotNull { it.username }
             assertEquals(expectedUsernames.take(2), firstPageUsernames, "First page should honor requested ordering and size")
             assertNotNull(results.nextPage, "Additional pages should provide a next page token")
 

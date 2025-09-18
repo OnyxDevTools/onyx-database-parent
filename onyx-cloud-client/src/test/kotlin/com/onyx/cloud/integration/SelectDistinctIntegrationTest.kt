@@ -1,8 +1,7 @@
 package com.onyx.cloud.integration
 
 import com.onyx.cloud.OnyxClient
-import com.onyx.cloud.eq
-import com.onyx.cloud.inOp
+import com.onyx.cloud.api.*
 import java.util.Date
 import java.util.UUID
 import kotlin.test.Test
@@ -50,14 +49,14 @@ class SelectDistinctIntegrationTest {
         val ids = savedUsers.mapNotNull { it.id }
 
         try {
-            val results = client.from("User")
+            val results = client.from<User>()
                 .select("isActive")
                 .distinct()
                 .where("id" inOp ids)
                 .list<Map<String, Any>>()
 
-            val statuses = results.records.mapNotNull { it["isActive"] as? Boolean }
-            assertEquals(2, results.records.size, "Distinct should reduce duplicate values")
+            val statuses = results.getAllRecords().mapNotNull { it["isActive"] as? Boolean }
+            assertEquals(2, results.getAllRecords().size, "Distinct should reduce duplicate values")
             assertEquals(setOf(true, false), statuses.toSet(), "Expected both active and inactive flags")
         } finally {
             savedUsers.mapNotNull { it.id }.forEach { safeDelete("User", it) }
@@ -72,15 +71,15 @@ class SelectDistinctIntegrationTest {
         val ids = savedUsers.mapNotNull { it.id }
 
         try {
-            val results = client.from("User")
+            val results = client.from<User>()
                 .select("isActive")
                 .distinct()
                 .where("id" inOp ids)
                 .and("isActive" eq true)
                 .list<Map<String, Any>>()
 
-            val statuses = results.records.mapNotNull { it["isActive"] as? Boolean }
-            assertEquals(1, results.records.size, "Distinct should collapse duplicate active rows")
+            val statuses = results.getAllRecords().mapNotNull { it["isActive"] as? Boolean }
+            assertEquals(1, results.getAllRecords().size, "Distinct should collapse duplicate active rows")
             assertTrue(statuses.all { it }, "Only active rows should remain")
         } finally {
             savedUsers.mapNotNull { it.id }.forEach { safeDelete("User", it) }

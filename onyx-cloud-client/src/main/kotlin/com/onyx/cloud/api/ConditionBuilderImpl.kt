@@ -1,5 +1,9 @@
 package com.onyx.cloud.api
 
+import com.onyx.cloud.QueryCondition
+import com.onyx.cloud.QueryCondition.CompoundCondition
+import com.onyx.cloud.QueryCondition.SingleCondition
+
 /**
  * Builder implementation for combining query conditions.
  *

@@ -12,24 +12,20 @@ class SaveBuilderImplTest {
     fun `one() invokes save with correct cascade relationships`() {
         val captured = mutableListOf<Captured>()
         val stubDb = object : IOnyxDatabase<Any> {
-            override fun save(
-                table: String,
-                entityOrEntities: Any,
-                options: SaveOptions?
-            ): Any? {
-                captured.add(Captured(table, entityOrEntities, options))
-                return "ok"
-            }
+
             // Unused interface methods
-            override fun from(table: String) = throw UnsupportedOperationException()
             override fun select(vararg fields: String) = throw UnsupportedOperationException()
             override fun cascade(vararg relationships: String) = throw UnsupportedOperationException()
-            override fun batchSave(
+            override fun <T> save(
                 table: String,
-                entities: List<Any>,
-                batchSize: Int,
+                entityOrEntities: T,
                 options: SaveOptions?
-            ) = throw UnsupportedOperationException()
+            ): T {
+                captured.add(Captured(table, entityOrEntities as Any, options))
+                @Suppress("UNCHECKED_CAST")
+                return entityOrEntities as T
+            }
+
             override fun findById(
                 table: String,
                 primaryKey: String,
@@ -49,7 +45,7 @@ class SaveBuilderImplTest {
         val builder = SaveBuilderImpl(stubDb, "User")
             .cascade("rel1", "rel2")
         val result = builder.one(entity)
-        assertEquals("ok", result)
+        assertEquals(entity, result)
         assertEquals(1, captured.size)
         with(captured.first()) {
             assertEquals("User", table)
@@ -62,24 +58,17 @@ class SaveBuilderImplTest {
     fun `many() invokes save with correct cascade relationships`() {
         val captured = mutableListOf<Captured>()
         val stubDb = object : IOnyxDatabase<Any> {
-            override fun save(
+            override fun <T> save(
                 table: String,
-                entityOrEntities: Any,
+                entityOrEntities: T,
                 options: SaveOptions?
-            ): Any? {
-                captured.add(Captured(table, entityOrEntities, options))
-                return null
+            ): T {
+                captured.add(Captured(table, entityOrEntities as Any, options))
+                return entityOrEntities as T
             }
             // Unused interface methods
-            override fun from(table: String) = throw UnsupportedOperationException()
             override fun select(vararg fields: String) = throw UnsupportedOperationException()
             override fun cascade(vararg relationships: String) = throw UnsupportedOperationException()
-            override fun batchSave(
-                table: String,
-                entities: List<Any>,
-                batchSize: Int,
-                options: SaveOptions?
-            ) = throw UnsupportedOperationException()
             override fun findById(
                 table: String,
                 primaryKey: String,
