@@ -6,6 +6,9 @@ import com.onyx.cloud.QueryBuilder
 import com.onyx.cloud.QueryCondition
 import java.math.BigInteger
 
+/** Public facade entry point. */
+val onyx: OnyxFacade = OnyxFacadeImpl
+
 /**
  * Supported operators for building query criteria.
  */

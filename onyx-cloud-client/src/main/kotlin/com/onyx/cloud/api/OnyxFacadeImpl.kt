@@ -7,6 +7,3 @@ object OnyxFacadeImpl : OnyxFacade {
 
     override fun clearCacheConfig() {}
 }
-
-/** Public facade entry point. */
-val onyx: OnyxFacade = OnyxFacadeImpl
