@@ -4,6 +4,7 @@ package com.onyx.cloud
 
 import com.google.gson.*
 import com.google.gson.annotations.SerializedName
+import com.onyx.cloud.api.DeleteOptions
 import com.onyx.cloud.exceptions.NotFoundException
 import com.onyx.cloud.extensions.fromJson
 import com.onyx.cloud.extensions.fromJsonList
@@ -191,13 +192,13 @@ class OnyxClient(
      *
      * @param table Table name.
      * @param primaryKey Key value.
-     * @param options Optional query options (partition).
+     * @param options Optional delete options such as partition or cascade relationships.
      */
     fun delete(
         table: String,
         primaryKey: String,
-        options: Map<String, Any?> = emptyMap()
-    ): Boolean {
+        options: DeleteOptions? = null
+    ): Any? {
         val queryString = buildQueryString(options)
         val path = "/data/${encode(databaseId)}/${encode(table)}/${encode(primaryKey)}"
         return makeRequest(HttpMethod.Delete, path, queryString = queryString).equals("true", ignoreCase = true)
@@ -211,7 +212,8 @@ class OnyxClient(
      * @param partition Partition value.
      */
     fun deleteInPartition(table: String, primaryKey: String, partition: String): Boolean {
-        return delete(table, primaryKey, mapOf("partition" to partition))
+        val result = delete(table, primaryKey, DeleteOptions(partition = partition))
+        return result as? Boolean ?: false
     }
 
     /**
@@ -494,17 +496,25 @@ class OnyxClient(
         }
     }
 
+    private fun buildQueryString(options: DeleteOptions?): String {
+        if (options == null) return ""
+        val params = mutableMapOf<String, Any?>()
+        options.partition?.let { params["partition"] = it }
+        options.relationships?.let { params["relationships"] = it }
+        return buildQueryString(params)
+    }
+
     private fun buildQueryString(options: Map<String, Any?>): String {
         val params = buildList {
-        options.forEach { (key, value) ->
-            when {
-                value == null -> { /* skip */ }
-                (key == "fetch" || key == "relationships") && value is List<*> -> {
-                    val list = value.filterNotNull().joinToString(",")
-                    if (list.isNotEmpty()) add("$key=${encode(list)}")
+            options.forEach { (key, value) ->
+                when {
+                    value == null -> { /* skip */ }
+                    (key == "fetch" || key == "relationships") && value is List<*> -> {
+                        val list = value.filterNotNull().joinToString(",")
+                        if (list.isNotEmpty()) add("$key=${encode(list)}")
+                    }
+                    else -> add("$key=${encode(value.toString())}")
                 }
-                else -> add("$key=${encode(value.toString())}")
-            }
             }
         }.joinToString("&")
         return if (params.isNotEmpty()) "?$params" else ""
