@@ -1,5 +1,7 @@
 package com.onyx.cloud
 
+import com.onyx.cloud.api.DeleteOptions
+
 /**
  * Builder for cascading save or delete operations on the client.
  *
@@ -25,8 +27,8 @@ class CascadeClientBuilder(
      *
      * @param table Table name.
      * @param primaryKey Entity primary key.
-     * @return Success flag from the server.
+     * @return Result from the server.
      */
-    fun delete(table: String, primaryKey: String): Boolean =
-        client.delete(table, primaryKey, mapOf("relationships" to relationships))
+    fun delete(table: String, primaryKey: String): Any? =
+        client.delete(table, primaryKey, DeleteOptions(relationships = relationships))
 }
