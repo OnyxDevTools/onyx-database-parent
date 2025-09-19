@@ -173,7 +173,7 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      */
     override fun delete() {
         this.close()
-//        this.store.delete()
+        this.store.delete()
         this.nodeStore.delete()
     }
 
