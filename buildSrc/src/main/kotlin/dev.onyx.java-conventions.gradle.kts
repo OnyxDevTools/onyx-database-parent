@@ -115,6 +115,8 @@ tasks.withType<GenerateModuleMetadata> { suppressedValidationErrors.add("enforce
 
 // ---- Central Portal finalize (required for Gradle's maven-publish via OSSRH Staging API) ----
 // See docs: replace s01 with ossrh-staging-api + call /manual/upload after PUTs so the portal sees it & publishes.
+// ---- Central Portal finalize (runs ONCE after all modules publish) ----
+// Replaces per-module finalize; only runs on the root project after every subproject has published.
 val centralNamespace = "dev.onyx" // your Central namespace (matches your group)
 
 fun bearer(user: String, pass: String): String =
@@ -122,15 +124,23 @@ fun bearer(user: String, pass: String): String =
 
 val centralFinalize by tasks.register("centralFinalize") {
     group = "publishing"
-    description = "Finalize upload to Central Portal (auto-publish)."
-    dependsOn(tasks.named("publishMavenPublicationToSonatypeRepository"))
+    description = "Finalize upload to Central Portal (auto-publish, once for all modules)."
+
+    // Only execute this task on the root project
+    onlyIf { project == rootProject }
+
+    // Wait for every subproject's publish to complete
+    dependsOn(gradle.rootProject.subprojects.map { it.tasks.named("publish") })
+
     doLast {
         val user = project.findOptionalProperty("maven.sonatype.username")
             ?: error("Missing maven.sonatype.username (Portal token username)")
         val pass = project.findOptionalProperty("maven.sonatype.password")
             ?: error("Missing maven.sonatype.password (Portal token password)")
 
-        val url = URL("https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/$centralNamespace?publishing_type=automatic")
+        val url = URL(
+            "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/$centralNamespace?publishing_type=automatic"
+        )
         val conn = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Authorization", "Bearer ${bearer(user, pass)}")
@@ -141,11 +151,20 @@ val centralFinalize by tasks.register("centralFinalize") {
         val code = conn.responseCode
         if (code !in 200..299) {
             val err = conn.errorStream?.readBytes()?.toString(Charsets.UTF_8)
-            error("Central finalize failed ($code): ${err ?: "no message"}")
+            // If already released, treat as no-op so the build doesn't fail on later modules
+            if (code == 400 && (err ?: "").contains("state released", ignoreCase = true)) {
+                println("Central finalize: already released (skipping).")
+            } else {
+                error("Central finalize failed ($code): ${err ?: "no message"}")
+            }
+        } else {
+            println("Central finalize: OK ($code)")
         }
-        println("Central finalize: OK ($code)")
     }
 }
 
-// Optionally chain finalize after full 'publish'
-tasks.named("publish") { finalizedBy(centralFinalize) }
+// Chain finalize after the root 'publish' only
+if (project == rootProject) {
+    tasks.named("publish") { finalizedBy(centralFinalize) }
+}
+
