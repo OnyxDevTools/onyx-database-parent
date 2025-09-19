@@ -7,7 +7,6 @@ import com.onyx.cloud.api.DeleteOptions
 import com.onyx.cloud.api.DocumentOptions
 import com.onyx.cloud.api.FetchImpl
 import com.onyx.cloud.api.FetchInit
-import com.onyx.cloud.api.FetchResponse
 import com.onyx.cloud.api.FindOptions
 import com.onyx.cloud.api.ICascadeBuilder
 import com.onyx.cloud.api.IConditionBuilder
@@ -544,7 +543,7 @@ class OnyxClient(
                 if (firstError == null) {
                     firstError = ex
                 } else {
-                    firstError!!.addSuppressed(ex)
+                    firstError.addSuppressed(ex)
                 }
             } finally {
                 synchronized(lifecycleLock) {
@@ -588,6 +587,7 @@ class OnyxClient(
         }
     }
 
+    @Suppress("DuplicatedCode")
     private fun buildQueryString(options: DeleteOptions?): String {
         if (options == null && defaultPartition == null) return ""
         val params = mutableMapOf<String, Any?>()
@@ -606,6 +606,7 @@ class OnyxClient(
         return buildQueryString(params)
     }
 
+    @Suppress("DuplicatedCode")
     private fun buildQueryString(options: FindOptions?): String {
         if (options == null && defaultPartition == null) return ""
         val params = mutableMapOf<String, Any?>()
