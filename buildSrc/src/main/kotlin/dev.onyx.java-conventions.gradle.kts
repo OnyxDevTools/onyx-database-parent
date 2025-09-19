@@ -105,8 +105,12 @@ publishing {
             val pub = this
             pom {
                 name.set(pub.artifactId)
-                description.set("Onyx Database is a graph database that is written in Kotlin and supports Java and Android.  It is designed to be lightweight and easy to use.  Features include in memory database, embedded, and remote server.  It leverages its own ORM and storage.")
-                url.set("http://onyx.dev")
+                description.set("Onyx Cloud Services develops the Onyx Database, a Kotlin-first graph database for JVM and Android applications with in-memory, embedded, and remote deployment options.")
+                url.set("https://onyx.dev")
+                organization {
+                    name.set("Onyx Cloud Services")
+                    url.set("https://onyx.dev")
+                }
                 licenses {
                     license {
                         name.set("Free Software Foundation's GNU AGPL v3.0")
@@ -118,6 +122,8 @@ publishing {
                         id.set("tosborn")
                         name.set("Tim Osborn")
                         email.set("tosborn@onyx.dev")
+                        organization.set("Onyx Cloud Services")
+                        organizationUrl.set("https://onyx.dev")
                     }
                 }
                 scm {
