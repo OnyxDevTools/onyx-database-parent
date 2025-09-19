@@ -2,7 +2,7 @@
 
 package com.onyx.cloud.impl
 
-import com.google.gson.*
+import com.google.gson.JsonObject
 import com.onyx.cloud.api.DeleteOptions
 import com.onyx.cloud.api.DocumentOptions
 import com.onyx.cloud.api.FindOptions
@@ -30,16 +30,37 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.util.*
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import javax.xml.validation.Schema
 import kotlin.reflect.KClass
 
 /**
- * Onyx API client implemented with JDK networking only.
+ * Minimal Onyx API client implemented using JDK networking only (no third-party HTTP client).
  *
- * @param baseUrl Base URL of the Onyx API without trailing slashes.
+ * This client focuses on correctness and predictable behavior in production:
+ * - Uses fixed-length streaming for request bodies to avoid chunked‐transfer oddities.
+ * - Explicitly refuses unsafe redirects that would drop request bodies (e.g., 301/303).
+ * - Handles 307/308 redirects only (preserve method + body), with a sane redirect cap.
+ * - Surfaces non-2xx responses with the response body for easier diagnostics.
+ *
+ * Typical usage:
+ * ```
+ * val db = OnyxClient(
+ *   baseUrl = "https://api.onyx.dev",
+ *   databaseId = "db_123",
+ *   apiKey = "...",
+ *   apiSecret = "..."
+ * )
+ *
+ * val results = db
+ *   .select("id", "name")
+ *   .from<User>()
+ *   .where("name".eq("Ada"))
+ *   .list<User>()
+ * ```
+ *
+ * @param baseUrl Base URL of the Onyx API (no trailing slash required).
  * @param databaseId Target database identifier.
  * @param apiKey API key header value.
  * @param apiSecret API secret header value.
@@ -49,7 +70,8 @@ class OnyxClient(
     private val databaseId: String,
     private val apiKey: String,
     private val apiSecret: String
-) : IOnyxDatabase<Schema> {
+) : IOnyxDatabase<Any> {
+
     private val baseUrl: String = baseUrl.replace(Regex("/+$"), "")
 
     private class HttpMethod private constructor(val value: String) {
@@ -62,17 +84,24 @@ class OnyxClient(
     }
 
     private object Timeouts {
+        /** Max time to read non-stream requests (ms). */
         const val REQUEST_TIMEOUT = 12_000_000
+        /** Connect timeout (ms). */
         const val CONNECT_TIMEOUT = 30_000
+        /** Streaming read timeout (ms). 0 = infinite (socket-level). */
         const val STREAM_READ_TIMEOUT = 0
     }
+
+    // ---------------------------------------------------------------------
+    // Documents
+    // ---------------------------------------------------------------------
 
     /**
      * Retrieves a document by ID.
      *
      * @param documentId Document identifier.
-     * @param options Optional query parameters such as image sizing.
-     * @return Raw document payload as a string.
+     * @param options Optional rendering/size options.
+     * @return Raw JSON or binary wrapper, depending on server response. May be `String` JSON.
      */
     override fun getDocument(documentId: String, options: DocumentOptions?): Any? {
         val queryString = buildQueryString(options)
@@ -84,28 +113,40 @@ class OnyxClient(
      * Deletes a document by ID.
      *
      * @param documentId Document identifier.
-     * @return True if deletion succeeded.
+     * @return `true` if deleted, `false` otherwise.
      */
     override fun deleteDocument(documentId: String): Boolean {
         val path = "/data/${encode(databaseId)}/document/${encode(documentId)}"
         return makeRequest(HttpMethod.Delete, path).equals("true", ignoreCase = true)
     }
 
-    override fun close() {
-        TODO("Not yet implemented")
+    /**
+     * Saves or updates a document.
+     *
+     * @param doc The document to save.
+     * @return The persisted document returned by the server.
+     */
+    override fun saveDocument(doc: OnyxDocument): OnyxDocument {
+        val path = "/data/${encode(databaseId)}/document"
+        return makeRequest(HttpMethod.Put, path, doc).fromJson<OnyxDocument>()
+            ?: throw IllegalStateException("Failed to parse response for saveDocument")
     }
 
+    // ---------------------------------------------------------------------
+    // Entities
+    // ---------------------------------------------------------------------
+
     /**
-     * Saves an entity or a list of entities.
+     * Saves an entity or a list of entities (no cascade options).
      *
-     * @param table Target entity type.
-     * @param entityOrEntities Entity or list of entities.
-     * @return Saved entity or original list.
+     * @param T Entity type.
+     * @param table The target entity class (table).
+     * @param entityOrEntities Entity instance or list of entities to save.
+     * @return The saved entity (or original list for batch saves).
      */
     @Suppress("UNCHECKED_CAST")
     fun <T : Any> save(table: KClass<*>, entityOrEntities: T): T {
         val path = "/data/${encode(databaseId)}/${encode(table)}"
-
         return if (entityOrEntities is List<*>) {
             makeRequest(HttpMethod.Put, path, entityOrEntities)
             entityOrEntities
@@ -116,13 +157,73 @@ class OnyxClient(
     }
 
     /**
+     * Saves an entity or list of entities with querystring options (e.g., cascade relationships).
+     *
+     * @param table Table class.
+     * @param entityOrEntities Entity instance or list.
+     * @param options Querystring parameters (e.g., `"relationships"`).
+     * @return Parsed server response when available, otherwise best-effort echo of input.
+     */
+    fun <T> save(table: KClass<*>, entityOrEntities: T, options: Map<String, Any?>): Any? {
+        val queryString = buildQueryString(options)
+        val path = "/data/${encode(databaseId)}/${encode(table.simpleName!!)}"
+        val response = makeRequest(HttpMethod.Put, path, entityOrEntities, queryString = queryString)
+
+        // Try to parse a sensible value back for common cases.
+        return when (entityOrEntities) {
+            is List<*> -> {
+                val elementType = entityOrEntities.firstOrNull()?.javaClass
+                if (elementType != null) {
+                    response.fromJsonList<Any>(elementType) ?: entityOrEntities
+                } else {
+                    response // unknown element type—return raw response
+                }
+            }
+            null -> response
+            else -> {
+                response.fromJson<Any>(entityOrEntities::class)
+            }
+        }
+    }
+
+    /**
+     * Cascading save/delete entry point.
+     *
+     * @param relationships Relationship graph strings to cascade (e.g., `"orders:Order(userId,id)"`).
+     * @return A builder that can perform `save` or `delete` with the cascade graph applied.
+     */
+    override fun cascade(vararg relationships: String): ICascadeBuilder =
+        CascadeBuilderImpl(this, relationships.toList())
+
+    /**
+     * Saves an entity or list of entities with optional cascade relationships.
+     *
+     * @param table Table class.
+     * @param entityOrEntities Entity instance or list.
+     * @param options Optional save options (e.g., cascade relationships).
+     * @return The saved entity or list.
+     */
+    @Suppress("UNCHECKED_CAST")
+    override fun <T> save(
+        table: KClass<*>,
+        entityOrEntities: T,
+        options: SaveOptions?
+    ): T {
+        return save(
+            table,
+            entityOrEntities,
+            hashMapOf<String, List<String>?>("relationships" to options?.relationships)
+        ) as T
+    }
+
+    /**
      * Finds an entity by primary key.
      *
-     * @param T Result type.
-     * @param type Entity class.
-     * @param primaryKey Key value.
-     * @param options Optional query options (partition, fetch).
-     * @return Entity or null when not found.
+     * @param T Entity type.
+     * @param type Entity class token.
+     * @param primaryKey Primary key value.
+     * @param options Optional find options (partition/resolvers).
+     * @return The entity or `null` if not found.
      */
     override fun <T> findById(
         type: KClass<*>,
@@ -139,11 +240,12 @@ class OnyxClient(
     }
 
     /**
-     * Deletes an entity by key.
+     * Deletes an entity by primary key.
      *
      * @param table Table name.
-     * @param primaryKey Key value.
-     * @param options Optional delete options such as partition or cascade relationships.
+     * @param primaryKey Primary key value.
+     * @param options Optional delete options (partition/relationships).
+     * @return `true` when the server reports success, otherwise `false`.
      */
     override fun delete(
         table: String,
@@ -155,19 +257,16 @@ class OnyxClient(
         return makeRequest(HttpMethod.Delete, path, queryString = queryString).equals("true", ignoreCase = true)
     }
 
-    override fun saveDocument(doc: OnyxDocument): OnyxDocument {
-        val path = "/data/${encode(databaseId)}/document"
-        return makeRequest(HttpMethod.Put, path, doc).fromJson<OnyxDocument>()
-            ?: throw IllegalStateException("Failed to parse response for saveDocument")
-    }
+    // ---------------------------------------------------------------------
+    // Query (non-streaming)
+    // ---------------------------------------------------------------------
 
     /**
-     * Executes a select query.
+     * Executes a select query and returns the raw JSON response.
      *
      * @param table Table name.
-     * @param selectQuery Query body.
-     * @param options Optional querystring options (pageSize, nextPage, partition).
-     * @return Raw JSON response.
+     * @param selectQuery Query body (select clauses, conditions, etc.).
+     * @param options Querystring options (e.g., pageSize, nextPage, partition).
      */
     fun executeQuery(
         table: String,
@@ -180,12 +279,12 @@ class OnyxClient(
     }
 
     /**
-     * Executes a count query.
+     * Executes a count query (server counts rows that match the conditions).
      *
      * @param table Table name.
      * @param selectQuery Query body with conditions.
-     * @param options Optional options (partition).
-     * @return Count as integer.
+     * @param options Optional options (e.g., partition).
+     * @return Count as an `Int` (0 if the server returns a non-numeric body).
      */
     fun executeCountForQuery(
         table: String,
@@ -198,12 +297,12 @@ class OnyxClient(
     }
 
     /**
-     * Executes an update query.
+     * Executes an update-by-query.
      *
      * @param table Table name.
-     * @param updateQuery Update body.
-     * @param options Optional options (partition).
-     * @return Number updated.
+     * @param updateQuery Update body (conditions + updates).
+     * @param options Optional options (e.g., partition).
+     * @return Number of updated rows.
      */
     fun executeUpdateQuery(
         table: String,
@@ -220,8 +319,8 @@ class OnyxClient(
      *
      * @param table Table name.
      * @param selectQuery Conditions body.
-     * @param options Optional options (partition).
-     * @return Number deleted.
+     * @param options Optional options (e.g., partition).
+     * @return Number of deleted rows.
      */
     fun executeDeleteQuery(
         table: String,
@@ -233,18 +332,23 @@ class OnyxClient(
         return makeRequest(HttpMethod.Put, path, selectQuery, queryString = queryString).toIntOrNull() ?: 0
     }
 
+    // ---------------------------------------------------------------------
+    // Streaming
+    // ---------------------------------------------------------------------
+
     /**
-     * Opens a JSONL stream and invokes [onLine] for each line of the response.
+     * Opens a NDJSON (JSON Lines) stream for a query and invokes [onLine] for each line.
      *
-     * The stream is processed on a dedicated daemon thread and the returned [StreamSubscription]
-     * can be used to stop listening for events when desired.
+     * The stream runs on a dedicated daemon thread; use the returned [StreamSubscription] to
+     * cancel or wait for completion. The client uses fixed-length streaming for the request body,
+     * disables automatic redirect following, and validates 2xx status codes before reading.
      *
      * @param table Table name.
      * @param selectQuery Query body.
-     * @param includeQueryResults Emit initial results first.
-     * @param keepAlive Keep connection open for changes.
-     * @param onLine Callback invoked for each raw JSON line from the stream.
-     * @return An active [StreamSubscription] controlling the stream lifecycle.
+     * @param includeQueryResults Emit initial results first (if supported by the server).
+     * @param keepAlive Keep connection open for change events after initial results.
+     * @param onLine Callback invoked with each raw line from the stream (already UTF-8 decoded).
+     * @return A [StreamSubscription] that controls the stream lifecycle and exposes the last error (if any).
      */
     fun stream(
         table: String,
@@ -334,6 +438,10 @@ class OnyxClient(
         )
     }
 
+    // ---------------------------------------------------------------------
+    // Builder entry points / helpers
+    // ---------------------------------------------------------------------
+
     /**
      * Creates a [QueryBuilder] inferring the table from [T].
      *
@@ -342,9 +450,10 @@ class OnyxClient(
     inline fun <reified T> from(): IQueryBuilder = QueryBuilder(this, T::class)
 
     /**
-     * Creates a [QueryBuilder] with selected fields.
+     * Starts a select query with the desired fields.
      *
      * @param fields Field names or aggregate expressions.
+     * @return A [IQueryBuilder] for further fluency.
      */
     override fun select(vararg fields: String): IQueryBuilder {
         val qb = QueryBuilder(this)
@@ -353,76 +462,25 @@ class OnyxClient(
     }
 
     /**
-     * URL-encodes a string.
-     *
-     * @param value Raw value.
+     * URL-encodes a string for safe inclusion in paths or querystrings.
      */
     fun encode(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8.name())
 
     /**
-     * URL-encodes a KClass simple name.
-     *
-     * @param value Class to encode.
+     * URL-encodes a class simple name (table).
      */
     fun encode(value: KClass<*>): String = encode(value.java.simpleName)
 
     /**
-     * Saves an entity or list of entities with additional query options (e.g., cascade relationships).
-     *
-     * @param table Table name.
-     * @param entityOrEntities Single entity or list of entities to save.
-     * @param options Map of query parameters (e.g., "relationships").
-     * @return Saved entity or original list.
+     * Releases any client resources. No-op for this implementation.
      */
-    fun <T> save(table: KClass<*>, entityOrEntities: T, options: Map<String, Any?>): Any? {
-        val queryString = buildQueryString(options)
-        val path = "/data/${encode(databaseId)}/${encode(table.simpleName!!)}"
-        // Perform save request and capture raw response
-        val response = makeRequest(HttpMethod.Put, path, entityOrEntities, queryString = queryString)
-        // Handle cascade updates or batch save: server may return an array or a single object
-        if (entityOrEntities is List<*> || options.containsKey("relationships")) {
-            // Determine element type from payload or default to Any
-            return if (entityOrEntities is List<*>) {
-                val elementType = entityOrEntities.firstOrNull()?.javaClass
-                // Fallback to Any
-                val actualType = elementType ?: Any::class.java
-                // Try parsing response as array
-                response.fromJsonList<Any>(actualType)?.let { return it }
-            } else {
-                val elementType = entityOrEntities!!.javaClass
-                response.fromJson<Any>(elementType.kotlin).let { return it }
-            }
-            // Fallback to single-object response wrapped in list
-            throw IllegalStateException("Failed to parse response for save list of entities")
-        }
-        // Handle saving a single entity: server may return an object or an array
-        val entityType = entityOrEntities!!::class.java
-        response.fromJson<Any>(entityType.kotlin).let { return it }
-        response.fromJsonList<Any>(entityType)?.firstOrNull()?.let { return it }
-        throw IllegalStateException("Failed to parse response for save single entity")
+    override fun close() {
+        // no persistent resources to release
     }
 
-    /**
-     * Begins a cascading save or delete operation that includes specified relationships.
-     *
-     * @param relationships Relationship graph strings to cascade.
-     * @return Builder to perform save or delete with cascade.
-     */
-    override fun cascade(vararg relationships: String): ICascadeBuilder =
-        CascadeBuilderImpl(this, relationships.toList())
-
-    @Suppress("UNCHECKED_CAST")
-    override fun <T> save(
-        table: KClass<*>,
-        entityOrEntities: T,
-        options: SaveOptions?
-    ): T {
-        return save(
-            table, entityOrEntities, hashMapOf<String, List<String>?>(
-                "relationships" to options?.relationships
-            )
-        ) as T
-    }
+    // ---------------------------------------------------------------------
+    // Internal: HTTP + utilities
+    // ---------------------------------------------------------------------
 
     private fun defaultHeaders(extra: Map<String, String> = emptyMap()): Map<String, String> =
         mapOf(
@@ -476,14 +534,11 @@ class OnyxClient(
         val params = buildList {
             options.forEach { (key, value) ->
                 when {
-                    value == null -> { /* skip */
-                    }
-
+                    value == null -> Unit
                     (key == "fetch" || key == "relationships") && value is List<*> -> {
                         val list = value.filterNotNull().joinToString(",")
                         if (list.isNotEmpty()) add("$key=${encode(list)}")
                     }
-
                     else -> add("$key=${encode(value.toString())}")
                 }
             }
@@ -491,6 +546,14 @@ class OnyxClient(
         return if (params.isNotEmpty()) "?$params" else ""
     }
 
+    /**
+     * Performs an HTTP call with robust redirect and error handling.
+     *
+     * Behavior:
+     * - Only 307/308 redirects are followed (at most 5 hops); other redirect codes are refused if a body is present.
+     * - Returns the response body as UTF-8 string on 2xx.
+     * - Throws [NotFoundException] on 404, or [RuntimeException] for other non-2xx codes with body included.
+     */
     private fun makeRequest(
         method: HttpMethod,
         path: String,
@@ -585,11 +648,29 @@ class OnyxClient(
     }
 }
 
+// =====================================================================
+// Query builder
+// =====================================================================
+
 /**
- * Fluent builder for select, update and delete queries including streaming.
+ * Fluent builder for select/update/delete queries and event streaming.
  *
- * @property client Backing [OnyxClient].
- * @property table Optional table name; must be set before execution.
+ * Construct via [OnyxClient.from] (type-inferred) or [OnyxClient.select] (fields-first).
+ * Methods are chainable and validated so that illegal sequences throw early with clear messages.
+ *
+ * Example:
+ * ```
+ * val page = client.select("id","name")
+ *   .from<User>()
+ *   .where("age".gt(18))
+ *   .orderBy(Sort("created", ascending = false))
+ *   .pageSize(50)
+ *   .list<User>()
+ * ```
+ *
+ * @property client Underlying [OnyxClient] used to execute requests.
+ * @property type Optional entity class (when inferred via [OnyxClient.from]).
+ * @property table Optional table name; inferred from [type] when not set explicitly.
  */
 class QueryBuilder(
     private val client: OnyxClient,
@@ -608,21 +689,21 @@ class QueryBuilder(
     private var updates: Map<String, Any?>? = null
 
     private enum class Mode { SELECT, UPDATE, DELETE }
-
     private var mode: Mode = Mode.SELECT
 
     private var pageSizeValue: Int? = null
     private var nextPageValue: String? = null
 
+    // Streaming callbacks (typed at delivery time)
     private var onItemAddedListener: ((entity: Any) -> Unit)? = null
     private var onItemDeletedListener: ((entity: Any) -> Unit)? = null
     private var onItemUpdatedListener: ((entity: Any) -> Unit)? = null
     private var onItemListener: ((entity: Any) -> Unit)? = null
 
     /**
-     * Selects fields.
+     * Sets the projection for SELECT queries.
      *
-     * @param fields Field names or expressions.
+     * @param fields Field names or expressions/aggregates.
      */
     override fun select(vararg fields: String): QueryBuilder {
         this.fields = fields.toList().ifEmpty { null }
@@ -631,9 +712,7 @@ class QueryBuilder(
     }
 
     /**
-     * Replaces existing conditions.
-     *
-     * @param condition Root condition.
+     * Replaces existing conditions with [condition].
      */
     override fun where(condition: IConditionBuilder): IQueryBuilder {
         this.conditions = condition.toCondition()
@@ -641,9 +720,7 @@ class QueryBuilder(
     }
 
     /**
-     * Adds AND condition.
-     *
-     * @param condition Condition to add.
+     * Adds an `AND` condition to the current predicate.
      */
     override fun and(condition: IConditionBuilder): IQueryBuilder {
         addCondition(condition, LogicalOperator.AND)
@@ -651,9 +728,7 @@ class QueryBuilder(
     }
 
     /**
-     * Adds OR condition.
-     *
-     * @param condition Condition to add.
+     * Adds an `OR` condition to the current predicate.
      */
     override fun or(condition: IConditionBuilder): QueryBuilder {
         addCondition(condition, LogicalOperator.OR)
@@ -667,7 +742,6 @@ class QueryBuilder(
             currentCondition == null -> conditionToAdd
             currentCondition is QueryCondition.CompoundCondition && currentCondition.operator == logicalOperator ->
                 currentCondition.copy(conditions = currentCondition.conditions + conditionToAdd)
-
             else -> QueryCondition.CompoundCondition(
                 operator = logicalOperator,
                 conditions = listOfNotNull(currentCondition, conditionToAdd)
@@ -676,9 +750,7 @@ class QueryBuilder(
     }
 
     /**
-     * Sets limit.
-     *
-     * @param limit Maximum rows.
+     * Limits the number of rows returned by the server.
      */
     override fun limit(limit: Int): QueryBuilder {
         limitValue = limit
@@ -686,7 +758,7 @@ class QueryBuilder(
     }
 
     /**
-     * Enforces distinct results.
+     * Requests distinct results for the projection.
      */
     override fun distinct(): QueryBuilder {
         distinctValue = true
@@ -694,9 +766,7 @@ class QueryBuilder(
     }
 
     /**
-     * Sets group-by.
-     *
-     * @param fields Fields to group by.
+     * Groups results by the given fields.
      */
     override fun groupBy(vararg fields: String): QueryBuilder {
         groupByValues = fields.toList().ifEmpty { null }
@@ -704,9 +774,7 @@ class QueryBuilder(
     }
 
     /**
-     * Sets order-by.
-     *
-     * @param orders Sort orders.
+     * Applies sort ordering to the results.
      */
     override fun orderBy(vararg orders: Sort): IQueryBuilder {
         sort = orders.toList().ifEmpty { null }
@@ -714,9 +782,7 @@ class QueryBuilder(
     }
 
     /**
-     * Scopes the query to a partition.
-     *
-     * @param partition Partition value.
+     * Scopes the query to a specific partition (shard/tenant).
      */
     override fun inPartition(partition: String): QueryBuilder {
         partitionValue = partition
@@ -724,9 +790,7 @@ class QueryBuilder(
     }
 
     /**
-     * Requests relationship resolution.
-     *
-     * @param resolvers Relationships to resolve.
+     * Requests relationship resolution for the given resolvers.
      */
     override fun resolve(vararg resolvers: String): QueryBuilder {
         this.resolvers = resolvers.toList()
@@ -734,9 +798,7 @@ class QueryBuilder(
     }
 
     /**
-     * Switches to update mode with field values.
-     *
-     * @param updates Field/value pairs.
+     * Switches to UPDATE mode and sets field/value updates.
      */
     override fun setUpdates(vararg updates: Pair<String, Any?>): QueryBuilder {
         this.mode = Mode.UPDATE
@@ -745,9 +807,7 @@ class QueryBuilder(
     }
 
     /**
-     * Sets page size.
-     *
-     * @param size Items per page.
+     * Sets the desired page size when paginating results.
      */
     override fun pageSize(size: Int): QueryBuilder {
         pageSizeValue = size
@@ -755,9 +815,7 @@ class QueryBuilder(
     }
 
     /**
-     * Sets next page token.
-     *
-     * @param token Next page token.
+     * Sets the server-provided next page token for pagination.
      */
     override fun nextPage(token: String): QueryBuilder {
         nextPageValue = token
@@ -800,34 +858,46 @@ class QueryBuilder(
         ).filterValues { it != null }
 
     /**
-     * Executes the query and returns the first page of results.
+     * Executes the (SELECT) query and returns the first page of results.
      *
-     * @param T Result type.
-     * @param type Class token for deserialization.
+     * Notes:
+     * - When a projection is specified (`select("fieldA", ...)`) the result type defaults to `HashMap`
+     *   so you can call `list<HashMap<String, Any>>()`. For full-entity selects, the inferred [type] is used.
      */
     override fun <T : Any> list(): IQueryResults<T> {
         check(mode == Mode.SELECT) { "Cannot call list() when the builder is in ${mode.name} mode." }
-        val targetTable =
-            table ?: throw IllegalStateException("Table name must be specified using from() before calling list().")
+        val targetTable = table
+            ?: throw IllegalStateException("Table name must be specified using from() before calling list().")
         val queryPayload = buildSelectQueryPayload()
         val requestOptions = buildCommonOptions()
         val jsonResponse = client.executeQuery(targetTable, queryPayload, requestOptions)
-        val results =
-            jsonResponse.toQueryResults<T>(gson, if (fields?.isNotEmpty() == true) HashMap::class else this.type!!)
+
+        val isProjection = fields?.isNotEmpty() == true
+        val clazz = if (isProjection) HashMap::class else this.type
+            ?: throw IllegalStateException("Result class cannot be determined. Use from<T>() or provide fields.")
+
+        val results = jsonResponse.toQueryResults<T>(gson, clazz)
         results.query = this
-        results.classType = if (fields?.isNotEmpty() == true) HashMap::class else this.type!!
+        results.classType = clazz
         return results
     }
 
+    /**
+     * Executes the query and returns the first record or `null`.
+     */
     override fun <T : Any> firstOrNull(): T? = this.list<T>().firstOrNull()
+
+    /**
+     * Alias for [firstOrNull] (kept for API parity).
+     */
     override fun <T : Any> one(): T? = this.list<T>().firstOrNull()
 
     /**
-     * Counts rows that match current conditions.
+     * Counts rows that match the current conditions.
      */
     override fun count(): Int {
-        val targetTable =
-            table ?: throw IllegalStateException("Table name must be specified using from() before calling count().")
+        val targetTable = table
+            ?: throw IllegalStateException("Table name must be specified using from() before calling count().")
         val countQueryPayload = mapOf(
             "type" to "SelectQuery",
             "conditions" to conditions,
@@ -838,14 +908,16 @@ class QueryBuilder(
     }
 
     /**
-     * Deletes rows that match current conditions.
+     * Deletes rows that match the current conditions.
      *
-     * @return Rows deleted.
+     * @return Number of deleted rows.
      */
     override fun delete(): Int {
-        check(mode == Mode.SELECT || mode == Mode.DELETE) { "delete() can only be called after setting conditions (where/and/or/partition), not in update mode." }
-        val targetTable =
-            table ?: throw IllegalStateException("Table name must be specified using from() before calling delete().")
+        check(mode == Mode.SELECT || mode == Mode.DELETE) {
+            "delete() can only be called after setting conditions (where/and/or/partition), not in update mode."
+        }
+        val targetTable = table
+            ?: throw IllegalStateException("Table name must be specified using from() before calling delete().")
         mode = Mode.DELETE
         val queryPayload = buildDeleteQueryPayload()
         val requestOptions = mapOf("partition" to partitionValue).filterValues { it != null }
@@ -853,25 +925,24 @@ class QueryBuilder(
     }
 
     /**
-     * Applies updates to rows that match current conditions.
+     * Applies updates to rows that match the current conditions.
      *
-     * @return Rows updated.
+     * @return Number of updated rows.
      */
     override fun update(): Int {
         check(mode == Mode.UPDATE) { "Must call setUpdates(...) before calling update()." }
         check(updates != null) { "No updates specified. Call setUpdates(...) first." }
-        val targetTable =
-            table ?: throw IllegalStateException("Table name must be specified using from() before calling update().")
+        val targetTable = table
+            ?: throw IllegalStateException("Table name must be specified using from() before calling update().")
         val queryPayload = buildUpdateQueryPayload()
         val requestOptions = mapOf("partition" to partitionValue).filterValues { it != null }
         return client.executeUpdateQuery(targetTable, queryPayload, requestOptions)
     }
 
+    // ---------------------- Streaming (builder) ----------------------
+
     /**
-     * Registers a creation listener for streaming.
-     *
-     * @param T Entity type.
-     * @param listener Callback for created items.
+     * Registers a creation listener used when [stream] is invoked.
      */
     override fun <T : Any> onItemAdded(listener: (entity: T) -> Unit): QueryBuilder {
         @Suppress("UNCHECKED_CAST")
@@ -880,10 +951,7 @@ class QueryBuilder(
     }
 
     /**
-     * Registers a deletion listener for streaming.
-     *
-     * @param T Entity type.
-     * @param listener Callback for deleted items.
+     * Registers a deletion listener used when [stream] is invoked.
      */
     override fun <T : Any> onItemDeleted(listener: (entity: T) -> Unit): QueryBuilder {
         @Suppress("UNCHECKED_CAST")
@@ -892,10 +960,7 @@ class QueryBuilder(
     }
 
     /**
-     * Registers an update listener for streaming.
-     *
-     * @param T Entity type.
-     * @param listener Callback for updated items.
+     * Registers an update listener used when [stream] is invoked.
      */
     override fun <T : Any> onItemUpdated(listener: (entity: T) -> Unit): QueryBuilder {
         @Suppress("UNCHECKED_CAST")
@@ -904,10 +969,7 @@ class QueryBuilder(
     }
 
     /**
-     * Registers a listener for initial query results on streaming.
-     *
-     * @param T Entity type.
-     * @param listener Callback for initial results.
+     * Registers a listener for initial query results when [stream] is invoked with `includeQueryResults = true`.
      */
     override fun <T : Any> onItem(listener: (entity: T) -> Unit): IQueryBuilder {
         @Suppress("UNCHECKED_CAST")
@@ -916,20 +978,19 @@ class QueryBuilder(
     }
 
     /**
-     * Starts streaming with optional initial results.
+     * Starts a change stream for the current SELECT query.
      *
-     * @param T Entity type.
-     * @param type Class token for deserialization.
-     * @param includeQueryResults Include initial results.
-     * @param keepAlive Keep the stream open.
+     * @param includeQueryResults If `true`, delivers initial results via [onItem] callbacks prior to live events.
+     * @param keepAlive If `true`, keeps the connection open for subsequent change events.
+     * @return An [IStreamSubscription] to control the stream.
      */
     override fun <T> stream(
         includeQueryResults: Boolean,
         keepAlive: Boolean,
     ): IStreamSubscription {
         check(mode == Mode.SELECT) { "Streaming is only applicable in select mode." }
-        val targetTable =
-            table ?: throw IllegalStateException("Table name must be specified using from() before calling stream().")
+        val targetTable = table
+            ?: throw IllegalStateException("Table name must be specified using from() before calling stream().")
         val queryPayload = buildSelectQueryPayload()
 
         return client.stream(
@@ -939,9 +1000,7 @@ class QueryBuilder(
             keepAlive,
         ) onLine@{ line ->
             val trimmed = line.trim()
-            if (trimmed.isEmpty()) {
-                return@onLine
-            }
+            if (trimmed.isEmpty()) return@onLine
 
             val response = runCatching { trimmed.fromJson<StreamResponse>() }.getOrNull() ?: return@onLine
             val entityJson = response.entity?.toString() ?: return@onLine
@@ -966,12 +1025,16 @@ class QueryBuilder(
     }
 }
 
+// =====================================================================
+// Query condition model
+// =====================================================================
+
 /**
  * Discriminated union for query conditions.
  */
 sealed class QueryCondition {
     /**
-     * Leaf condition.
+     * Leaf condition consisting of a single [QueryCriteria].
      */
     data class SingleCondition(
         val criteria: QueryCriteria,
@@ -979,7 +1042,7 @@ sealed class QueryCondition {
     ) : QueryCondition()
 
     /**
-     * Composite condition with a logical operator.
+     * Composite condition with a logical operator applied to nested conditions.
      */
     data class CompoundCondition(
         val operator: LogicalOperator,
@@ -988,10 +1051,14 @@ sealed class QueryCondition {
     ) : QueryCondition()
 }
 
+// =====================================================================
+// Streaming subscription + envelope
+// =====================================================================
+
 /**
  * Represents an active streaming subscription created via [OnyxClient.stream].
  *
- * The underlying stream executes on a daemon thread. Use [cancel], [join], or [cancelAndJoin]
+ * The underlying stream runs on a daemon thread. Use [cancel], [join], or [cancelAndJoin]
  * to control its lifecycle. Invoking [close] behaves the same as [cancel].
  */
 class StreamSubscription internal constructor(
@@ -1036,10 +1103,10 @@ class StreamSubscription internal constructor(
 }
 
 /**
- * Stream response envelope.
+ * Stream response envelope (one line of NDJSON).
  *
- * @property action Event type.
- * @property entity Raw entity object.
+ * @property action Event type (`CREATE`/`UPDATE`/`DELETE`/`QUERY_RESPONSE`).
+ * @property entity Raw entity payload as JSON.
  */
 internal data class StreamResponse(
     val action: String?,

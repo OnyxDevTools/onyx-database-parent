@@ -11,7 +11,7 @@ import kotlin.test.assertTrue
  * Integration tests for streaming functionality against the real Onyx Cloud backend.
  */
 class OnyxCloudStreamingIntegrationTest {
-    private val client = OnyxClient(
+    private val client = onyx.init(
         baseUrl = "https://api.onyx.dev",
         databaseId = "bbabca0e-82ce-11f0-0000-a2ce78b61b6a",
         apiKey = "Hj52NXaqB",

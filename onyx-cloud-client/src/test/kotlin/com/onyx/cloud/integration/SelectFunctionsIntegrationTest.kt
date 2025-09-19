@@ -13,7 +13,7 @@ import kotlin.test.fail
  * real Onyx Cloud backend.
  */
 class SelectFunctionsIntegrationTest {
-    private val client = OnyxClient(
+    private val client = onyx.init(
         baseUrl = "https://api.onyx.dev",
         databaseId = "bbabca0e-82ce-11f0-0000-a2ce78b61b6a",
         apiKey = "Hj52NXaqB",

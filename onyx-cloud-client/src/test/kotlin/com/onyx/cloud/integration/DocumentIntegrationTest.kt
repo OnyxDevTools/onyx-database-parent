@@ -2,6 +2,7 @@ package com.onyx.cloud.integration
 
 import com.onyx.cloud.impl.OnyxClient
 import com.onyx.cloud.api.OnyxDocument
+import com.onyx.cloud.api.onyx
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 import java.util.Date
@@ -20,8 +21,7 @@ private val enforceIpv4Stack = run {
  * Integration tests for document endpoints against the shared Onyx Cloud database.
  */
 class DocumentIntegrationTest {
-    private val client = OnyxClient(
-        baseUrl = "https://api.onyx.dev",
+    private val client = onyx.init(
         databaseId = "bbabca0e-82ce-11f0-0000-a2ce78b61b6a",
         apiKey = "Hj52NXaqB",
         apiSecret = "bEJiEsuE28z1XeT/MHujy+1/6sqFMsZ4WK7M/M8BS34="

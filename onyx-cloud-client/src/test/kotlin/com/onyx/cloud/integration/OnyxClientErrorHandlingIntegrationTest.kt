@@ -1,5 +1,8 @@
 package com.onyx.cloud.integration
 
+import com.onyx.cloud.api.IOnyxDatabase
+import com.onyx.cloud.api.from
+import com.onyx.cloud.api.onyx
 import com.onyx.cloud.impl.OnyxClient
 import com.onyx.cloud.api.save
 import com.onyx.cloud.exceptions.NotFoundException
@@ -17,13 +20,13 @@ import kotlin.test.assertTrue
 
 class OnyxClientErrorHandlingIntegrationTest {
     private lateinit var server: MockWebServer
-    private lateinit var client: OnyxClient
+    private lateinit var client: IOnyxDatabase<Any>
 
     @BeforeTest
     fun setUp() {
         server = MockWebServer().apply { start() }
         val baseUrl = server.url("/").toString().trimEnd('/')
-        client = OnyxClient(baseUrl = baseUrl, databaseId = "db", apiKey = "key", apiSecret = "secret")
+        client = onyx.init(baseUrl = baseUrl, databaseId = "db", apiKey = "key", apiSecret = "secret")
     }
 
     @AfterTest
@@ -146,12 +149,12 @@ class OnyxClientErrorHandlingIntegrationTest {
                 .setBody("stream failure")
         )
 
-        val subscription = client.stream(
-            table = "User",
-            selectQuery = mapOf("type" to "SelectQuery"),
+        client
+
+        val subscription = client.from<User>().stream<User>(
             includeQueryResults = true,
             keepAlive = false,
-        ) { }
+        )
 
         val request = server.takeRequest(5, TimeUnit.SECONDS)
         assertNotNull(request)

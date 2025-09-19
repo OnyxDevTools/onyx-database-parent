@@ -1,7 +1,8 @@
 package com.onyx.cloud.integration
 
-import com.onyx.cloud.impl.OnyxClient
 import com.onyx.cloud.api.eq
+import com.onyx.cloud.api.from
+import com.onyx.cloud.api.onyx
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import java.util.UUID
@@ -10,7 +11,7 @@ import java.util.UUID
  * Integration tests for update queries using the cloud client.
  */
 class UpdateQueryIntegrationTest {
-    private val client = OnyxClient(
+    private val client = onyx.init(
         baseUrl = "https://api.onyx.dev",
         databaseId = "bbabca0e-82ce-11f0-0000-a2ce78b61b6a",
         apiKey = "Hj52NXaqB",

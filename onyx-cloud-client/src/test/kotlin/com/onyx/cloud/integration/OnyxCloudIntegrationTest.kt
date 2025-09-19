@@ -10,7 +10,7 @@ import java.util.UUID
  * Integration tests exercising the Onyx Cloud backend.
  */
 class OnyxCloudIntegrationTest {
-    private val client = OnyxClient(
+    private val client = onyx.init(
         baseUrl = "https://api.onyx.dev",
         databaseId = "bbabca0e-82ce-11f0-0000-a2ce78b61b6a",
         apiKey = "Hj52NXaqB",

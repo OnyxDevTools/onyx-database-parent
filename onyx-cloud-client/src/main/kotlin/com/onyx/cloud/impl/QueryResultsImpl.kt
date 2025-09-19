@@ -5,7 +5,6 @@ import com.google.gson.annotations.SerializedName
 import com.onyx.cloud.api.IQueryResults
 import com.onyx.cloud.extensions.fromJsonList
 import com.onyx.cloud.extensions.get
-import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.concurrent.Executors
 import kotlin.reflect.KClass
@@ -126,9 +125,6 @@ data class QueryResultsImpl<T : Any>(
 
     override fun sumOfBigInt(selector: (T) -> BigInteger): BigInteger =
         getAllRecords().map(selector).fold(BigInteger.ZERO, BigInteger::add)
-
-    fun sumOfBigDecimal(selector: (T) -> BigDecimal): BigDecimal =
-        getAllRecords().map(selector).fold(BigDecimal.ZERO, BigDecimal::add)
 
     /** Page-parallel helper (unchanged). */
     override fun forEachPageParallel(action: (T) -> Unit) {
