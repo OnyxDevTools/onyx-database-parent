@@ -5,6 +5,9 @@ package com.onyx.cloud.impl
 import com.google.gson.JsonObject
 import com.onyx.cloud.api.DeleteOptions
 import com.onyx.cloud.api.DocumentOptions
+import com.onyx.cloud.api.FetchImpl
+import com.onyx.cloud.api.FetchInit
+import com.onyx.cloud.api.FetchResponse
 import com.onyx.cloud.api.FindOptions
 import com.onyx.cloud.api.ICascadeBuilder
 import com.onyx.cloud.api.IConditionBuilder
@@ -64,12 +67,28 @@ import kotlin.reflect.KClass
  * @param databaseId Target database identifier.
  * @param apiKey API key header value.
  * @param apiSecret API secret header value.
+ * @param fetch Optional custom HTTP implementation. When provided, all non-streaming
+ * requests will delegate to this function instead of the default `HttpURLConnection`
+ * transport.
+ * @param defaultPartition Default partition applied to queries when none is specified
+ * explicitly.
+ * @param requestLoggingEnabled When `true`, the client logs outgoing requests (with
+ * sensitive headers redacted).
+ * @param responseLoggingEnabled When `true`, the client logs responses received from the
+ * server.
+ * @param ttl Optional time-to-live value (milliseconds) propagated via the `x-onyx-ttl`
+ * header for credential caching.
  */
 class OnyxClient(
     baseUrl: String = "https://api.onyx.dev",
     private val databaseId: String,
     private val apiKey: String,
-    private val apiSecret: String
+    private val apiSecret: String,
+    private val fetch: FetchImpl? = null,
+    internal val defaultPartition: String? = null,
+    private val requestLoggingEnabled: Boolean = false,
+    private val responseLoggingEnabled: Boolean = false,
+    private val ttl: Long? = null
 ) : IOnyxDatabase<Any> {
 
     private val baseUrl: String = baseUrl.replace(Regex("/+$"), "")
@@ -482,14 +501,18 @@ class OnyxClient(
     // Internal: HTTP + utilities
     // ---------------------------------------------------------------------
 
-    private fun defaultHeaders(extra: Map<String, String> = emptyMap()): Map<String, String> =
-        mapOf(
+    private fun defaultHeaders(extra: Map<String, String> = emptyMap()): MutableMap<String, String> {
+        val headers = mutableMapOf(
             "x-onyx-key" to apiKey,
             "x-onyx-secret" to apiSecret,
             "Content-Type" to "application/json",
             "Accept" to "application/json",
             "Connection" to "keep-alive"
-        ) + extra
+        )
+        ttl?.let { headers["x-onyx-ttl"] = it.toString() }
+        headers.putAll(extra)
+        return headers
+    }
 
     private fun applyHeaders(conn: HttpURLConnection, headers: Map<String, String>) {
         headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
@@ -507,26 +530,29 @@ class OnyxClient(
     }
 
     private fun buildQueryString(options: DeleteOptions?): String {
-        if (options == null) return ""
+        if (options == null && defaultPartition == null) return ""
         val params = mutableMapOf<String, Any?>()
-        options.partition?.let { params["partition"] = it }
-        options.relationships?.let { params["relationships"] = it }
+        val partition = options?.partition ?: defaultPartition
+        partition?.let { params["partition"] = it }
+        options?.relationships?.let { params["relationships"] = it }
         return buildQueryString(params)
     }
 
     private fun buildQueryString(options: DocumentOptions?): String {
-        if (options == null) return ""
+        if (options == null && defaultPartition == null) return ""
         val params = mutableMapOf<String, Any?>()
-        options.height?.let { params["height"] = it }
-        options.width?.let { params["width"] = it }
+        options?.height?.let { params["height"] = it }
+        options?.width?.let { params["width"] = it }
+        defaultPartition?.let { params["partition"] = it }
         return buildQueryString(params)
     }
 
     private fun buildQueryString(options: FindOptions?): String {
-        if (options == null) return ""
+        if (options == null && defaultPartition == null) return ""
         val params = mutableMapOf<String, Any?>()
-        options.partition?.let { params["partition"] = it }
-        options.resolvers?.let { params["resolvers"] = it }
+        val partition = options?.partition ?: defaultPartition
+        partition?.let { params["partition"] = it }
+        options?.resolvers?.let { params["resolvers"] = it }
         return buildQueryString(params)
     }
 
@@ -561,16 +587,62 @@ class OnyxClient(
         extraHeaders: Map<String, String> = emptyMap(),
         queryString: String = ""
     ): String {
-        var currentUrl = URI("$baseUrl$path$queryString").toURL()
-        var methodToUse = method.value
-        var redirects = 0
+        val url = "$baseUrl$path$queryString"
+        val methodValue = method.value
+        val headers = defaultHeaders(extraHeaders)
+        val payload = if ((methodValue == "POST" || methodValue == "PUT") && body != null) {
+            (body as? String) ?: body.toJson()
+        } else null
 
-        // Prepare body bytes up-front (if any)
-        var bodyBytes: ByteArray? = null
-        if ((methodToUse == "POST" || methodToUse == "PUT") && body != null) {
-            val payload = (body as? String) ?: body.toJson()
-            bodyBytes = payload.toByteArray(StandardCharsets.UTF_8)
+        if (headers["Accept"].isNullOrEmpty()) {
+            headers["Accept"] = "application/json"
         }
+        if (payload != null && headers["Content-Type"].isNullOrEmpty()) {
+            headers["Content-Type"] = "application/json; charset=utf-8"
+        }
+
+        return if (fetch != null) {
+            executeWithFetch(url, methodValue, headers, payload)
+        } else {
+            executeWithHttpUrlConnection(url, methodValue, headers, payload)
+        }
+    }
+
+    private fun executeWithFetch(
+        url: String,
+        method: String,
+        headers: MutableMap<String, String>,
+        payload: String?
+    ): String {
+        if (requestLoggingEnabled) {
+            logRequest(method, url, headers, payload)
+        }
+        val init = FetchInit(method = method, headers = headers.toMap(), body = payload)
+        val response = fetch!!.invoke(url, init)
+        val text = response.text()
+        if (responseLoggingEnabled) {
+            logResponse(response.status, url, text)
+        }
+        if (response.status !in 200..299) {
+            val msg = "HTTP ${response.status} @ $url → $text"
+            throw when (response.status) {
+                404 -> NotFoundException(msg, RuntimeException("HTTP ${response.status}"))
+                else -> RuntimeException(msg)
+            }
+        }
+        return text
+    }
+
+    private fun executeWithHttpUrlConnection(
+        url: String,
+        method: String,
+        headers: MutableMap<String, String>,
+        payload: String?
+    ): String {
+        var currentUrl = URI(url).toURL()
+        var methodToUse = method
+        var redirects = 0
+        val bodyBytes = payload?.toByteArray(StandardCharsets.UTF_8)
 
         while (true) {
             val conn = (currentUrl.openConnection() as HttpURLConnection)
@@ -583,16 +655,11 @@ class OnyxClient(
                 conn.doOutput = bodyBytes != null
                 conn.requestMethod = methodToUse
 
-                // Headers
-                applyHeaders(conn, defaultHeaders(extraHeaders))
-                if (conn.getRequestProperty("Accept").isNullOrEmpty()) {
-                    conn.setRequestProperty("Accept", "application/json")
-                }
-                if (bodyBytes != null && conn.getRequestProperty("Content-Type").isNullOrEmpty()) {
-                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                applyHeaders(conn, headers)
+                if (requestLoggingEnabled) {
+                    logRequest(methodToUse, currentUrl.toString(), headers, payload)
                 }
 
-                // Fixed-length streaming (avoid chunked TE)
                 if (bodyBytes != null) {
                     conn.setFixedLengthStreamingMode(bodyBytes.size)
                 }
@@ -608,8 +675,10 @@ class OnyxClient(
 
                 val code = conn.responseCode
 
-                // Follow only 307/308 (preserve method + body)
                 if (code == HttpURLConnection.HTTP_MOVED_TEMP || code == 308) {
+                    if (responseLoggingEnabled) {
+                        logResponse(code, conn.url.toString(), "<redirect>")
+                    }
                     val location = conn.getHeaderField("Location")
                     conn.disconnect()
                     if (!location.isNullOrEmpty() && redirects < 5) {
@@ -621,16 +690,21 @@ class OnyxClient(
                     }
                 }
 
-                // Refuse 301/302/303 on methods with bodies (they would drop the body)
                 if ((code == 301 || code == 303) && bodyBytes != null) {
                     val location = conn.getHeaderField("Location")
                     val txt = conn.errorStream?.use { String(it.readBytes(), StandardCharsets.UTF_8) } ?: ""
+                    if (responseLoggingEnabled) {
+                        logResponse(code, conn.url.toString(), txt)
+                    }
                     conn.disconnect()
                     throw RuntimeException("Refusing to follow $code redirect for $methodToUse with body to $location. Response: $txt")
                 }
 
                 val stream = if (code >= 400) (conn.errorStream ?: conn.inputStream) else conn.inputStream
                 val text = stream?.use { String(it.readBytes(), StandardCharsets.UTF_8) } ?: ""
+                if (responseLoggingEnabled) {
+                    logResponse(code, conn.url.toString(), text)
+                }
 
                 if (code !in 200..299) {
                     val msg = "HTTP $code @ ${conn.url} → $text"
@@ -645,6 +719,22 @@ class OnyxClient(
                 conn.disconnect()
             }
         }
+    }
+
+    private fun maskSensitiveHeaders(headers: Map<String, String>): Map<String, String> =
+        headers.mapValues { (key, value) ->
+            if (key.equals("x-onyx-secret", ignoreCase = true)) "****" else value
+        }
+
+    private fun logRequest(method: String, url: String, headers: Map<String, String>, body: String?) {
+        val sanitizedHeaders = maskSensitiveHeaders(headers)
+        val bodyPreview = body ?: "<empty>"
+        println("OnyxClient Request: method=$method url=$url headers=$sanitizedHeaders body=$bodyPreview")
+    }
+
+    private fun logResponse(status: Int, url: String, body: String?) {
+        val bodyPreview = body ?: "<empty>"
+        println("OnyxClient Response: status=$status url=$url body=$bodyPreview")
     }
 }
 
@@ -684,7 +774,7 @@ class QueryBuilder(
     private var limitValue: Int? = null
     private var distinctValue: Boolean = false
     private var groupByValues: List<String>? = null
-    private var partitionValue: String? = null
+    private var partitionValue: String? = client.defaultPartition
     private var resolvers: List<String> = emptyList()
     private var updates: Map<String, Any?>? = null
 

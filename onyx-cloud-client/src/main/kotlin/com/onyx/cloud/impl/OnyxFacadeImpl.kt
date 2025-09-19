@@ -27,7 +27,12 @@ object OnyxFacadeImpl : OnyxFacade {
             baseUrl = config?.baseUrl ?: "https://api.onyx.dev",
             databaseId = config?.databaseId ?: System.getenv("ONYX_DATABASE_ID"),
             apiKey = config?.apiKey ?: System.getenv("ONYX_API_KEY"),
-            apiSecret = config?.apiSecret ?: System.getenv("ONYX_API_SECRET")
+            apiSecret = config?.apiSecret ?: System.getenv("ONYX_API_SECRET"),
+            fetch = config?.fetch,
+            defaultPartition = config?.partition,
+            requestLoggingEnabled = config?.requestLoggingEnabled ?: false,
+            responseLoggingEnabled = config?.responseLoggingEnabled ?: false,
+            ttl = config?.ttl
         ) as IOnyxDatabase<Schema>
 
     override fun clearCacheConfig() {}
