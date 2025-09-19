@@ -31,8 +31,10 @@ import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.jvm.Volatile
 import kotlin.reflect.KClass
 
 /**
@@ -73,6 +75,11 @@ class OnyxClient(
 ) : IOnyxDatabase<Any> {
 
     private val baseUrl: String = baseUrl.replace(Regex("/+$"), "")
+    private val lifecycleLock = Any()
+    private val activeStreams = ConcurrentHashMap.newKeySet<StreamSubscription>()
+
+    @Volatile
+    private var closed = false
 
     private class HttpMethod private constructor(val value: String) {
         companion object {
@@ -357,6 +364,10 @@ class OnyxClient(
         keepAlive: Boolean = false,
         onLine: (String) -> Unit,
     ): StreamSubscription {
+        if (closed) {
+            throw IllegalStateException("OnyxClient has been closed")
+        }
+
         val params = "?includeQueryResults=$includeQueryResults&keepAlive=$keepAlive"
         val encodedDbId = encode(databaseId)
         val encodedTable = encode(table)
@@ -366,6 +377,16 @@ class OnyxClient(
         val isActive = AtomicBoolean(true)
         val connectionRef = AtomicReference<HttpURLConnection?>()
         val errorRef = AtomicReference<Throwable?>()
+
+        lateinit var subscription: StreamSubscription
+        val removed = AtomicBoolean(false)
+        val removeFromRegistry = {
+            if (removed.compareAndSet(false, true)) {
+                synchronized(lifecycleLock) {
+                    activeStreams.remove(subscription)
+                }
+            }
+        }
 
         val thread = Thread {
             var conn: HttpURLConnection? = null
@@ -421,13 +442,11 @@ class OnyxClient(
                 isActive.set(false)
                 connectionRef.getAndSet(null)?.disconnect()
                 conn?.disconnect()
+                removeFromRegistry()
             }
         }
 
-        thread.isDaemon = true
-        thread.start()
-
-        return StreamSubscription(
+        subscription = StreamSubscription(
             thread,
             cancelAction = {
                 if (isActive.compareAndSet(true, false)) {
@@ -436,6 +455,18 @@ class OnyxClient(
             },
             errorRef = errorRef
         )
+
+        synchronized(lifecycleLock) {
+            if (closed) {
+                removeFromRegistry()
+                throw IllegalStateException("OnyxClient has been closed")
+            }
+            activeStreams.add(subscription)
+            thread.isDaemon = true
+            thread.start()
+        }
+
+        return subscription
     }
 
     // ---------------------------------------------------------------------
@@ -472,10 +503,38 @@ class OnyxClient(
     fun encode(value: KClass<*>): String = encode(value.java.simpleName)
 
     /**
-     * Releases any client resources. No-op for this implementation.
+     * Cancels and waits for completion of all active stream subscriptions.
+     *
+     * Subsequent calls are idempotent. After closing, new streams cannot be created.
      */
     override fun close() {
-        // no persistent resources to release
+        val subscriptionsToClose: List<StreamSubscription>
+        synchronized(lifecycleLock) {
+            if (closed) {
+                return
+            }
+            closed = true
+            subscriptionsToClose = activeStreams.toList()
+        }
+
+        var firstError: Throwable? = null
+        subscriptionsToClose.forEach { subscription ->
+            try {
+                subscription.cancelAndJoin()
+            } catch (ex: Throwable) {
+                if (firstError == null) {
+                    firstError = ex
+                } else {
+                    firstError!!.addSuppressed(ex)
+                }
+            } finally {
+                synchronized(lifecycleLock) {
+                    activeStreams.remove(subscription)
+                }
+            }
+        }
+
+        firstError?.let { throw it }
     }
 
     // ---------------------------------------------------------------------
