@@ -4,6 +4,7 @@ import com.onyx.extension.common.ClassMetadata
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import java.util.Date
+import kotlin.Pair
 
 /**
  * This Enum indicates all of the different types of objects that can be serialized
@@ -58,8 +59,8 @@ enum class BufferObjectType constructor(private val type: Class<*>?) {
 
     ENTITY(IManagedEntity::class.java),
 
-    OTHER(null);
-
+    OTHER(null),
+    PAIR(Pair::class.java);
 
     companion object {
 

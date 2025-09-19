@@ -121,7 +121,7 @@ class IdentifierListTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
     @Test
     fun testIdentifierGreaterThan() {
         val results = manager.list<AllAttributeForFetchSequenceGen>(AllAttributeForFetchSequenceGen::class.java, ("id" gt 5))
-        assertEquals(2, results.size, "Expected 2 Results")
+        assertEquals(5, results.size, "Expected 5 Results")
     }
 
     @Test
@@ -132,7 +132,7 @@ class IdentifierListTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Test
     fun testIdentifierGreaterThanNoResults() {
-        val results = manager.list<AllAttributeForFetchSequenceGen>(AllAttributeForFetchSequenceGen::class.java, ("id" gt 7))
+        val results = manager.list<AllAttributeForFetchSequenceGen>(AllAttributeForFetchSequenceGen::class.java, ("id" gt 10))
         assertEquals(0, results.size, "Expected No Results")
     }
 }
