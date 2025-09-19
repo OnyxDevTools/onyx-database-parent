@@ -186,5 +186,46 @@ class OnyxClientErrorHandlingIntegrationTest {
         assertTrue(error.message.orEmpty().contains("too many redirects", ignoreCase = true))
         assertTrue(server.requestCount >= 5)
     }
+
+    @Test
+    fun closeCancelsActiveStreamsAndPreventsNewSubscriptions() {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/x-ndjson")
+                .setBodyDelay(1, TimeUnit.MINUTES)
+                .setBody("""{"action":"QUERY_RESPONSE","entity":{"id":"1","username":"ada"}}""" + "\n")
+        )
+
+        val onyxClient = client as OnyxClient
+        val subscription = onyxClient.from<User>().stream<User>(keepAlive = true)
+
+        val request = server.takeRequest(5, TimeUnit.SECONDS)
+        assertNotNull(request)
+
+        val activeStreamsField = OnyxClient::class.java.getDeclaredField("activeStreams").apply {
+            isAccessible = true
+        }
+        val activeStreams = activeStreamsField.get(onyxClient) as Collection<*>
+        assertEquals(1, activeStreams.size)
+
+        onyxClient.close()
+        subscription.join()
+
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (System.nanoTime() < deadline) {
+            val remaining = (activeStreamsField.get(onyxClient) as Collection<*>).size
+            if (remaining == 0) {
+                break
+            }
+            Thread.sleep(10)
+        }
+
+        assertEquals(0, (activeStreamsField.get(onyxClient) as Collection<*>).size)
+
+        assertFailsWith<IllegalStateException> {
+            onyxClient.from<User>().stream<User>()
+        }
+    }
 }
 
