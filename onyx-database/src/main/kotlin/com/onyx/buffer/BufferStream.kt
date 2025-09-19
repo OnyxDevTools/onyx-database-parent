@@ -15,6 +15,7 @@ import java.lang.reflect.Modifier
 import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
 import java.util.*
+import kotlin.Pair
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
@@ -327,6 +328,7 @@ open class BufferStream(buffer: ByteBuffer) {
                 BufferObjectType.DATE -> return date
                 BufferObjectType.STRING -> return string
                 BufferObjectType.CLASS -> return objectClass
+                BufferObjectType.PAIR -> return pair
                 BufferObjectType.COLLECTION -> return collection
                 BufferObjectType.MAP -> return map
                 BufferObjectType.OTHER -> return other
@@ -441,6 +443,22 @@ open class BufferStream(buffer: ByteBuffer) {
         get() {
             val epoch = expandableByteBuffer!!.buffer.long
             return Date(epoch)
+        }
+
+    /**
+     * Get Pair from the buffer.
+     *
+     * @return Pair read from the buffer
+     * @throws BufferingException Generic Buffer Exception
+     */
+    val pair: Pair<Any?, Any?>
+        @Throws(BufferingException::class)
+        get() {
+            val first = value
+            val second = value
+            val pair = Pair(first, second)
+            addReference(pair)
+            return pair
         }
 
     /**
@@ -792,6 +810,16 @@ open class BufferStream(buffer: ByteBuffer) {
     }
 
     /**
+     * Put a Pair on the buffer stream.
+     */
+    @Throws(BufferingException::class)
+    fun putPair(pair: Pair<*, *>) {
+        addReference(pair)
+        putObject(pair.first)
+        putObject(pair.second)
+    }
+
+    /**
      * Put a Collection to a buffer.  If the Collection class is un-accessible it will default to an ArrayCollection
      *
      * @since 1.1.0
@@ -1081,6 +1109,7 @@ open class BufferStream(buffer: ByteBuffer) {
                 BufferObjectType.DATE -> putDate(value as Date)
                 BufferObjectType.STRING -> putString(value as String)
                 BufferObjectType.CLASS -> putObjectClass(value as Class<*>)
+                BufferObjectType.PAIR -> putPair(value as Pair<*, *>)
                 BufferObjectType.COLLECTION -> putCollection(value as Collection<*>)
                 BufferObjectType.MAP -> putMap(value as Map<*, *>)
                 BufferObjectType.OTHER -> putOther(value)

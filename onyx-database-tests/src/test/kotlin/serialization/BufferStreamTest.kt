@@ -143,6 +143,25 @@ class BufferStreamTest {
     }
 
     @Test
+    fun testPairSerialization() {
+        val value = Pair("left", 42)
+        val buffer = serialize(value)
+        val otherValue = deserialize(buffer) as Pair<*, *>?
+        assertNotNull(otherValue)
+        assertEquals(value.first, otherValue.first)
+        assertEquals(value.second, otherValue.second)
+        BufferPool.recycle(buffer)
+
+        val nullablePair: Pair<String?, String?> = Pair(null, "value")
+        val nullableBuffer = serialize(nullablePair)
+        val nullableOther = deserialize(nullableBuffer) as Pair<*, *>?
+        assertNotNull(nullableOther)
+        assertNull(nullableOther.first)
+        assertEquals(nullablePair.second, nullableOther.second)
+        BufferPool.recycle(nullableBuffer)
+    }
+
+    @Test
     fun testNamedObject() {
 
         val entity = AllAttributeEntity()
