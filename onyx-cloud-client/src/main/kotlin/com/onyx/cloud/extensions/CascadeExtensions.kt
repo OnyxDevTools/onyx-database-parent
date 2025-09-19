@@ -5,10 +5,10 @@ import java.net.URLDecoder
 /**
  * Represents a single cascade relationship instruction parsed from a cascade query parameter.
  *
- * @param attribute Name of the attribute on the source entity.
- * @param type Relationship graph type (graphType).
- * @param targetField Field on the target entity.
- * @param sourceField Field on the source entity.
+ * @property attribute name of the attribute on the source entity.
+ * @property type relationship graph type (graphType).
+ * @property targetField field on the target entity.
+ * @property sourceField field on the source entity.
  */
 data class CascadeInstruction(
     val attribute: String,
@@ -18,16 +18,17 @@ data class CascadeInstruction(
 )
 
 /**
- * Parses a comma-separated cascade instruction string into a list of [CascadeInstruction].
+ * Parses a comma-separated cascade instruction string into a list of [CascadeInstruction] instances.
  *
  * Each entry must be URI-encoded and follow the pattern:
+ *
  * ```
  * attribute:GraphType(targetField,sourceField)
  * ```
  *
- * @receiver The raw cascade query parameter value.
- * @return A list of parsed [CascadeInstruction].
- * @throws IllegalArgumentException if the format of any entry is invalid.
+ * @receiver the raw cascade query parameter value.
+ * @return a list of parsed instructions; empty when the string is blank.
+ * @throws IllegalArgumentException if the format of any entry is invalid or parentheses are unbalanced.
  */
 fun String.toCascadeInstructions(): List<CascadeInstruction> {
     val input = this.trim()
@@ -59,6 +60,13 @@ fun String.toCascadeInstructions(): List<CascadeInstruction> {
     return mappings
 }
 
+/**
+ * Splits the supplied string by commas, ignoring commas enclosed in parentheses.
+ *
+ * @param s the string to split.
+ * @return a list of segments extracted at the top level.
+ * @throws IllegalArgumentException when parentheses are unbalanced.
+ */
 private fun splitTopLevelByComma(s: String): List<String> {
     val out = mutableListOf<String>()
     val buf = StringBuilder()
@@ -90,4 +98,10 @@ private fun splitTopLevelByComma(s: String): List<String> {
     return out
 }
 
+/**
+ * Decodes the receiving URI-encoded string using UTF-8.
+ *
+ * @receiver the encoded string value.
+ * @return the decoded text.
+ */
 fun String.decodeURI(): String = URLDecoder.decode(this, "UTF-8")

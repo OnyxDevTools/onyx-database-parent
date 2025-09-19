@@ -105,8 +105,8 @@ private val kotlinDelegateExclusionStrategy = object : ExclusionStrategy {
  *
  * Configuration includes:
  * - Enabling complex map key serialization.
- * - Serializing special floating-point values (NaN, Infinity).
- * - Omitting null fields to avoid sending explicit nulls for unset properties.
+ * - Serialising special floating-point values (NaN, Infinity).
+ * - Including `null` fields so that explicit nulls can be transmitted when desired.
  * - Excluding Kotlin synthetic delegate fields (`$delegate`).
  * - Registering a `CyclicTypeAdapterFactory` to handle object graph cycles.
  * - Registering custom adapters for `java.util.Date` serialization and deserialization.
