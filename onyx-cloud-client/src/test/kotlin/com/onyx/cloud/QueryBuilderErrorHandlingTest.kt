@@ -3,6 +3,7 @@ package com.onyx.cloud
 import com.google.gson.JsonParser
 import com.onyx.cloud.api.matches
 import com.onyx.cloud.exceptions.NotFoundException
+import com.onyx.cloud.impl.OnyxClient
 import com.onyx.cloud.integration.User
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer

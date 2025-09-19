@@ -1,9 +1,10 @@
 package com.onyx.cloud
 
+import com.onyx.cloud.impl.OnyxClient
 import kotlin.test.*
 
 /**
- * Exercises utility helpers within [OnyxClient].
+ * Exercises utility helpers within [com.onyx.cloud.impl.OnyxClient].
  */
 class OnyxClientTest {
     private val client = OnyxClient(baseUrl = "http://localhost", databaseId = "db", apiKey = "k", apiSecret = "s")

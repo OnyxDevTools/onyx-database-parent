@@ -2,7 +2,7 @@ package com.onyx.cloud.extensions
 
 import com.onyx.cloud.api.IQueryBuilder
 import com.onyx.cloud.api.IQueryResults
-import com.onyx.cloud.api.QueryResultsImpl
+import com.onyx.cloud.impl.QueryResultsImpl
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService

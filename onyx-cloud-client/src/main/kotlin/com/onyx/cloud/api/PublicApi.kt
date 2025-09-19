@@ -2,9 +2,14 @@
 
 package com.onyx.cloud.api
 
-import com.onyx.cloud.QueryBuilder
-import com.onyx.cloud.QueryCondition
+import com.onyx.cloud.impl.QueryBuilder
+import com.onyx.cloud.impl.QueryCondition
+import com.onyx.cloud.impl.CascadeBuilderImpl
+import com.onyx.cloud.impl.ConditionBuilderImpl
+import com.onyx.cloud.impl.OnyxFacadeImpl
 import java.math.BigInteger
+import java.util.Date
+import kotlin.reflect.KClass
 
 /** Public facade entry point. */
 val onyx: OnyxFacade = OnyxFacadeImpl
@@ -72,74 +77,12 @@ enum class StreamAction {
  * Basic document representation used by the SDK.
  */
 data class OnyxDocument(
-    val documentId: String? = null,
-    val path: String? = null,
-    val created: java.util.Date? = null,
-    val updated: java.util.Date? = null,
+    val documentId: String = "",
+    val path: String = "null",
+    val created: Date = Date(),
+    val updated: Date = Date(),
     val mimeType: String? = null,
-    val content: String? = null
-)
-
-/**
- * Minimal fetch typing to avoid DOM lib dependency.
- */
-interface FetchResponse {
-    val ok: Boolean
-    val status: Int
-    val statusText: String
-    fun header(name: String): String?
-    fun text(): String
-    val body: Any?
-}
-
-/**
- * Parameters accepted by [FetchImpl].
- */
-data class FetchInit(
-    val method: String? = null,
-    val headers: Map<String, String>? = null,
-    val body: String? = null
-)
-
-/**
- * Fetch implementation signature used by the SDK.
- */
-typealias FetchImpl = (url: String, init: FetchInit?) -> FetchResponse
-
-/**
- * Represents a single field comparison in a query.
- */
-data class QueryCriteria(
-    val field: String,
-    val operator: QueryCriteriaOperator,
-    val value: Any? = null
-)
-
-/**
- * Wire format for select queries sent to the server.
- */
-data class SelectQuery(
-    val type: String = "SelectQuery",
-    val fields: List<String>? = null,
-    val conditions: QueryCondition? = null,
-    val sort: List<Sort>? = null,
-    val limit: Int? = null,
-    val distinct: Boolean? = null,
-    val groupBy: List<String>? = null,
-    val partition: String? = null,
-    val resolvers: List<String>? = null
-)
-
-/**
- * Wire format for update queries sent to the server.
- */
-data class UpdateQuery(
-    val type: String = "UpdateQuery",
-    val conditions: QueryCondition? = null,
-    val updates: Map<String, Any?>,
-    val sort: List<Sort>? = null,
-    val limit: Int? = null,
-    val partition: String? = null
+    val content: String = ""
 )
 
 /**
@@ -273,6 +216,15 @@ interface IConditionBuilder {
 }
 
 /**
+ * Represents a single field comparison in a query.
+ */
+data class QueryCriteria(
+    val field: String,
+    val operator: QueryCriteriaOperator,
+    val value: Any? = null
+)
+
+/**
  * Fluent query builder for constructing and executing operations.
  */
 interface IQueryBuilder {
@@ -373,37 +325,20 @@ interface IStreamSubscription : AutoCloseable {
     val error: Throwable?
 }
 
-/**
- * Options for paged queries.
- *
- * @property pageSize Number of records per page.
- * @property nextPage Token for the next page.
- */
-data class ListOptions(val pageSize: Int? = null, val nextPage: String? = null)
-
-/** Builder for save operations. */
-interface ISaveBuilder<T : Any> {
-    /** Cascades specified relationships when saving. */
-    fun cascade(vararg relationships: String): ISaveBuilder<T>
-
-    /** Persists a single entity. */
-    fun one(entity: Map<String, Any?>): Any?
-
-    /** Persists multiple entities. */
-    fun many(entities: List<Map<String, Any?>>): Any?
-}
-
 /** Builder for cascading save/delete operations across multiple tables. */
 interface ICascadeBuilder {
     /** Specifies relationships to cascade through. */
     fun cascade(vararg relationships: String): ICascadeBuilder
 
     /** Saves one or many entities for a given table. */
-    fun save(table: String, entityOrEntities: Any): Any?
+    fun <T> save(entityOrEntities: Any): T
 
     /** Deletes an entity by primary key. */
-    fun delete(table: String, primaryKey: String): Any?
+    fun delete(table: String, primaryKey: String): Boolean
 }
+
+inline fun <reified T> ICascadeBuilder.delete(primaryKey: Any) =
+    this.delete(T::class.simpleName!!, primaryKey.toString())
 
 /** Builder for describing cascade relationship metadata. */
 interface ICascadeRelationshipBuilder {
@@ -445,6 +380,32 @@ data class OnyxConfig(
     val ttl: Long? = null
 )
 
+/**
+ * Minimal fetch typing to avoid DOM lib dependency.
+ */
+interface FetchResponse {
+    val ok: Boolean
+    val status: Int
+    val statusText: String
+    fun header(name: String): String?
+    fun text(): String
+    val body: Any?
+}
+
+/**
+ * Parameters accepted by [FetchImpl].
+ */
+data class FetchInit(
+    val method: String? = null,
+    val headers: Map<String, String>? = null,
+    val body: String? = null
+)
+
+/**
+ * Fetch implementation signature used by the SDK.
+ */
+typealias FetchImpl = (url: String, init: FetchInit?) -> FetchResponse
+
 /** Database client interface. */
 interface IOnyxDatabase<Schema : Any> {
 
@@ -462,27 +423,27 @@ interface IOnyxDatabase<Schema : Any> {
 
     /** Save one or many entities immediately. */
     fun <T> save(
-        table: String,
+        table: KClass<*>,
         entityOrEntities: T,
-        options: SaveOptions? = null
+        options: SaveOptions? = null,
     ): T
 
     /** Retrieve an entity by its primary key. */
-    fun findById(
-        table: String,
-        primaryKey: String,
+    fun <T> findById(
+        table: KClass<*>,
+        primaryKey: Any,
         options: FindOptions? = null
-    ): Any?
+    ): T?
 
     /** Delete an entity by primary key. */
     fun delete(
         table: String,
         primaryKey: String,
         options: DeleteOptions? = null
-    ): Any?
+    ): Boolean
 
     /** Store a document (file blob) for later retrieval. */
-    fun saveDocument(doc: OnyxDocument): Any?
+    fun saveDocument(doc: OnyxDocument): OnyxDocument
 
     /** Fetch a previously saved document. */
     fun getDocument(documentId: String, options: DocumentOptions? = null): Any?
@@ -492,6 +453,61 @@ interface IOnyxDatabase<Schema : Any> {
 
     /** Cancels active streams; safe to call multiple times. */
     fun close()
+}
+
+inline fun <reified T : Any> IOnyxDatabase<*>.delete(primaryKey: Any): Boolean =
+    this.delete(T::class.simpleName!!, primaryKey.toString())
+
+inline fun <reified T : Any> IOnyxDatabase<*>.deleteInPartition(primaryKey: Any, partition: Any): Boolean = this.delete(
+    T::class.simpleName!!, primaryKey.toString(),
+    DeleteOptions(partition = partition.toString())
+)
+
+fun IOnyxDatabase<*>.deleteInPartition(table: String, primaryKey: Any, partition: Any): Boolean = this.delete(
+    table, primaryKey.toString(),
+    DeleteOptions(partition = partition.toString())
+)
+
+
+/**
+ * Saves a single entity inferring the table.
+ *
+ * @param T Entity type.
+ * @param entity Entity to save.
+ * @return Saved entity.
+ */
+inline fun <reified T : Any> IOnyxDatabase<*>.save(entity: T): T = this.save(T::class, entity)
+
+/**
+ * Saves entities in batches.
+ *
+ * @param T Entity type.
+ * @param entities Entities to save.
+ * @param batchSize Number per request.
+ */
+inline fun <reified T : Any> IOnyxDatabase<*>.batchSave(entities: List<T>, batchSize: Int = 1000) {
+    entities.chunked(batchSize).forEach { chunk ->
+        if (chunk.isNotEmpty()) this.save(T::class, chunk)
+    }
+}
+
+/**
+ * Finds an entity by primary key inferring the table.
+ *
+ * @param T Result type.
+ * @param id Key value.
+ */
+inline fun <reified T : Any> IOnyxDatabase<*>.findById(id: Any): T? = findById(T::class, id.toString())
+
+/**
+ * Finds an entity within a partition inferring the table.
+ *
+ * @param T Result type.
+ * @param primaryKey Key value.
+ * @param partition Partition value.
+ */
+inline fun <reified T : Any> IOnyxDatabase<*>.findByIdInPartition(primaryKey: String, partition: String): T? {
+    return findById(T::class, primaryKey, FindOptions(partition = partition))
 }
 
 /**
@@ -852,9 +868,3 @@ fun replace(attribute: String, pattern: String, repl: String): String =
  * @param p Percentile value.
  */
 fun percentile(attribute: String, p: Number): String = "percentile($attribute,$p)"
-
-/** SDK name. */
-const val sdkName: String = "@onyx.dev/onyx-database"
-
-/** SDK version. */
-const val sdkVersion: String = "0.1.0"

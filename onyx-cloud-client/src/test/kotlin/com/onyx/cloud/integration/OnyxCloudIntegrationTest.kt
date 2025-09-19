@@ -1,6 +1,6 @@
 package com.onyx.cloud.integration
 
-import com.onyx.cloud.OnyxClient
+import com.onyx.cloud.impl.OnyxClient
 import com.onyx.cloud.api.*
 import kotlin.test.*
 import java.util.Date
@@ -258,19 +258,19 @@ class OnyxCloudIntegrationTest {
                     profile = UserProfile().apply { firstName = "Cascaded" }
                 }
 
-            val saved: List<*> = client.cascade(
+            val saved: User = client.cascade(
                 "userRoles:UserRole(userId,id)",
                 "profile:UserProfile(userId,id)"
-            ).save("User", user) as List<*>
+            ).save(user)
 
             // Verify nested entities were created
             val profiles = client.from<UserProfile>()
-                .where("userId" eq (saved.first() as User).id)
+                .where("userId" eq saved.id)
                 .list<UserProfile>()
             assertTrue(profiles.getAllRecords().any { it.firstName == "Cascaded" })
 
             val rolesAssigned = client.from<UserRole>()
-                .where("userId" eq (saved.first() as User).id)
+                .where("userId" eq saved.id)
                 .list<UserRole>()
             assertTrue(rolesAssigned.getAllRecords().any { it.roleId == role.id })
         } finally {

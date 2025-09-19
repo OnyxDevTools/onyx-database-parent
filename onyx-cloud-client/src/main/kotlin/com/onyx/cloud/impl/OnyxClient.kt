@@ -1,9 +1,8 @@
 @file:Suppress("unused", "MemberVisibilityCanBePrivate")
 
-package com.onyx.cloud
+package com.onyx.cloud.impl
 
 import com.google.gson.*
-import com.onyx.cloud.api.CascadeBuilderImpl
 import com.onyx.cloud.api.DeleteOptions
 import com.onyx.cloud.api.DocumentOptions
 import com.onyx.cloud.api.FindOptions
@@ -69,18 +68,6 @@ class OnyxClient(
     }
 
     /**
-     * Saves or updates a [Document].
-     *
-     * @param document Document to persist.
-     * @return Saved document returned by the server.
-     */
-    fun saveDocument(document: Document): Document {
-        val path = "/data/${encode(databaseId)}/document"
-        return makeRequest(HttpMethod.Put, path, document).fromJson<Document>()
-            ?: throw IllegalStateException("Failed to parse response for saveDocument")
-    }
-
-    /**
      * Retrieves a document by ID.
      *
      * @param documentId Document identifier.
@@ -129,28 +116,6 @@ class OnyxClient(
     }
 
     /**
-     * Saves a single entity inferring the table.
-     *
-     * @param T Entity type.
-     * @param entity Entity to save.
-     * @return Saved entity.
-     */
-    inline fun <reified T : Any> save(entity: T): T = this.save(T::class, entity)
-
-    /**
-     * Saves entities in batches.
-     *
-     * @param T Entity type.
-     * @param entities Entities to save.
-     * @param batchSize Number per request.
-     */
-    inline fun <reified T : Any> batchSave(entities: List<T>, batchSize: Int = 1000) {
-        entities.chunked(batchSize).forEach { chunk ->
-            if (chunk.isNotEmpty()) this.save(T::class, chunk)
-        }
-    }
-
-    /**
      * Finds an entity by primary key.
      *
      * @param T Result type.
@@ -159,10 +124,10 @@ class OnyxClient(
      * @param options Optional query options (partition, fetch).
      * @return Entity or null when not found.
      */
-    fun <T : Any> findById(
+    override fun <T> findById(
         type: KClass<*>,
         primaryKey: Any,
-        options: Map<String, Any?> = emptyMap()
+        options: FindOptions?
     ): T? {
         val queryString = buildQueryString(options)
         val path = "/data/${encode(databaseId)}/${encode(type.java.simpleName)}/${encode(primaryKey.toString())}"
@@ -171,37 +136,6 @@ class OnyxClient(
         } catch (_: NotFoundException) {
             null
         }
-    }
-
-    /**
-     * Finds an entity by primary key inferring the table.
-     *
-     * @param T Result type.
-     * @param id Key value.
-     */
-    inline fun <reified T : Any> findById(id: Any): T? = findById(T::class, id)
-
-    /**
-     * Finds an entity within a partition.
-     *
-     * @param T Result type.
-     * @param table Entity class.
-     * @param primaryKey Key value.
-     * @param partition Partition value.
-     */
-    fun <T : Any> findByIdInPartition(table: KClass<*>, primaryKey: String, partition: String): T? {
-        return findById(table, primaryKey, mapOf("partition" to partition))
-    }
-
-    /**
-     * Finds an entity within a partition inferring the table.
-     *
-     * @param T Result type.
-     * @param primaryKey Key value.
-     * @param partition Partition value.
-     */
-    inline fun <reified T : Any> findByIdInPartition(primaryKey: String, partition: String): T? {
-        return findByIdInPartition(T::class, primaryKey, partition)
     }
 
     /**
@@ -215,26 +149,16 @@ class OnyxClient(
         table: String,
         primaryKey: String,
         options: DeleteOptions?
-    ): Any? {
+    ): Boolean {
         val queryString = buildQueryString(options)
         val path = "/data/${encode(databaseId)}/${encode(table)}/${encode(primaryKey)}"
         return makeRequest(HttpMethod.Delete, path, queryString = queryString).equals("true", ignoreCase = true)
     }
 
-    override fun saveDocument(doc: OnyxDocument): Any? {
-        TODO("Not yet implemented")
-    }
-
-    /**
-     * Deletes an entity in a partition.
-     *
-     * @param table Table name.
-     * @param primaryKey Key value.
-     * @param partition Partition value.
-     */
-    fun deleteInPartition(table: String, primaryKey: String, partition: String): Boolean {
-        val result = delete(table, primaryKey, DeleteOptions(partition = partition))
-        return result as? Boolean == true
+    override fun saveDocument(doc: OnyxDocument): OnyxDocument {
+        val path = "/data/${encode(databaseId)}/document"
+        return makeRequest(HttpMethod.Put, path, doc).fromJson<OnyxDocument>()
+            ?: throw IllegalStateException("Failed to parse response for saveDocument")
     }
 
     /**
@@ -450,24 +374,25 @@ class OnyxClient(
      * @param options Map of query parameters (e.g., "relationships").
      * @return Saved entity or original list.
      */
-    fun <T> save(table: String, entityOrEntities: T, options: Map<String, Any?>): Any? {
+    fun <T> save(table: KClass<*>, entityOrEntities: T, options: Map<String, Any?>): Any? {
         val queryString = buildQueryString(options)
-        val path = "/data/${encode(databaseId)}/${encode(table)}"
+        val path = "/data/${encode(databaseId)}/${encode(table.simpleName!!)}"
         // Perform save request and capture raw response
         val response = makeRequest(HttpMethod.Put, path, entityOrEntities, queryString = queryString)
         // Handle cascade updates or batch save: server may return an array or a single object
         if (entityOrEntities is List<*> || options.containsKey("relationships")) {
             // Determine element type from payload or default to Any
-            val elementType = if (entityOrEntities is List<*>)
-                entityOrEntities.firstOrNull()?.javaClass
-            else
-                entityOrEntities!!.javaClass
-            // Fallback to Any
-            val actualType = elementType ?: Any::class.java
-            // Try parsing response as array
-            response.fromJsonList<Any>(actualType)?.let { return it }
+            return if (entityOrEntities is List<*>) {
+                val elementType = entityOrEntities.firstOrNull()?.javaClass
+                // Fallback to Any
+                val actualType = elementType ?: Any::class.java
+                // Try parsing response as array
+                response.fromJsonList<Any>(actualType)?.let { return it }
+            } else {
+                val elementType = entityOrEntities!!.javaClass
+                response.fromJson<Any>(elementType.kotlin).let { return it }
+            }
             // Fallback to single-object response wrapped in list
-            response.fromJson<Any>(actualType.kotlin).let { return listOf(it) }
             throw IllegalStateException("Failed to parse response for save list of entities")
         }
         // Handle saving a single entity: server may return an object or an array
@@ -488,7 +413,7 @@ class OnyxClient(
 
     @Suppress("UNCHECKED_CAST")
     override fun <T> save(
-        table: String,
+        table: KClass<*>,
         entityOrEntities: T,
         options: SaveOptions?
     ): T {
@@ -497,14 +422,6 @@ class OnyxClient(
                 "relationships" to options?.relationships
             )
         ) as T
-    }
-
-    override fun findById(
-        table: String,
-        primaryKey: String,
-        options: FindOptions?
-    ): Any? {
-        TODO("Not yet implemented")
     }
 
     private fun defaultHeaders(extra: Map<String, String> = emptyMap()): Map<String, String> =
@@ -544,6 +461,14 @@ class OnyxClient(
         val params = mutableMapOf<String, Any?>()
         options.height?.let { params["height"] = it }
         options.width?.let { params["width"] = it }
+        return buildQueryString(params)
+    }
+
+    private fun buildQueryString(options: FindOptions?): String {
+        if (options == null) return ""
+        val params = mutableMapOf<String, Any?>()
+        options.partition?.let { params["partition"] = it }
+        options.resolvers?.let { params["resolvers"] = it }
         return buildQueryString(params)
     }
 
@@ -887,7 +812,8 @@ class QueryBuilder(
         val queryPayload = buildSelectQueryPayload()
         val requestOptions = buildCommonOptions()
         val jsonResponse = client.executeQuery(targetTable, queryPayload, requestOptions)
-        val results = jsonResponse.toQueryResults<T>(gson, if (fields?.isNotEmpty() == true) HashMap::class else this.type!!)
+        val results =
+            jsonResponse.toQueryResults<T>(gson, if (fields?.isNotEmpty() == true) HashMap::class else this.type!!)
         results.query = this
         results.classType = if (fields?.isNotEmpty() == true) HashMap::class else this.type!!
         return results
@@ -1061,18 +987,6 @@ sealed class QueryCondition {
         val conditionType: String = "CompoundCondition"
     ) : QueryCondition()
 }
-
-/**
- * Document model for the document endpoints.
- */
-data class Document(
-    val documentId: String = "",
-    val path: String = "",
-    val created: Date = Date(),
-    val updated: Date = Date(),
-    val mimeType: String = "",
-    val content: String = ""
-)
 
 /**
  * Represents an active streaming subscription created via [OnyxClient.stream].

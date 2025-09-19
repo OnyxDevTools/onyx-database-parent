@@ -1,11 +1,8 @@
-@file:Suppress("UNCHECKED_CAST")
-
-package com.onyx.cloud.api
+package com.onyx.cloud.impl
 
 import com.google.gson.JsonArray
 import com.google.gson.annotations.SerializedName
-import com.google.gson.reflect.TypeToken
-import com.onyx.cloud.QueryBuilder
+import com.onyx.cloud.api.IQueryResults
 import com.onyx.cloud.extensions.fromJsonList
 import com.onyx.cloud.extensions.get
 import java.math.BigDecimal

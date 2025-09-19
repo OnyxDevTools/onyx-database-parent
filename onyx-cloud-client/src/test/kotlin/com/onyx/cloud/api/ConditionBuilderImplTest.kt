@@ -1,10 +1,11 @@
 package com.onyx.cloud.api
 
-import com.onyx.cloud.QueryCondition.CompoundCondition
+import com.onyx.cloud.impl.QueryCondition.CompoundCondition
+import com.onyx.cloud.impl.ConditionBuilderImpl
 import kotlin.test.*
 
 /**
- * Validates logical composition within [ConditionBuilderImpl].
+ * Validates logical composition within [com.onyx.cloud.impl.ConditionBuilderImpl].
  */
 class ConditionBuilderImplTest {
     @Test

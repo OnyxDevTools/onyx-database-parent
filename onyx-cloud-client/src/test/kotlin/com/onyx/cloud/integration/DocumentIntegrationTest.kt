@@ -1,7 +1,7 @@
 package com.onyx.cloud.integration
 
-import com.onyx.cloud.Document
-import com.onyx.cloud.OnyxClient
+import com.onyx.cloud.impl.OnyxClient
+import com.onyx.cloud.api.OnyxDocument
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 import java.util.Date
@@ -27,12 +27,12 @@ class DocumentIntegrationTest {
         apiSecret = "bEJiEsuE28z1XeT/MHujy+1/6sqFMsZ4WK7M/M8BS34="
     )
 
-    private fun newDocument(): Document {
+    private fun newDocument(): OnyxDocument {
         val documentId = UUID.randomUUID().toString()
         val now = Date()
         val plainContent = "Integration document ${'$'}{UUID.randomUUID()}"
         val encodedContent = Base64.getEncoder().encodeToString(plainContent.toByteArray(StandardCharsets.UTF_8))
-        return Document(
+        return OnyxDocument(
             documentId = documentId,
             path = "/integration/tests/${'$'}documentId.txt",
             created = now,

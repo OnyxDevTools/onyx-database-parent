@@ -5,7 +5,7 @@ import com.google.gson.*
 import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
-import com.onyx.cloud.api.QueryResultsImpl
+import com.onyx.cloud.impl.QueryResultsImpl
 import java.text.SimpleDateFormat
 import java.util.*
 

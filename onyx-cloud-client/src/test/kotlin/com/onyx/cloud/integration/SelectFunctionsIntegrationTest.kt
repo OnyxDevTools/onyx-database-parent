@@ -1,6 +1,6 @@
 package com.onyx.cloud.integration
 
-import com.onyx.cloud.OnyxClient
+import com.onyx.cloud.impl.OnyxClient
 import com.onyx.cloud.api.*
 import java.util.Date
 import java.util.UUID

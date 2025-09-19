@@ -2,7 +2,7 @@ package com.onyx.cloud.extensions
 
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
-import com.onyx.cloud.api.QueryResultsImpl
+import com.onyx.cloud.impl.QueryResultsImpl
 import kotlin.reflect.KClass
 import com.google.gson.*
 import java.lang.reflect.Type

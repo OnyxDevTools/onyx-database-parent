@@ -1,6 +1,7 @@
 package com.onyx.cloud.integration
 
-import com.onyx.cloud.OnyxClient
+import com.onyx.cloud.impl.OnyxClient
+import com.onyx.cloud.api.save
 import com.onyx.cloud.exceptions.NotFoundException
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -74,7 +75,7 @@ class OnyxClientErrorHandlingIntegrationTest {
         )
 
         val error = assertFailsWith<RuntimeException> {
-            client.save("User", mapOf("id" to "1"), emptyMap<String, Any?>())
+            client.save(User(id = "1", username = "redirected"))
         }
 
         assertTrue(error.message.orEmpty().contains("Refusing to follow 301 redirect"))

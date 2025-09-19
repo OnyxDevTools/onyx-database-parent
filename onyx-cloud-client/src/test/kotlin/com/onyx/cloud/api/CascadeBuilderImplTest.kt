@@ -1,12 +1,13 @@
 package com.onyx.cloud.api
 
 import kotlin.test.*
+import kotlin.reflect.KClass
 
 /**
- * Unit tests for [CascadeBuilderImpl] verifying cascade save and delete behavior.
+ * Unit tests for [com.onyx.cloud.impl.CascadeBuilderImpl] verifying cascade save and delete behavior.
  */
 class CascadeBuilderImplTest {
-    private data class SaveCaptured(val table: String, val entity: Any, val options: SaveOptions?)
+    private data class SaveCaptured(val table: KClass<*>, val entity: Any, val options: SaveOptions?)
     private data class DeleteCaptured(val table: String, val key: String, val options: DeleteOptions?)
 
     @Test
@@ -14,10 +15,13 @@ class CascadeBuilderImplTest {
         val saveCalls = mutableListOf<SaveCaptured>()
         val stubDb = object : IOnyxDatabase<Any> {
 
-            override fun select(vararg fields: String) = throw UnsupportedOperationException()
-            override fun cascade(vararg relationships: String) = throw UnsupportedOperationException()
+            override fun select(vararg fields: String): IQueryBuilder =
+                throw UnsupportedOperationException()
+
+            // Use default cascade() from the interface (not overridden).
+
             override fun <T> save(
-                table: String,
+                table: KClass<*>,
                 entityOrEntities: T,
                 options: SaveOptions?
             ): T {
@@ -25,32 +29,45 @@ class CascadeBuilderImplTest {
                 @Suppress("UNCHECKED_CAST")
                 return entityOrEntities as T
             }
-            override fun findById(
-                table: String,
-                primaryKey: String,
+
+            override fun <T> findById(
+                table: KClass<*>,
+                primaryKey: Any,
                 options: FindOptions?
-            ) = throw UnsupportedOperationException()
+            ): T? = throw UnsupportedOperationException()
+
             override fun delete(
                 table: String,
                 primaryKey: String,
                 options: DeleteOptions?
-            ) = throw UnsupportedOperationException()
-            override fun saveDocument(doc: OnyxDocument) = throw UnsupportedOperationException()
-            override fun getDocument(documentId: String, options: DocumentOptions?) = throw UnsupportedOperationException()
-            override fun deleteDocument(documentId: String) = throw UnsupportedOperationException()
+            ): Boolean = throw UnsupportedOperationException()
+
+            override fun saveDocument(doc: OnyxDocument): OnyxDocument =
+                throw UnsupportedOperationException()
+
+            override fun getDocument(documentId: String, options: DocumentOptions?): Any? =
+                throw UnsupportedOperationException()
+
+            override fun deleteDocument(documentId: String): Any? =
+                throw UnsupportedOperationException()
+
             override fun close() = throw UnsupportedOperationException()
         }
-        val builder = CascadeBuilderImpl(stubDb, listOf("r1"))
-            .cascade("r2", "r3")
+
+        val builder = stubDb.cascade("r2", "r3")
+
         val entity = mapOf("id" to 10)
-        val result = builder.save("Entity", entity)
+
+        // ICascadeBuilder.save(entity) – no table arg now; assert relationships forwarded.
+        val result: Map<String, Any> = builder.save(entity)
+
         assertEquals(entity, result)
-        @Suppress("KotlinConstantConditions")
         assertEquals(1, saveCalls.size)
+
         with(saveCalls.first()) {
-            assertEquals("Entity", table)
+            // Table is inferred by the builder; for a Map entity this will be Map::class.
             assertEquals(entity, this.entity)
-            assertEquals(listOf("r1", "r2", "r3"), options?.relationships)
+            assertEquals(listOf("r2", "r3"), options?.relationships)
         }
     }
 
@@ -58,40 +75,51 @@ class CascadeBuilderImplTest {
     fun `delete() invokes underlying delete with configured cascade relationships`() {
         val deleteCalls = mutableListOf<DeleteCaptured>()
         val stubDb = object : IOnyxDatabase<Any> {
+
             override fun delete(
                 table: String,
                 primaryKey: String,
                 options: DeleteOptions?
-            ): Any? {
+            ): Boolean {
                 deleteCalls.add(DeleteCaptured(table, primaryKey, options))
-                return "deleted"
+                return true
             }
-            // Unused
-            override fun select(vararg fields: String) = throw UnsupportedOperationException()
-            override fun cascade(vararg relationships: String) = throw UnsupportedOperationException()
+
+            // Unused in this test:
+            override fun select(vararg fields: String): IQueryBuilder =
+                throw UnsupportedOperationException()
+
+            // Use default cascade() from the interface (not overridden).
 
             override fun <T> save(
-                table: String,
+                table: KClass<*>,
                 entityOrEntities: T,
                 options: SaveOptions?
-            ): T {
-                @Suppress("UNCHECKED_CAST")
-                return entityOrEntities as T
-            }
-            override fun findById(
-                table: String,
-                primaryKey: String,
+            ): T = entityOrEntities
+
+            override fun <T> findById(
+                table: KClass<*>,
+                primaryKey: Any,
                 options: FindOptions?
-            ) = throw UnsupportedOperationException()
-            override fun saveDocument(doc: OnyxDocument) = throw UnsupportedOperationException()
-            override fun getDocument(documentId: String, options: DocumentOptions?) = throw UnsupportedOperationException()
-            override fun deleteDocument(documentId: String) = throw UnsupportedOperationException()
+            ): T? = throw UnsupportedOperationException()
+
+            override fun saveDocument(doc: OnyxDocument): OnyxDocument =
+                throw UnsupportedOperationException()
+
+            override fun getDocument(documentId: String, options: DocumentOptions?): Any? =
+                throw UnsupportedOperationException()
+
+            override fun deleteDocument(documentId: String): Any? =
+                throw UnsupportedOperationException()
+
             override fun close() = throw UnsupportedOperationException()
         }
-        val builder = CascadeBuilderImpl(stubDb, emptyList())
-            .cascade("x")
-        val result = builder.delete("T", "key1")
-        assertEquals("deleted", result)
+
+        val builder = stubDb.cascade("x")
+
+        val ok: Boolean = builder.delete("T", "key1")
+        assertTrue(ok)
+
         assertEquals(1, deleteCalls.size)
         with(deleteCalls.first()) {
             assertEquals("T", table)

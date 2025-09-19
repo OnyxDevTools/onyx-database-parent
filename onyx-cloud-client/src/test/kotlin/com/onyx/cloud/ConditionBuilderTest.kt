@@ -1,12 +1,13 @@
 package com.onyx.cloud
 
-import com.onyx.cloud.api.ConditionBuilderImpl
+import com.onyx.cloud.impl.ConditionBuilderImpl
 import com.onyx.cloud.api.LogicalOperator
 import com.onyx.cloud.api.QueryCriteriaOperator
 import com.onyx.cloud.api.between
 import com.onyx.cloud.api.eq
 import com.onyx.cloud.api.gt
 import com.onyx.cloud.api.inOp
+import com.onyx.cloud.impl.QueryCondition
 import kotlin.test.*
 
 /**

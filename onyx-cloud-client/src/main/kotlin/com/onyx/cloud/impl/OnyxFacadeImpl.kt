@@ -1,4 +1,8 @@
-package com.onyx.cloud.api
+package com.onyx.cloud.impl
+
+import com.onyx.cloud.api.IOnyxDatabase
+import com.onyx.cloud.api.OnyxConfig
+import com.onyx.cloud.api.OnyxFacade
 
 /** Default facade implementation. */
 object OnyxFacadeImpl : OnyxFacade {
