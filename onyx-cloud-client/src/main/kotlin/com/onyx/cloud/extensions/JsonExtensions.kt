@@ -85,6 +85,12 @@ fun <T> String.fromJsonList(elementType: Class<*>): List<T>? {
     }
 }
 
+/**
+ * Custom Gson adapter capable of materialising [QueryResultsImpl] instances from raw JSON payloads.
+ *
+ * The adapter extracts the record array, pagination token, and total result count while deferring type
+ * conversion of individual records to [QueryResultsImpl.records].
+ */
 class QueryResultsImplAdapter : JsonDeserializer<QueryResultsImpl<*>> {
     override fun deserialize(json: JsonElement, typeOfT: Type, ctx: JsonDeserializationContext): QueryResultsImpl<*> {
         val obj = json.asJsonObject
@@ -97,8 +103,17 @@ class QueryResultsImplAdapter : JsonDeserializer<QueryResultsImpl<*>> {
     }
 }
 
-// usage without reified:
-fun <T: Any> String.toQueryResults(gson: Gson, entityType: KClass<*>): QueryResultsImpl<T> {
+/**
+ * Deserialises the receiving JSON string into a [QueryResultsImpl] while supplying the entity type manually.
+ *
+ * This overload is useful when reified generics are not available (e.g., from Java call sites).
+ *
+ * @receiver JSON payload representing the query response.
+ * @param gson configured Gson instance used for deserialisation.
+ * @param entityType Kotlin class that represents the element type contained in the query results.
+ * @return deserialised [QueryResultsImpl] whose [QueryResultsImpl.classType] is set to [entityType].
+ */
+fun <T : Any> String.toQueryResults(gson: Gson, entityType: KClass<*>): QueryResultsImpl<T> {
     val type = TypeToken.getParameterized(QueryResultsImpl::class.java, entityType.java).type
     val page = gson.fromJson(this, type) as QueryResultsImpl<T>
     page.classType = entityType

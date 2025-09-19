@@ -10,10 +10,17 @@ import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
 /**
- * Returns a Sequence that streams every record in every page,
- * prefetching the next page on [executor] while you consume the current one.
+ * Streams the entire result set as a [Sequence], prefetching pages asynchronously when possible.
  *
- * ⚠️  The sequence WILL block at page boundaries if the next page isn’t ready yet.
+ * The returned sequence executes the supplied [filter] and [transform] lazily. While processing a page,
+ * it preloads the next page on the provided [executor]; iteration blocks at page boundaries if the next
+ * page has not completed loading.
+ *
+ * @receiver the original paginated results to iterate over.
+ * @param executor executor used to prefetch the next page; defaults to a single-thread executor.
+ * @param filter predicate applied before the transformation step.
+ * @param transform projection applied to each filtered record before yielding.
+ * @return a lazily-evaluated [Sequence] streaming the transformed records from all pages.
  */
 @Suppress("unused")
 fun <T : Any, R> IQueryResults<T>.asSequence(
@@ -59,6 +66,14 @@ fun <T : Any, R> IQueryResults<T>.asSequence(
 }
 
 /* ───────────────────────── helper ───────────────────────── */
+/**
+ * Submits an asynchronous request that fetches the page identified by [token].
+ *
+ * @param executor executor responsible for running the request.
+ * @param qb query builder used to retrieve the next page.
+ * @param token pagination token representing the desired page.
+ * @return a [Future] that resolves to the fetched [IQueryResults] or `null` if retrieval fails.
+ */
 private fun <T : Any> submitFetch(
     executor: ExecutorService,
     qb: IQueryBuilder,
