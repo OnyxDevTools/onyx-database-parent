@@ -117,26 +117,36 @@ tasks.withType<GenerateModuleMetadata> { suppressedValidationErrors.add("enforce
 // See docs: replace s01 with ossrh-staging-api + call /manual/upload after PUTs so the portal sees it & publishes.
 // ---- Central Portal finalize (runs ONCE after all modules publish) ----
 // Replaces per-module finalize; only runs on the root project after every subproject has published.
+// ---- Central Portal finalize (required for Gradle's maven-publish via OSSRH Staging API) ----
+// See docs: replace s01 with ossrh-staging-api + call /manual/upload after PUTs so the portal sees it & publishes.
 val centralNamespace = "dev.onyx" // your Central namespace (matches your group)
 
 fun bearer(user: String, pass: String): String =
     Base64.getEncoder().encodeToString("$user:$pass".toByteArray(Charsets.UTF_8))
 
+// Register the same task name, but make it finalize ONLY after *all* Sonatype publish tasks are done.
 val centralFinalize by tasks.register("centralFinalize") {
     group = "publishing"
-    description = "Finalize upload to Central Portal (auto-publish, once for all modules)."
+    description = "Finalize upload to Central Portal (auto-publish)."
 
-    // Only execute this task on the root project
-    onlyIf { project == rootProject }
-
-    // Wait for every subproject's publish to complete
-    dependsOn(gradle.rootProject.subprojects.map { it.tasks.named("publish") })
+    // Keep the original dependency so it's still a drop-in for single-module builds
+    dependsOn(tasks.named("publishMavenPublicationToSonatypeRepository"))
 
     doLast {
         val user = project.findOptionalProperty("maven.sonatype.username")
             ?: error("Missing maven.sonatype.username (Portal token username)")
         val pass = project.findOptionalProperty("maven.sonatype.password")
             ?: error("Missing maven.sonatype.password (Portal token password)")
+
+        // Only the last module to finish will actually call the finalize API.
+        // We compute "am I last?" by checking if there are any *other* Sonatype publish tasks still scheduled/running.
+        val remaining = gradle.taskGraph.allTasks.filter {
+            it !== this && it.name.startsWith("publish") && it.name.endsWith("ToSonatypeRepository") && !it.state.executed
+        }
+        if (remaining.isNotEmpty()) {
+            println("Central finalize: waiting (${remaining.size} remaining Sonatype publish task(s))")
+            return@doLast
+        }
 
         val url = URL(
             "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/$centralNamespace?publishing_type=automatic"
@@ -150,12 +160,12 @@ val centralFinalize by tasks.register("centralFinalize") {
         conn.outputStream.use { } // no body
         val code = conn.responseCode
         if (code !in 200..299) {
-            val err = conn.errorStream?.readBytes()?.toString(Charsets.UTF_8)
-            // If already released, treat as no-op so the build doesn't fail on later modules
-            if (code == 400 && (err ?: "").contains("state released", ignoreCase = true)) {
-                println("Central finalize: already released (skipping).")
+            val err = conn.errorStream?.readBytes()?.toString(Charsets.UTF_8).orEmpty()
+            // Treat already-released repos as success to keep multi-module builds green
+            if (code == 400 && (err.contains("state released", true) || err.contains("must be dropped", true))) {
+                println("Central finalize: repository already released (skipping).")
             } else {
-                error("Central finalize failed ($code): ${err ?: "no message"}")
+                error("Central finalize failed ($code): ${if (err.isBlank()) "no message" else err}")
             }
         } else {
             println("Central finalize: OK ($code)")
@@ -163,8 +173,21 @@ val centralFinalize by tasks.register("centralFinalize") {
     }
 }
 
-// Chain finalize after the root 'publish' only
-if (project == rootProject) {
-    tasks.named("publish") { finalizedBy(centralFinalize) }
-}
+// Keep your existing chaining so this still runs after 'publish'
+tasks.named("publish") { finalizedBy(centralFinalize) }
 
+// Ensure this finalize runs only once at the end of the whole build when multiple modules publish:
+// After all projects are evaluated, make centralFinalize depend on *all* Sonatype publish tasks in all subprojects.
+gradle.projectsEvaluated {
+    val allSonatypePublishes = rootProject.subprojects.flatMap { sp ->
+        sp.tasks.matching { it.name.startsWith("publish") && it.name.endsWith("ToSonatypeRepository") }.toList()
+    }
+    // Add our own project's publish task too (if not already captured)
+    val here = tasks.matching { it.name.startsWith("publish") && it.name.endsWith("ToSonatypeRepository") }.toList()
+    val allTargets = (allSonatypePublishes + here).distinct()
+
+    // Make this project's centralFinalize wait for *every* module’s Sonatype publish task
+    tasks.named("centralFinalize") {
+        dependsOn(allTargets)
+    }
+}
