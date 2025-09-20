@@ -47,18 +47,6 @@ abstract class AbstractCachedSkipList<K, V>(fileStore: WeakReference<Store>, nod
     override fun find(key: K): SkipNode? = keyCache.getOrPut(key) { super.find(key) }
 
     /**
-     * Delete node from cache
-     *
-     * @since 2.0.0
-     * @param node Node to delete
-     * @param head Current head nodes
-     */
-    override fun deleteNode(node: SkipNode) {
-        super.deleteNode(node)
-        nodeCache.remove(node.position)
-    }
-
-    /**
      * Add node to cache
      *
      * @param node Node to update

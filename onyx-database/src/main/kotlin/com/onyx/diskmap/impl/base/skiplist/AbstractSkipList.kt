@@ -314,19 +314,6 @@ abstract class AbstractSkipList<K, V>(
         return null
     }
 
-    /*
-     * Delete a node and set values for neighboring nodes
-     *
-     */
-    protected open fun deleteNode(node: SkipNode) {
-        val leftNode: SkipNode? = if (node.left > 0) findNodeAtPosition(node.left) else null
-        val rightNode: SkipNode? = if (node.right > 0) findNodeAtPosition(node.right) else null
-        leftNode?.setRight(fileStore, rightNode?.position ?: 0L)
-        updateNodeCache(leftNode)
-        rightNode?.setLeft(fileStore, leftNode?.position ?: 0L)
-        updateNodeCache(rightNode)
-    }
-
     /**
      * Get value from map
      */
