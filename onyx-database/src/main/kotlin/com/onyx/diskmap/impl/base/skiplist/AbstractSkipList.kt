@@ -135,7 +135,7 @@ abstract class AbstractSkipList<K, V>(
 
             for (currentLevel in 0..newNodeLevel) {
                 val predecessorAtLevel = update[currentLevel]
-                val pred = predecessorAtLevel ?: currentOverallHead
+                val pred = predecessorAtLevel ?: headAtLevel(currentLevel)
 
                 val rightOfPredecessorPos = pred.right
 
@@ -234,6 +234,20 @@ abstract class AbstractSkipList<K, V>(
     }
 
     /**
+     * Get the head at a level
+     */
+    private fun headAtLevel(targetLevel: Int): SkipNode {
+        var targetHead = requireNotNull(head)
+        var level = targetHead.level.toInt()
+        while (level > targetLevel) {
+            val down = targetHead.down
+            targetHead = findNodeAtPosition(down)!!
+            level--
+        }
+        return targetHead
+    }
+
+    /**
      * Put a key value into the Map.  The underlying algorithm for searching is a Skip List
      *
      * @param key   Key identifier of the value
@@ -270,6 +284,7 @@ abstract class AbstractSkipList<K, V>(
                     if (nodeToDeleteAtLevelI != null) {
                         if (isEqual(key, nodeToDeleteAtLevelI.getKey(records, storeKeyWithinNode, keyType))) {
                             predecessorAtLevelI.setRight(fileStore, nodeToDeleteAtLevelI.right)
+                            updateNodeCache(predecessorAtLevelI)
                             if (nodeToDeleteAtLevelI.right > 0L) {
                                 val successorNode = findNodeAtPosition(nodeToDeleteAtLevelI.right)
                                 if (successorNode != null) {
@@ -277,7 +292,6 @@ abstract class AbstractSkipList<K, V>(
                                     updateNodeCache(successorNode)
                                 }
                             }
-                            deleteNode(nodeToDeleteAtLevelI)
                         }
                     }
                 }
@@ -361,10 +375,12 @@ abstract class AbstractSkipList<K, V>(
                         found = true
                         next
                     }
+
                     isGreater(key, nextKey) -> {
                         if (next.position == current.position) break@moveRightLoop
                         next
                     }
+
                     else -> break@moveRightLoop
                 }
             }
