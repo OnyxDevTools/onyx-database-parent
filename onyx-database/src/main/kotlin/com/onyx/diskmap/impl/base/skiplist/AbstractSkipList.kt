@@ -34,7 +34,7 @@ abstract class AbstractSkipList<K, V>(
     keyType: Class<*>
 ) : AbstractDiskMap<K, V>(store, recordStore, header, keyType) {
 
-    protected open var nodeCache: MutableMap<Long, SkipNode?> = OptimisticLockingMap(WeakHashMap())
+    protected open var nodeCache = OptimisticLockingMap<Long, SkipNode?>(WeakHashMap())
 
     init {
         @Suppress("LeakingThis")
@@ -348,6 +348,7 @@ abstract class AbstractSkipList<K, V>(
 
                 // Skip sentinel nodes that have no associated key
                 if (next.key == 0L) {
+                    if (next.position == current.position) break@moveRightLoop
                     current = next
                     continue@moveRightLoop
                 }
@@ -360,14 +361,19 @@ abstract class AbstractSkipList<K, V>(
                         found = true
                         next
                     }
-
-                    isGreater(key, nextKey) -> next
+                    isGreater(key, nextKey) -> {
+                        if (next.position == current.position) break@moveRightLoop
+                        next
+                    }
                     else -> break@moveRightLoop
                 }
             }
 
             if (current.down > 0L) {
-                current = findNodeAtPosition(current.down)!!
+                val down = findNodeAtPosition(current.down) ?: break@moveDownLoop
+                // Guard against vertical self-link cycle.
+                if (down.position == current.position) break@moveDownLoop
+                current = down
             } else {
                 break@moveDownLoop
             }

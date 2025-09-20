@@ -56,15 +56,18 @@ open class OptimisticLockingMap<K, V>(@Suppress("MemberVisibilityCanPrivate") va
      */
     inline fun getOrPut(key: K, crossinline body: () -> V): V {
         val value: V? = get(key)
-        return value ?: lock.writeLock {
+        @Suppress("UNCHECKED_CAST")
+        return value ?: lock.writeLock<V?> {
             var newValue = m[key]
             if (newValue == null) {
                 newValue = body.invoke()
-                m[key] = newValue
+                if (newValue != null) {
+                    m[key] = newValue
+                }
             }
 
             return@writeLock newValue
-        }!!
+        } as V
     }
 
 }

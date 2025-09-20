@@ -16,7 +16,7 @@ import java.nio.ByteBuffer
  */
 class InMemoryStore(context: SchemaContext?, storeId: String) : MemoryMappedStore(), Store {
 
-    private var slices: MutableMap<Int, ByteBuffer> = OptimisticLockingMap(HashMap())
+    private var slices = OptimisticLockingMap<Int, ByteBuffer> (HashMap())
 
     init {
         this.contextId = context?.contextId

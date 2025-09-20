@@ -32,7 +32,7 @@ open class DefaultDiskMapFactory : DiskMapFactory {
     open protected lateinit var nodeStore: Store
 
     // Contains all initialized maps
-    open protected val maps: MutableMap<String, Map<*, *>> = OptimisticLockingMap(WeakHashMap())
+    open protected val maps = OptimisticLockingMap<String, Map<*, *>>(WeakHashMap())
 
     // Contains all initialized maps
     open protected val mapsByHeader = OptimisticLockingMap(WeakHashMap<Header, Map<*, *>>())
