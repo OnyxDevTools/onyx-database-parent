@@ -40,33 +40,28 @@ private val DATE_TIME_FORMATTERS: List<DateTimeFormatter> = listOf(
  * cannot be parsed using any of the supported formats.
  */
 fun String.parseToJavaDate(): Date? {
+    // Fast paths for ISO inputs (covers your server "…Z" and offset forms)
+    runCatching { return Date.from(Instant.parse(this)) }.getOrNull()?.let { return it }
+    runCatching { return Date.from(OffsetDateTime.parse(this).toInstant()) }.getOrNull()?.let { return it }
+    runCatching { return Date.from(ZonedDateTime.parse(this).toInstant()) }.getOrNull()?.let { return it }
+
+    // Fallbacks using your formatter list (unchanged)
     for (formatter in DATE_TIME_FORMATTERS) {
-        // Try parsing as ZonedDateTime (includes timezone info)
         try {
-            val zonedDateTime = ZonedDateTime.parse(this, formatter)
-            return Date.from(zonedDateTime.toInstant())
-        } catch (ignore: DateTimeParseException) {
-            // Format didn't match ZonedDateTime, continue
-        }
+            val zdt = ZonedDateTime.parse(this, formatter)
+            return Date.from(zdt.toInstant())
+        } catch (_: DateTimeParseException) {}
 
-        // Try parsing as LocalDateTime (no timezone info) - assume UTC
         try {
-            val localDateTime = LocalDateTime.parse(this, formatter)
-            // Convert to Instant assuming UTC for consistency if no zone info was present in the string
-            return Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant())
-        } catch (ignore: DateTimeParseException) {
-            // Format didn't match LocalDateTime, continue
-        }
+            val ldt = LocalDateTime.parse(this, formatter)
+            // interpret naive local date-times as UTC (your chosen convention)
+            return Date.from(ldt.atZone(ZoneId.of("UTC")).toInstant())
+        } catch (_: DateTimeParseException) {}
 
-        // Try parsing as LocalDate (date only) - assume start of day UTC
         try {
-            val localDate = LocalDate.parse(this, formatter)
-            // Convert to Instant at the start of the day in UTC
-            return Date.from(localDate.atStartOfDay(ZoneId.of("UTC")).toInstant())
-        } catch (ignore: DateTimeParseException) {
-            // Format didn't match LocalDate, continue
+            val ld = LocalDate.parse(this, formatter)
+            return Date.from(ld.atStartOfDay(ZoneId.of("UTC")).toInstant())
+        } catch (_: DateTimeParseException) {}
         }
-    }
-    // None of the formats matched
     return null
 }
