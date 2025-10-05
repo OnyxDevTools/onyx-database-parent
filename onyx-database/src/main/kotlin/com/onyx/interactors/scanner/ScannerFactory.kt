@@ -109,12 +109,23 @@ object ScannerFactory {
             }
         }
 
-        val hasKey = descriptor.entityClass.kotlin.hasKey(attributeToScan)
-        if (hasKey || hasMember(descriptor.entityClass.kotlin, attributeToScan)) {
-            return if (descriptor.hasPartition) {
-                PartitionFullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
-            } else {
-                FullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
+        if (segments.size > 1) {
+            val hasKey = descriptor.entityClass.kotlin.hasKey(segments.first())
+            if (hasKey || hasMember(descriptor.entityClass.kotlin, segments.first())) {
+                return if (descriptor.hasPartition) {
+                    PartitionFullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
+                } else {
+                    FullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
+                }
+            }
+        } else {
+            val hasKey = descriptor.entityClass.kotlin.hasKey(attributeToScan)
+            if (hasKey || hasMember(descriptor.entityClass.kotlin, attributeToScan)) {
+                return if (descriptor.hasPartition) {
+                    PartitionFullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
+                } else {
+                    FullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
+                }
             }
         }
 
