@@ -138,6 +138,51 @@ class OnyxClientTest {
         assertEquals("60000", capturedInit?.headers?.get("x-onyx-ttl"))
     }
 
+    @Test
+    fun defaultTimeoutsMatchBuiltInDefaults() {
+        val defaultsClass = OnyxClient::class.java.declaredClasses.first { it.simpleName == "Defaults" }
+        val defaultRequest = defaultsClass.getDeclaredField("REQUEST_TIMEOUT_MS").apply { isAccessible = true }.getInt(null)
+        val defaultConnect = defaultsClass.getDeclaredField("CONNECT_TIMEOUT_MS").apply { isAccessible = true }.getInt(null)
+
+        val client = OnyxClient(baseUrl = "https://example.com", databaseId = "db", apiKey = "key", apiSecret = "secret")
+        val requestTimeout = OnyxClient::class.java.getDeclaredField("requestTimeoutMs").apply { isAccessible = true }.getInt(client)
+        val connectTimeout = OnyxClient::class.java.getDeclaredField("connectTimeoutMs").apply { isAccessible = true }.getInt(client)
+
+        assertEquals(defaultRequest, requestTimeout)
+        assertEquals(defaultConnect, connectTimeout)
+    }
+
+    @Test
+    fun customTimeoutOverridesAreApplied() {
+        val client = OnyxClient(
+            baseUrl = "https://example.com",
+            databaseId = "db",
+            apiKey = "key",
+            apiSecret = "secret",
+            requestTimeoutMsOverride = 5_000,
+            connectTimeoutMsOverride = 2_500
+        )
+
+        val requestTimeout = OnyxClient::class.java.getDeclaredField("requestTimeoutMs").apply { isAccessible = true }.getInt(client)
+        val connectTimeout = OnyxClient::class.java.getDeclaredField("connectTimeoutMs").apply { isAccessible = true }.getInt(client)
+
+        assertEquals(5_000, requestTimeout)
+        assertEquals(2_500, connectTimeout)
+    }
+
+    @Test
+    fun invalidTimeoutValuesThrowHelpfulErrors() {
+        val exRequest = assertFailsWith<IllegalArgumentException> {
+            OnyxClient(baseUrl = "https://example.com", databaseId = "db", apiKey = "key", apiSecret = "secret", requestTimeoutMsOverride = 0)
+        }
+        assertTrue(exRequest.message?.contains("requestTimeoutMs") == true)
+
+        val exConnect = assertFailsWith<IllegalArgumentException> {
+            OnyxClient(baseUrl = "https://example.com", databaseId = "db", apiKey = "key", apiSecret = "secret", connectTimeoutMsOverride = -1)
+        }
+        assertTrue(exConnect.message?.contains("connectTimeoutMs") == true)
+    }
+
     private data class ExampleEntity(val id: String)
 
     private class StubFetchResponse(
