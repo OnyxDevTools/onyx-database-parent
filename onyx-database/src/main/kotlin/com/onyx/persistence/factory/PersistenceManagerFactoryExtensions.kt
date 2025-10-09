@@ -5,7 +5,6 @@ import com.onyx.entity.SystemPartitionEntry
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
-import com.onyx.persistence.query.and
 import com.onyx.persistence.query.eq
 import com.onyx.persistence.query.from
 import com.onyx.persistence.query.notStartsWith
@@ -60,12 +59,20 @@ private fun streamAndSave(
     }
 
     val query = queryBuilder.query
-    sourceManager.stream(query, object : QueryStream<IManagedEntity> {
-        override fun accept(entity: IManagedEntity, persistenceManager: PersistenceManager): Boolean {
-            destinationManager.saveEntity(entity)
-            return true
-        }
-    })
+    try {
+        sourceManager.stream(query, object : QueryStream<IManagedEntity> {
+            override fun accept(entity: IManagedEntity, persistenceManager: PersistenceManager): Boolean {
+                try {
+                    destinationManager.saveEntity(entity)
+                } catch (e: Exception) {
+                    println("Failure to save entity $entity")
+                }
+                return true
+            }
+        })
+    } catch (e: Exception) {
+        println("Failure to stream $entityType")
+    }
 }
 
 private fun SchemaContext.getAllPartitionsSafely(entityClass: Class<*>): List<SystemPartitionEntry> = runCatching {
