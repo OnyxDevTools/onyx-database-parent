@@ -56,7 +56,9 @@ object OnyxFacadeImpl : OnyxFacade {
             defaultPartition = config?.partition,
             requestLoggingEnabled = config?.requestLoggingEnabled ?: false,
             responseLoggingEnabled = config?.responseLoggingEnabled ?: false,
-            ttl = config?.ttl
+            ttl = config?.ttl,
+            requestTimeoutMsOverride = config?.requestTimeoutMs,
+            connectTimeoutMsOverride = config?.connectTimeoutMs
         ) as IOnyxDatabase<Schema>
 
     /**

@@ -695,6 +695,8 @@ inline fun <reified T> ICascadeBuilder.delete(primaryKey: Any) =
  * @property requestLoggingEnabled If `true`, logs HTTP request details.
  * @property responseLoggingEnabled If `true`, logs HTTP response details.
  * @property ttl The time-to-live in milliseconds for caching resolved credentials.
+ * @property requestTimeoutMs Optional override for the non-streaming read timeout in milliseconds.
+ * @property connectTimeoutMs Optional override for the socket connect timeout in milliseconds.
  */
 data class OnyxConfig(
     val baseUrl: String? = null,
@@ -705,7 +707,9 @@ data class OnyxConfig(
     val partition: String? = null,
     val requestLoggingEnabled: Boolean? = null,
     val responseLoggingEnabled: Boolean? = null,
-    val ttl: Long? = null
+    val ttl: Long? = null,
+    val requestTimeoutMs: Int? = null,
+    val connectTimeoutMs: Int? = null
 )
 
 /**

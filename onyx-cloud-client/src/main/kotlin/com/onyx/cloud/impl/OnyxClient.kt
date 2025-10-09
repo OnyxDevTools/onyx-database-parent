@@ -79,6 +79,10 @@ import kotlin.reflect.KClass
  * server.
  * @param ttl Optional time-to-live value (milliseconds) propagated via the `x-onyx-ttl`
  * header for credential caching.
+ * @param requestTimeoutMsOverride Optional override for the non-streaming read timeout
+ * in milliseconds. When `null`, a safe default is used.
+ * @param connectTimeoutMsOverride Optional override for the socket connection timeout in
+ * milliseconds. When `null`, a safe default is used.
  */
 class OnyxClient(
     baseUrl: String = "https://api.onyx.dev",
@@ -89,12 +93,24 @@ class OnyxClient(
     internal val defaultPartition: String? = null,
     private val requestLoggingEnabled: Boolean = false,
     private val responseLoggingEnabled: Boolean = false,
-    private val ttl: Long? = null
+    private val ttl: Long? = null,
+    requestTimeoutMsOverride: Int? = null,
+    connectTimeoutMsOverride: Int? = null
 ) : IOnyxDatabase<Any> {
 
     private val baseUrl: String = baseUrl.replace(Regex("/+$"), "")
     private val lifecycleLock = Any()
     private val activeStreams = ConcurrentHashMap.newKeySet<StreamSubscription>()
+
+    private val requestTimeoutMs: Int = requestTimeoutMsOverride?.also {
+        require(it > 0) { "requestTimeoutMs must be greater than zero but was $it" }
+    } ?: Defaults.REQUEST_TIMEOUT_MS
+
+    private val connectTimeoutMs: Int = connectTimeoutMsOverride?.also {
+        require(it > 0) { "connectTimeoutMs must be greater than zero but was $it" }
+    } ?: Defaults.CONNECT_TIMEOUT_MS
+
+    private val streamReadTimeoutMs: Int = Defaults.STREAM_READ_TIMEOUT_MS
 
     @Volatile
     private var closed = false
@@ -108,13 +124,13 @@ class OnyxClient(
         }
     }
 
-    private object Timeouts {
-        /** Max time to read non-stream requests (ms). */
-        const val REQUEST_TIMEOUT = 12_000_000
+    private object Defaults {
+        /** Max time to read non-stream requests (ms). 120 seconds keeps calls responsive without hanging indefinitely. */
+        const val REQUEST_TIMEOUT_MS = 120_000
         /** Connect timeout (ms). */
-        const val CONNECT_TIMEOUT = 30_000
+        const val CONNECT_TIMEOUT_MS = 30_000
         /** Streaming read timeout (ms). 0 = infinite (socket-level). */
-        const val STREAM_READ_TIMEOUT = 0
+        const val STREAM_READ_TIMEOUT_MS = 0
     }
 
     // ---------------------------------------------------------------------
@@ -417,8 +433,8 @@ class OnyxClient(
 
                 conn.requestMethod = "PUT"
                 conn.instanceFollowRedirects = false // avoid silent body drop on 30x
-                conn.connectTimeout = Timeouts.CONNECT_TIMEOUT
-                conn.readTimeout = Timeouts.STREAM_READ_TIMEOUT
+                conn.connectTimeout = connectTimeoutMs
+                conn.readTimeout = streamReadTimeoutMs
                 conn.doInput = true
                 conn.doOutput = true
                 conn.useCaches = false
@@ -708,8 +724,8 @@ class OnyxClient(
             val conn = (currentUrl.openConnection() as HttpURLConnection)
             try {
                 conn.instanceFollowRedirects = false
-                conn.connectTimeout = Timeouts.CONNECT_TIMEOUT
-                conn.readTimeout = Timeouts.REQUEST_TIMEOUT
+                conn.connectTimeout = connectTimeoutMs
+                conn.readTimeout = requestTimeoutMs
                 conn.useCaches = false
                 conn.doInput = true
                 conn.doOutput = bodyBytes != null
