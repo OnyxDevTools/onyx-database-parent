@@ -16,6 +16,7 @@ import com.onyx.persistence.query.QueryPartitionMode
 import com.onyx.extension.common.async
 import com.onyx.extension.toManagedEntity
 import com.onyx.persistence.context.Contexts
+import com.onyx.extension.meetsCriteria
 import java.util.concurrent.Future
 import kotlin.collections.HashSet
 
@@ -132,8 +133,9 @@ class PartitionVectorIndexScanner @Throws(OnyxException::class) constructor(
                     scanSinglePartition(indexInteractor, entry.index)
                 } else {
                     // When not collecting, just get the raw matches to be processed later.
-                    findMatches(criteria.value, indexInteractor)
-                        .map { (recordId, _) -> Reference(entry.index, recordId) }
+                    val results = findMatches(criteria.value, indexInteractor)
+                    val filteredResults = filterResults(results, criteria)
+                    filteredResults.map { (recordId, _) -> Reference(entry.index, recordId) }
                         .toMutableSet()
                 }
             }
@@ -158,8 +160,11 @@ class PartitionVectorIndexScanner @Throws(OnyxException::class) constructor(
         val matchingReferences = HashSet<Reference>()
 
         val results = findMatches(criteria.value, indexInteractor)
+        
+        // Filter results based on the operator
+        val filteredResults = filterResults(results, criteria)
 
-        results.forEach { (recordId, _) ->
+        filteredResults.forEach { (recordId, _) ->
             if (matchingReferences.size > maxCardinality) {
                 throw MaxCardinalityExceededException(context.maxCardinality)
             }
@@ -196,5 +201,44 @@ class PartitionVectorIndexScanner @Throws(OnyxException::class) constructor(
         val maxCandidates = context.maxCardinality
 
         return interactor.matchAll(queryValue, k, maxCandidates)
+    }
+    
+    /**
+     * Filter results based on the query criteria operator
+     * @param results Results from vector similarity search
+     * @param criteria Query criteria with operator and value
+     * @return Filtered results
+     */
+    override fun filterResults(results: Map<Long, Any?>, criteria: QueryCriteria): Map<Long, Any?> {
+        val context = Contexts.get(contextId)!!
+        val operator = criteria.operator ?: return results
+
+        // For operators that should use the default index interactor, return all results
+        // as they will be filtered by the default index interactor
+        return when (operator) {
+            com.onyx.persistence.query.QueryCriteriaOperator.LIKE -> {
+                // For MATCHES and LIKE operators, we use the vector similarity search directly
+                // No additional filtering is needed
+                results
+            }
+            com.onyx.persistence.query.QueryCriteriaOperator.MATCHES,
+            com.onyx.persistence.query.QueryCriteriaOperator.CONTAINS,
+            com.onyx.persistence.query.QueryCriteriaOperator.CONTAINS_IGNORE_CASE,
+            com.onyx.persistence.query.QueryCriteriaOperator.NOT_CONTAINS,
+            com.onyx.persistence.query.QueryCriteriaOperator.NOT_CONTAINS_IGNORE_CASE,
+            com.onyx.persistence.query.QueryCriteriaOperator.STARTS_WITH,
+            com.onyx.persistence.query.QueryCriteriaOperator.NOT_STARTS_WITH,
+            com.onyx.persistence.query.QueryCriteriaOperator.NOT_MATCHES,
+            com.onyx.persistence.query.QueryCriteriaOperator.NOT_LIKE -> {
+                // For these operators, we need to filter the results using the query comparison functionality
+                results.filter { (recordId, _) ->
+                    // Use the partitionId from the outer scope
+                    val reference = Reference(this@PartitionVectorIndexScanner.partitionId, recordId)
+                    val entity = reference.toManagedEntity(context, descriptor)
+                    query.meetsCriteria(entity, reference, context, descriptor)
+                }
+            }
+            else -> results
+        }
     }
 }

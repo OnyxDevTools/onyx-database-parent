@@ -2,11 +2,7 @@ package database.index
 
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
-import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory
-import com.onyx.persistence.query.eq
-import com.onyx.persistence.query.from
-import com.onyx.persistence.query.like
-import com.onyx.persistence.query.match
+import com.onyx.persistence.query.*
 import database.base.DatabaseBaseTest
 import entities.VectorIndexEntity
 import org.junit.Before
@@ -279,5 +275,73 @@ class VectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(f
         assertEquals(results.size, 2)
         // We should get some results since we're doing a similarity search
         // The exact number may vary depending on the similarity algorithm
+    }
+    
+    @Test
+    fun testVectorIndexContainsOperator() {
+        // Save entities with vector data
+        val entity1 = VectorIndexEntity()
+        entity1.label = "contains_test_1"
+        entity1.vectorData = "This is a test vector string for contains testing"
+        
+        val entity2 = VectorIndexEntity()
+        entity2.label = "contains_test_2"
+        entity2.vectorData = "vector string for testing contains"
+        
+        val entity3 = VectorIndexEntity()
+        entity3.label = "contains_test_3"
+        entity3.vectorData = "This is a test vector string"
+        
+        manager.saveEntity<IManagedEntity>(entity1)
+        manager.saveEntity<IManagedEntity>(entity2)
+        manager.saveEntity<IManagedEntity>(entity3)
+        
+        // Import the contains operator
+        val results = manager.from(VectorIndexEntity::class)
+            .where("vectorData" cont "contains")
+            .list<VectorIndexEntity>()
+        
+        // Print results for debugging
+        println("Found ${results.size} results for query with contains operator")
+        results.forEach { entity ->
+            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
+        }
+        
+        // We should get entities 1 and 2 since they contain "contains"
+        assertEquals(2, results.size)
+    }
+    
+    @Test
+    fun testVectorIndexStartsWithOperator() {
+        // Save entities with vector data
+        val entity1 = VectorIndexEntity()
+        entity1.label = "startswith_test_1"
+        entity1.vectorData = "This is a test vector string for starts with testing"
+        
+        val entity2 = VectorIndexEntity()
+        entity2.label = "startswith_test_2"
+        entity2.vectorData = "vector string for testing starts with"
+        
+        val entity3 = VectorIndexEntity()
+        entity3.label = "startswith_test_3"
+        entity3.vectorData = "This is a test vector string"
+        
+        manager.saveEntity<IManagedEntity>(entity1)
+        manager.saveEntity<IManagedEntity>(entity2)
+        manager.saveEntity<IManagedEntity>(entity3)
+        
+        // Import the startsWith operator
+        val results = manager.from(VectorIndexEntity::class)
+            .where("vectorData" startsWith "This")
+            .list<VectorIndexEntity>()
+        
+        // Print results for debugging
+        println("Found ${results.size} results for query with startsWith operator")
+        results.forEach { entity ->
+            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
+        }
+        
+        // We should get entities 1 and 3 since they start with "This"
+        assertEquals(2, results.size)
     }
 }

@@ -102,9 +102,17 @@ object ScannerFactory {
             }
         }
         
-        // Vector index with MATCHES or LIKE operators
+        // Vector index with operators that can use vector similarity search
+        val vectorOperators = setOf(
+            QueryCriteriaOperator.MATCHES,
+            QueryCriteriaOperator.LIKE,
+            QueryCriteriaOperator.CONTAINS,
+            QueryCriteriaOperator.CONTAINS_IGNORE_CASE,
+            QueryCriteriaOperator.STARTS_WITH,
+        )
+        
         if (indexDescriptor != null && indexDescriptor.indexType == IndexType.VECTOR && 
-            (criteria.operator == QueryCriteriaOperator.MATCHES || criteria.operator == QueryCriteriaOperator.LIKE)) {
+            criteria.operator in vectorOperators) {
             return if (descriptor.hasPartition) {
                 PartitionVectorIndexScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
             } else {

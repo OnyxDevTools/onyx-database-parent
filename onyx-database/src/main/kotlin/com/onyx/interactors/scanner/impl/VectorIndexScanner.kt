@@ -12,6 +12,8 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
+import com.onyx.persistence.query.QueryCriteriaOperator
+import com.onyx.extension.meetsCriteria
 
 /**
  * Scanner for vector index matching operations
@@ -42,7 +44,10 @@ open class VectorIndexScanner @Throws(OnyxException::class) constructor(
         // Use matchAll for vector similarity search
         val results = findMatches(criteria.value)
         
-        results.forEach { (id, score) ->
+        // Filter results based on the operator
+        val filteredResults = filterResults(results, criteria)
+        
+        filteredResults.forEach { (id, score) ->
             val reference = Reference(partitionId, id)
             collector?.collect(reference, reference.toManagedEntity(context, descriptor))
             if (matching.size > maxCardinality)
@@ -87,5 +92,43 @@ open class VectorIndexScanner @Throws(OnyxException::class) constructor(
         val maxCandidates = context.maxCardinality
         
         return indexInteractor.matchAll(queryValue, k, maxCandidates)
+    }
+    
+    /**
+     * Filter results based on the query criteria operator
+     * @param results Results from vector similarity search
+     * @param criteria Query criteria with operator and value
+     * @return Filtered results
+     */
+    protected open fun filterResults(results: Map<Long, Any?>, criteria: QueryCriteria): Map<Long, Any?> {
+        val context = Contexts.get(contextId)!!
+        val operator = criteria.operator ?: return results
+        
+        // For operators that should use the default index interactor, return all results
+        // as they will be filtered by the default index interactor
+        return when (operator) {
+            QueryCriteriaOperator.MATCHES,
+            QueryCriteriaOperator.LIKE -> {
+                // For MATCHES and LIKE operators, we use the vector similarity search directly
+                // No additional filtering is needed
+                results
+            }
+            QueryCriteriaOperator.CONTAINS,
+            QueryCriteriaOperator.CONTAINS_IGNORE_CASE,
+            QueryCriteriaOperator.NOT_CONTAINS,
+            QueryCriteriaOperator.NOT_CONTAINS_IGNORE_CASE,
+            QueryCriteriaOperator.STARTS_WITH,
+            QueryCriteriaOperator.NOT_STARTS_WITH,
+            QueryCriteriaOperator.NOT_MATCHES,
+            QueryCriteriaOperator.NOT_LIKE -> {
+                // For these operators, we need to filter the results using the query comparison functionality
+                results.filter { (recordId, _) ->
+                    val reference = Reference(partitionId, recordId)
+                    val entity = reference.toManagedEntity(context, descriptor)
+                    query.meetsCriteria(entity, reference, context, descriptor)
+                }
+            }
+            else -> results
+        }
     }
 }

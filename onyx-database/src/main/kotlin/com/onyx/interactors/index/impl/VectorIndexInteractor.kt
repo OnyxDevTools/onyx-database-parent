@@ -335,6 +335,7 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
             entity.identifier(context, entityDescriptor)
         }
     }
+    
 
     /** Loads an entity from disk by its internal record ID. */
     private fun loadEntity(recordId: Long): IManagedEntity {
