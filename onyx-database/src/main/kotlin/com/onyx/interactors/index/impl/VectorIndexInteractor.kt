@@ -248,17 +248,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
             }
         }
 
-        // --- Fallback Stage: Bounded Full Scan ---
-        // If LSH yields too few results, perform a brute-force search on a subset of items.
-        val documentCount = vectors.size
-        if (candidates.isEmpty() || candidates.size < limit || documentCount <= 1024) {
-            var fallbackCount = 0
-            for (recordId in allRecordIds.keys) {
-                candidates.add(recordId)
-                if (++fallbackCount >= candidateCapacity) break
-            }
-        }
-
         if (candidates.isEmpty()) return emptyMap()
 
         // --- Scoring and Ranking Stage ---
