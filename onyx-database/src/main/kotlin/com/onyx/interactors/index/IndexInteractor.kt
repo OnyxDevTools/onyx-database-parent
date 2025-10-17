@@ -100,4 +100,16 @@ interface IndexInteractor {
      */
     fun clear()
 
+    /**
+     * Match all items that have similar vectors as the search value
+     *
+     * @param indexValue search text
+     * @param limit Maximum number of items returned
+     * @param maxCandidates Maximum number of candidates to consider for weight sorting
+     *
+     * @return Number of items matching search
+     */
+    fun matchAll(indexValue: Any?, limit: Int = 50, maxCandidates: Int = DEFAULT_MAX_CANDIDATES): Map<Long, Any?> = findAll(indexValue)
 }
+
+private const val DEFAULT_MAX_CANDIDATES: Int = 1_000

@@ -6,10 +6,12 @@ import com.onyx.exception.OnyxException
 import com.onyx.extension.common.ReflectionCache.hasMember
 import com.onyx.extension.common.hasKey
 import com.onyx.interactors.scanner.impl.*
+import com.onyx.persistence.annotations.values.IndexType
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
+import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.QueryPartitionMode
 
 /**
@@ -97,6 +99,16 @@ object ScannerFactory {
                 PartitionIndexScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
             } else {
                 IndexScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
+            }
+        }
+        
+        // Vector index with MATCHES or LIKE operators
+        if (indexDescriptor != null && indexDescriptor.indexType == IndexType.VECTOR && 
+            (criteria.operator == QueryCriteriaOperator.MATCHES || criteria.operator == QueryCriteriaOperator.LIKE)) {
+            return if (descriptor.hasPartition) {
+                PartitionVectorIndexScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
+            } else {
+                VectorIndexScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
             }
         }
 

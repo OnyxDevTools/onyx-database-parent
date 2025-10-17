@@ -4,6 +4,7 @@ import com.onyx.descriptor.IndexDescriptor
 import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.annotations.Entity
 import com.onyx.persistence.annotations.Identifier
+import com.onyx.persistence.annotations.values.IndexType
 
 /**
  * Created by timothy.osborn on 3/2/15.
@@ -14,11 +15,14 @@ import com.onyx.persistence.annotations.Identifier
 data class SystemIndex @JvmOverloads constructor(
 
     @Identifier
-    var name: String = ""
+    var name: String = "",
+    
+    var indexType: IndexType = IndexType.DEFAULT
 
 ): ManagedEntity() {
 
     constructor(descriptor: IndexDescriptor):this(
-        name = descriptor.name
+        name = descriptor.name,
+        indexType = descriptor.indexType
     )
 }

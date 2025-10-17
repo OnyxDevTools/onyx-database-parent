@@ -22,6 +22,7 @@ import com.onyx.interactors.encryption.EncryptionInteractor
 import com.onyx.interactors.encryption.data.Base64
 import com.onyx.interactors.index.IndexInteractor
 import com.onyx.interactors.index.impl.DefaultIndexInteractor
+import com.onyx.interactors.index.impl.VectorIndexInteractor
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.interactors.record.impl.DefaultRecordInteractor
 import com.onyx.interactors.record.impl.SequenceRecordInteractor
@@ -627,7 +628,10 @@ open class DefaultSchemaContext : SchemaContext {
      */
     override fun getIndexInteractor(indexDescriptor: IndexDescriptor): IndexInteractor =
         indexInteractors.getOrPut(indexDescriptor) {
-            return@getOrPut DefaultIndexInteractor(indexDescriptor.entityDescriptor, indexDescriptor, this)
+            return@getOrPut when (indexDescriptor.indexType) {
+                com.onyx.persistence.annotations.values.IndexType.VECTOR -> VectorIndexInteractor(indexDescriptor.entityDescriptor, indexDescriptor, this)
+                else -> DefaultIndexInteractor(indexDescriptor.entityDescriptor, indexDescriptor, this)
+            }
         }
 
     // endregion

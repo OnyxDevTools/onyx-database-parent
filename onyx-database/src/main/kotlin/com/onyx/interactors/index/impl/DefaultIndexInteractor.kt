@@ -20,7 +20,7 @@ import kotlin.collections.HashMap
  *
  * Controls behavior of an index
  */
-class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private val descriptor: EntityDescriptor, override val indexDescriptor: IndexDescriptor, context: SchemaContext) : IndexInteractor {
+open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private val descriptor: EntityDescriptor, override val indexDescriptor: IndexDescriptor, context: SchemaContext) : IndexInteractor {
 
     private val contextReference: WeakReference<SchemaContext>
 

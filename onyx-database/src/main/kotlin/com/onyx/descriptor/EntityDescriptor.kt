@@ -190,9 +190,11 @@ constructor(
             it.getAnnotation(ClassMetadata.INDEX_ANNOTATION) != null
         }.forEach {
             // Build Index descriptor
+            val indexAnnotation = it.getAnnotation(ClassMetadata.INDEX_ANNOTATION)
             val index = IndexDescriptor()
             index.name = it.name
             index.type = it.type
+            index.indexType = indexAnnotation.type
             index.entityDescriptor = this
             it.isAccessible = true
             index.field = it
