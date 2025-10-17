@@ -239,6 +239,7 @@ class VectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(f
         
         // We should get some results since we're doing a similarity search
         // The exact number may vary depending on the similarity algorithm
+        assertTrue(results.isNotEmpty(), "Should find matching vectors")
     }
     
     @Test
@@ -343,5 +344,213 @@ class VectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(f
         
         // We should get entities 1 and 3 since they start with "This"
         assertEquals(2, results.size)
+    }
+    
+    @Test
+    fun testVectorIndexNotContainsOperator() {
+        // Save entities with vector data
+        val entity1 = VectorIndexEntity()
+        entity1.label = "not_contains_test_1"
+        entity1.vectorData = "This is a test vector string for not contains testing"
+        
+        val entity2 = VectorIndexEntity()
+        entity2.label = "not_contains_test_2"
+        entity2.vectorData = "vector string for testing not contains"
+        
+        val entity3 = VectorIndexEntity()
+        entity3.label = "not_contains_test_3"
+        entity3.vectorData = "This is a test vector string"
+        
+        manager.saveEntity<IManagedEntity>(entity1)
+        manager.saveEntity<IManagedEntity>(entity2)
+        manager.saveEntity<IManagedEntity>(entity3)
+        
+        // Test the not contains operator
+        val results = manager.from(VectorIndexEntity::class)
+            .where("vectorData" notCont "not contains")
+            .list<VectorIndexEntity>()
+        
+        // Print results for debugging
+        println("Found ${results.size} results for query with notContains operator")
+        results.forEach { entity ->
+            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
+        }
+        
+        // We should get entity 3 since it doesn't contain "not contains"
+        assertEquals(1, results.size)
+    }
+    
+    @Test
+    fun testVectorIndexContainsIgnoreCaseOperator() {
+        // Save entities with vector data
+        val entity1 = VectorIndexEntity()
+        entity1.label = "contains_ignore_case_test_1"
+        entity1.vectorData = "This is a test vector string for contains ignore case testing"
+        
+        val entity2 = VectorIndexEntity()
+        entity2.label = "contains_ignore_case_test_2"
+        entity2.vectorData = "vector string for testing CONTAINS ignore case"
+        
+        val entity3 = VectorIndexEntity()
+        entity3.label = "contains_ignore_case_test_3"
+        entity3.vectorData = "This is a test vector string"
+        
+        manager.saveEntity<IManagedEntity>(entity1)
+        manager.saveEntity<IManagedEntity>(entity2)
+        manager.saveEntity<IManagedEntity>(entity3)
+        
+        // Test the contains ignore case operator
+        val results = manager.from(VectorIndexEntity::class)
+            .where("vectorData" containsIgnoreCase "CONTAINS")
+            .list<VectorIndexEntity>()
+        
+        // Print results for debugging
+        println("Found ${results.size} results for query with containsIgnoreCase operator")
+        results.forEach { entity ->
+            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
+        }
+        
+        // We should get entities 1 and 2 since they contain "contains" (case insensitive)
+        assertEquals(2, results.size)
+    }
+    
+    @Test
+    fun testVectorIndexNotContainsIgnoreCaseOperator() {
+        // Save entities with vector data
+        val entity1 = VectorIndexEntity()
+        entity1.label = "not_contains_ignore_case_test_1"
+        entity1.vectorData = "This is a test vector string for not contains ignore case testing"
+        
+        val entity2 = VectorIndexEntity()
+        entity2.label = "not_contains_ignore_case_test_2"
+        entity2.vectorData = "vector string for testing NOT contains ignore case"
+        
+        val entity3 = VectorIndexEntity()
+        entity3.label = "not_contains_ignore_case_test_3"
+        entity3.vectorData = "This is a test vector string"
+        
+        manager.saveEntity<IManagedEntity>(entity1)
+        manager.saveEntity<IManagedEntity>(entity2)
+        manager.saveEntity<IManagedEntity>(entity3)
+        
+        // Test the not contains ignore case operator
+        val results = manager.from(VectorIndexEntity::class)
+            .where("vectorData" notContainsIgnoreCase "NOT")
+            .list<VectorIndexEntity>()
+        
+        // Print results for debugging
+        println("Found ${results.size} results for query with notContainsIgnoreCase operator")
+        results.forEach { entity ->
+            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
+        }
+        
+        // We should get entity 3 since it doesn't contain "not" (case insensitive)
+        assertEquals(1, results.size)
+    }
+    
+    @Test
+    fun testVectorIndexNotStartsWithOperator() {
+        // Save entities with vector data
+        val entity1 = VectorIndexEntity()
+        entity1.label = "not_startswith_test_1"
+        entity1.vectorData = "This is a test vector string for not starts with testing"
+        
+        val entity2 = VectorIndexEntity()
+        entity2.label = "not_startswith_test_2"
+        entity2.vectorData = "vector string for testing not starts with"
+        
+        val entity3 = VectorIndexEntity()
+        entity3.label = "not_startswith_test_3"
+        entity3.vectorData = "Another test vector string"
+        
+        manager.saveEntity<IManagedEntity>(entity1)
+        manager.saveEntity<IManagedEntity>(entity2)
+        manager.saveEntity<IManagedEntity>(entity3)
+        
+        // Test the not starts with operator
+        val results = manager.from(VectorIndexEntity::class)
+            .where("vectorData" notStartsWith "This")
+            .list<VectorIndexEntity>()
+        
+        // Print results for debugging
+        println("Found ${results.size} results for query with notStartsWith operator")
+        results.forEach { entity ->
+            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
+        }
+        
+        // We should get entities 2 and 3 since they don't start with "This"
+        assertEquals(2, results.size)
+    }
+    
+    @Test
+    fun testVectorIndexNotMatchesOperator() {
+        // Save entities with vector data
+        val entity1 = VectorIndexEntity()
+        entity1.label = "not_matches_test_1"
+        entity1.vectorData = "This is a test vector string for not matches testing"
+        
+        val entity2 = VectorIndexEntity()
+        entity2.label = "not_matches_test_2"
+        entity2.vectorData = "vector string for testing not matches"
+        
+        val entity3 = VectorIndexEntity()
+        entity3.label = "not_matches_test_3"
+        entity3.vectorData = "This is a test vector string"
+        
+        manager.saveEntity<IManagedEntity>(entity1)
+        manager.saveEntity<IManagedEntity>(entity2)
+        manager.saveEntity<IManagedEntity>(entity3)
+        
+        // Test the not matches operator
+        val queryVector = "This is a test vector string for not matches testing"
+        val results = manager.from(VectorIndexEntity::class)
+            .where("vectorData" notMatch queryVector)
+            .list<VectorIndexEntity>()
+        
+        // Print results for debugging
+        println("Found ${results.size} results for query with notMatches operator")
+        results.forEach { entity ->
+            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
+        }
+        
+        // We should get entities 2 and 3 since they don't match the query vector exactly
+        // Note: The exact number may vary depending on the similarity algorithm
+        assertTrue(results.isNotEmpty(), "Should find non-matching vectors")
+    }
+    
+    @Test
+    fun testVectorIndexNotLikeOperator() {
+        // Save entities with vector data
+        val entity1 = VectorIndexEntity()
+        entity1.label = "not_like_test_1"
+        entity1.vectorData = "This is a test vector string for not like testing"
+        
+        val entity2 = VectorIndexEntity()
+        entity2.label = "not_like_test_2"
+        entity2.vectorData = "vector string for testing not like"
+        
+        val entity3 = VectorIndexEntity()
+        entity3.label = "not_like_test_3"
+        entity3.vectorData = "This is a test vector string"
+        
+        manager.saveEntity<IManagedEntity>(entity1)
+        manager.saveEntity<IManagedEntity>(entity2)
+        manager.saveEntity<IManagedEntity>(entity3)
+        
+        // Test the not like operator
+        val queryVector = "not like"
+        val results = manager.from(VectorIndexEntity::class)
+            .where("vectorData" notLike queryVector)
+            .list<VectorIndexEntity>()
+        
+        // Print results for debugging
+        println("Found ${results.size} results for query with notLike operator")
+        results.forEach { entity ->
+            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
+        }
+        
+        // We should get entities 1 and 3 since they don't match the query vector
+        // Note: The exact number may vary depending on the similarity algorithm
+        assertTrue(results.isNotEmpty(), "Should find non-matching vectors")
     }
 }
