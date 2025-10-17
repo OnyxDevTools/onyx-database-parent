@@ -12,7 +12,10 @@ import kotlin.jvm.internal.Intrinsics
 open class IndexDescriptor(
     override var name: String = "",
     open var type: Class<*> = ClassMetadata.ANY_CLASS,
-    open var indexType: IndexType = IndexType.DEFAULT
+    open var indexType: IndexType = IndexType.DEFAULT,
+    open var embeddingDimensions: Int = -1,
+    open var minimumScore: Float = -1f,
+    open var hashTableCount: Int = -1
 ) : AbstractBaseDescriptor(), BaseDescriptor {
 
     open lateinit var entityDescriptor: EntityDescriptor

@@ -195,6 +195,9 @@ constructor(
             index.name = it.name
             index.type = it.type
             index.indexType = indexAnnotation.type
+            index.embeddingDimensions = indexAnnotation.embeddingDimensions
+            index.minimumScore = indexAnnotation.minimumScore
+            index.hashTableCount = indexAnnotation.hashTableCount
             index.entityDescriptor = this
             it.isAccessible = true
             index.field = it

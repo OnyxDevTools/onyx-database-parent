@@ -39,11 +39,17 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
 ) : DefaultIndexInteractor(entityDescriptor, indexDescriptor, context) {
 
     // ---- Core Vector and LSH Configuration ----
-    /** The dimensionality of the embedding vectors. */
-    private val embeddingDimension: Int = 512
+    /** 
+     * The dimensionality of the embedding vectors. 
+     * Once defined, this value cannot be changed as it affects the storage format.
+     */
+    private val embeddingDimension: Int = if (indexDescriptor.embeddingDimensions > 0) indexDescriptor.embeddingDimensions else 512
 
-    /** The number of LSH hash tables to use. More tables improve accuracy but increase index size. */
-    private val lshTableCount: Int = 12
+    /** 
+     * The number of LSH hash tables to use. More tables improve accuracy but increase index size.
+     * This value can be customized via the @Index annotation.
+     */
+    private val lshTableCount: Int = if (indexDescriptor.hashTableCount > 0) indexDescriptor.hashTableCount else 12
 
     /** The maximum number of bits (hyperplanes) per LSH table signature used during indexing. */
     private val maxBitsPerTable: Int = 20
@@ -55,8 +61,11 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
     /** Queries with fewer tokens than this will be ignored. */
     private val minQueryTokens = 1
 
-    /** Search results with a cosine similarity score below this threshold will be discarded. */
-    private val minReturnedScore = 0.18f
+    /** 
+     * Search results with a cosine similarity score below this threshold will be discarded.
+     * This value can be customized via the @Index annotation.
+     */
+    private val minReturnedScore = if (indexDescriptor.minimumScore > 0) indexDescriptor.minimumScore else 0.18f
 
     /** The minimum length of a query string to enable character n-gram generation. */
     private val shortQueryNgramThreshold = 4
