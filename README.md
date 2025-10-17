@@ -600,7 +600,15 @@ This annotation marks a field as indexed, which can significantly improve the pe
 
 **Important:** The `@Attribute` annotation is still required along with `@Index`.
 
-**Example:**
+**Parameters:**
+* `type: IndexType` (optional, defaults to `IndexType.DEFAULT`): Specifies the type of index to create.
+  * `IndexType.DEFAULT`: Standard index for exact matching.
+  * `IndexType.VECTOR`: Vector index for text fuzzy searching using cosine similarity.
+* `embeddingDimensions: Int` (optional, defaults to `512` for vector indexes): The dimensionality of the embedding vectors for vector indexes. Once defined, this value cannot be changed as it affects the storage format.
+* `minimumScore: Float` (optional, defaults to `0.18f` for vector indexes): Search results with a cosine similarity score below this threshold will be discarded.
+* `hashTableCount: Int` (optional, defaults to `12` for vector indexes): The number of LSH hash tables to use for vector indexes. More tables improve accuracy but increase index size.
+
+**Example (Standard Index):**
 
 ```kotlin
 @Entity
@@ -608,6 +616,37 @@ class Product : IManagedEntity {
     @Index
     @Attribute(nullable = false, size = 100)
     var name: String? = null
+
+    // ... other fields
+}
+```
+
+**Example (Vector Index):**
+
+```kotlin
+@Entity
+class Document : IManagedEntity {
+    @Index(type = IndexType.VECTOR)
+    @Attribute
+    var content: String? = null
+
+    // ... other fields
+}
+```
+
+**Example (Custom Vector Index):**
+
+```kotlin
+@Entity
+class Document : IManagedEntity {
+    @Index(
+        type = IndexType.VECTOR,
+        embeddingDimensions = 256,
+        minimumScore = 0.25f,
+        hashTableCount = 8
+    )
+    @Attribute
+    var content: String? = null
 
     // ... other fields
 }
