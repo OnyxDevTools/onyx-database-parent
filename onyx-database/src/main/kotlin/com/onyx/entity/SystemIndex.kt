@@ -15,14 +15,13 @@ import com.onyx.persistence.annotations.values.IndexType
 data class SystemIndex @JvmOverloads constructor(
 
     @Identifier
-    var name: String = "",
-    
-    var indexType: IndexType = IndexType.DEFAULT
+    var name: String = ""
 
 ): ManagedEntity() {
 
     constructor(descriptor: IndexDescriptor):this(
         name = descriptor.name,
-        indexType = descriptor.indexType
     )
+
+    var indexType: IndexType = IndexType.DEFAULT
 }

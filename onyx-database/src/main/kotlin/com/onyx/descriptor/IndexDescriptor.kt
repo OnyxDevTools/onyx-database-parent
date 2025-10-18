@@ -20,13 +20,13 @@ open class IndexDescriptor(
 
     open lateinit var entityDescriptor: EntityDescriptor
 
-    override fun hashCode(): Int = (((((this.entityDescriptor.entityClass.hashCode()) * 31) * 31 + this.name.hashCode()) * 31 + this.type.hashCode()) * 31 + this.indexType.hashCode())
+    override fun hashCode(): Int = (((this.entityDescriptor.entityClass.hashCode()) * 31) * 31 + this.name.hashCode()) * 31 + this.type.hashCode()
 
     override fun equals(other: Any?): Boolean {
         return if (this !== other) {
             if (other is IndexDescriptor) {
                 val var2 = other as IndexDescriptor?
-                if (Intrinsics.areEqual(this.entityDescriptor.partition, var2!!.entityDescriptor.partition) && Intrinsics.areEqual(this.name, var2.name) && Intrinsics.areEqual(this.type, var2.type) && Intrinsics.areEqual(this.indexType, var2.indexType)) {
+                if (Intrinsics.areEqual(this.entityDescriptor.partition, var2!!.entityDescriptor.partition) && Intrinsics.areEqual(this.name, var2.name) && Intrinsics.areEqual(this.type, var2.type)) {
                     return true
                 }
             }
