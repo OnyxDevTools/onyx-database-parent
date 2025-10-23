@@ -1,5 +1,7 @@
 package com.onyx.interactors.index.impl
 
+import com.onyx.buffer.BufferStream
+import com.onyx.buffer.BufferStreamable
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.IndexDescriptor
 import com.onyx.diskmap.DiskMap
@@ -9,7 +11,6 @@ import com.onyx.exception.OnyxException
 import com.onyx.extension.identifier
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
-import java.io.Serializable
 import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -191,7 +192,19 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         val charTrigrams: Set<String>
     )
 
-    data class SpanMeta(val documentId: Long, val start: Int, val length: Int) : Serializable
+    data class SpanMeta(var documentId: Long = 0L, var start: Int = 0, var length: Int = 0) : BufferStreamable {
+        override fun read(buffer: BufferStream) {
+            documentId = buffer.long
+            start = buffer.int
+            length = buffer.int
+        }
+
+        override fun write(buffer: BufferStream) {
+            buffer.putLong(documentId)
+            buffer.putInt(start)
+            buffer.putInt(length)
+        }
+    }
 
     private fun spanId(documentId: Long, spanIndex: Int): Long =
         (documentId shl 16) or (spanIndex.toLong() and 0xFFFF)
@@ -246,6 +259,11 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         val prepared = prepareSpan(spanWindow.normalized)
         val spanId = spanId(recordId, spanIndex)
 
+        updateTokenDocumentFrequency(prepared.uniqueTokens, 1)
+        updateFeatureDocumentFrequency(prepared.uniqueFeatures, 1)
+        incrementStat(totalSpanCountKey, 1)
+        incrementStat(totalTokenCountKey, prepared.tokenCount.toLong())
+
         val vector = buildVectorFromFeatures(prepared.featureFrequencies)
         writeVector(spanId, vector)
 
@@ -255,12 +273,7 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         spanTokenFrequency[spanId] = HashMap(prepared.tokenFrequencies)
         spanTokenCounts[spanId] = prepared.tokenCount
 
-        updateTokenDocumentFrequency(prepared.uniqueTokens, 1)
-        updateFeatureDocumentFrequency(prepared.uniqueFeatures, 1)
         addCharNgramsForSpan(spanId, prepared.charTrigrams)
-
-        incrementStat(totalSpanCountKey, 1)
-        incrementStat(totalTokenCountKey, prepared.tokenCount.toLong())
     }
 
     private fun writeVector(recordId: Long, vector: FloatArray) {
@@ -822,13 +835,26 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
 
         val vector = FloatArray(embeddingDimension)
         val documentCount = max(1L, totalSpanCount())
+        var hasNonZeroWeight = false
+        val hashedFrequencies = ArrayList<Pair<Int, Float>>(featureFrequencies.size)
 
         for ((feature, frequency) in featureFrequencies) {
             val bucketIndex = getBucket(feature, embeddingDimension)
-            val tfWeight = 1.0 + ln(frequency.toDouble())
+            val tfWeight = (1.0 + ln(frequency.toDouble())).toFloat()
             val df = featureDocumentFrequency[feature]?.toLong() ?: 0L
             val idf = ln((documentCount + 1.0) / (df + 1.0))
-            vector[bucketIndex] += (tfWeight * idf).toFloat()
+            val weighted = (tfWeight * idf.toFloat())
+            if (weighted != 0f) {
+                vector[bucketIndex] += weighted
+                hasNonZeroWeight = true
+            }
+            hashedFrequencies.add(bucketIndex to tfWeight)
+        }
+
+        if (!hasNonZeroWeight) {
+            for ((bucketIndex, tfWeight) in hashedFrequencies) {
+                vector[bucketIndex] += tfWeight
+            }
         }
 
         l2NormalizeInPlace(vector)
