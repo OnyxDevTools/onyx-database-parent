@@ -1,19 +1,25 @@
 package com.onyx.interactors.index.impl
 
+import com.onyx.buffer.BufferStream
+import com.onyx.buffer.BufferStreamable
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.IndexDescriptor
-import com.onyx.exception.OnyxException
-import com.onyx.persistence.IManagedEntity
-import com.onyx.persistence.context.SchemaContext
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.factory.DiskMapFactory
+import com.onyx.exception.OnyxException
 import com.onyx.extension.identifier
+import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.context.SchemaContext
 import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.text.Normalizer
+import java.util.HashMap
 import java.util.LinkedHashMap
 import java.util.LinkedHashSet
+import kotlin.math.ln
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
 import kotlin.random.Random
@@ -43,7 +49,7 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
      * The dimensionality of the embedding vectors. 
      * Once defined, this value cannot be changed as it affects the storage format.
      */
-    private val embeddingDimension: Int = if (indexDescriptor.embeddingDimensions > 0) indexDescriptor.embeddingDimensions else 512
+    private val embeddingDimension: Int = if (indexDescriptor.embeddingDimensions > 0) indexDescriptor.embeddingDimensions else 128
 
     /** 
      * The number of LSH hash tables to use. More tables improve accuracy but increase index size.
@@ -102,16 +108,106 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
     private fun inverseTableMap(tableIndex: Int): DiskMap<Long, Int> =
         dataFile.getHashMap(Long::class.java, namespace("table_${tableIndex}_inv"))
 
-    /** Stores a set of all indexed record IDs, used for fallback searches. */
-    private val allRecordIds: DiskMap<Long, Byte?>
-        get() = dataFile.getHashMap(Long::class.java, namespace("all_ids"))
-
     /** Pre-computed random hyperplanes for LSH, generated deterministically from the seed. */
     private val planes: Array<Array<FloatArray>> = Array(lshTableCount) { tableIndex ->
         Array(maxBitsPerTable) { planeIndex ->
             randUnitVector(embeddingDimension, seedFor(tableIndex, planeIndex))
         }
     }
+
+    /** Stores all span identifiers that were materialised for string fields. */
+    private val allSpanIds: DiskMap<Long, Byte?>
+        get() = dataFile.getHashMap(Long::class.java, namespace("span_ids"))
+
+    /** Metadata for each span used to map back to the parent record and offsets. */
+    private val spanMeta: DiskMap<Long, SpanMeta>
+        get() = dataFile.getHashMap(Long::class.java, namespace("span_meta"))
+
+    /** Persisted normalised span text for clean removal and analytics. */
+    private val spanText: DiskMap<Long, String>
+        get() = dataFile.getHashMap(Long::class.java, namespace("span_text"))
+
+    /** Tracks how many spans were produced for a given record id. */
+    private val documentSpanCounts: DiskMap<Long, Int>
+        get() = dataFile.getHashMap(Long::class.java, namespace("doc_span_counts"))
+
+    /** Character 3-gram inverted index pointing to candidate span ids. */
+    private val charNgramIndex: DiskMap<String, Header>
+        get() = dataFile.getHashMap(String::class.java, namespace("char_ng3"))
+
+    /** Stores per-span token frequencies for lexical scoring. */
+    private val spanTokenFrequency: DiskMap<Long, Map<String, Int>>
+        get() = dataFile.getHashMap(Long::class.java, namespace("span_tf"))
+
+    /** Stores per-span token counts to compute BM25 length normalisation. */
+    private val spanTokenCounts: DiskMap<Long, Int>
+        get() = dataFile.getHashMap(Long::class.java, namespace("span_token_counts"))
+
+    /** Global token document frequency across all spans. */
+    private val tokenDocumentFrequency: DiskMap<String, Int>
+        get() = dataFile.getHashMap(String::class.java, namespace("token_df"))
+
+    /** Global feature document frequency used by the hashed embedding. */
+    private val featureDocumentFrequency: DiskMap<String, Int>
+        get() = dataFile.getHashMap(String::class.java, namespace("feature_df"))
+
+    /** Miscellaneous aggregate statistics for lexical scoring. */
+    private val stats: DiskMap<String, Long>
+        get() = dataFile.getHashMap(String::class.java, namespace("stats"))
+
+    private val spanWindowSizeTokens = 200
+    private val spanOverlapTokens = 50
+    private val spanStrideTokens = spanWindowSizeTokens - spanOverlapTokens
+
+    private val bm25K1 = 1.2f
+    private val bm25B = 0.75f
+    private val maxRerankCandidates = 256
+
+    private val tokenPattern = Regex("\\p{L}+|\\p{N}+")
+
+    private val stopWords = setOf(
+        "a", "an", "and", "are", "as", "at", "be", "but", "by", "for", "if",
+        "in", "into", "is", "it", "no", "not", "of", "on", "or", "such",
+        "that", "the", "their", "then", "there", "these", "they", "this",
+        "to", "was", "will", "with"
+    )
+
+    private val totalSpanCountKey = "total_span_count"
+    private val totalTokenCountKey = "total_token_count"
+
+    private data class SpanWindow(
+        val text: String,
+        val start: Int,
+        val length: Int,
+        val normalized: String
+    )
+
+    private data class PreparedSpan(
+        val normalizedText: String,
+        val featureFrequencies: Map<String, Int>,
+        val uniqueFeatures: Set<String>,
+        val tokenFrequencies: Map<String, Int>,
+        val uniqueTokens: Set<String>,
+        val tokenCount: Int,
+        val charTrigrams: Set<String>
+    )
+
+    data class SpanMeta(var documentId: Long = 0L, var start: Int = 0, var length: Int = 0) : BufferStreamable {
+        override fun read(buffer: BufferStream) {
+            documentId = buffer.long
+            start = buffer.int
+            length = buffer.int
+        }
+
+        override fun write(buffer: BufferStream) {
+            buffer.putLong(documentId)
+            buffer.putInt(start)
+            buffer.putInt(length)
+        }
+    }
+
+    private fun spanId(documentId: Long, spanIndex: Int): Long =
+        (documentId shl 16) or (spanIndex.toLong() and 0xFFFF)
 
     // ---------------- Lifecycle ----------------
 
@@ -123,18 +219,73 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         if (oldReferenceId > 0L) deleteVectorOnly(oldReferenceId)
 
         val valueForIndex = indexValue ?: extractIndexFieldValue(loadEntity(newReferenceId))
-        val vector = anyToVector(valueForIndex) ?: return
+        indexValueForRecord(newReferenceId, valueForIndex)
+    }
+
+    private fun indexValueForRecord(recordId: Long, valueForIndex: Any?) {
+        when (valueForIndex) {
+            null -> return
+            is String -> indexStringValue(recordId, valueForIndex)
+            else -> {
+                val vector = anyToVector(valueForIndex) ?: return
+                require(vector.size == embeddingDimension) {
+                    "Vector dimension mismatch: got ${vector.size}, expected $embeddingDimension"
+                }
+                documentSpanCounts.remove(recordId)
+                storeVector(recordId, vector)
+            }
+        }
+    }
+
+    private fun indexStringValue(recordId: Long, rawText: String) {
+        val spans = sliceTextIntoWindows(rawText)
+        if (spans.isEmpty()) {
+            documentSpanCounts.remove(recordId)
+            return
+        }
+
+        var spanIndex = 0
+        for (spanWindow in spans) {
+            storeSpan(recordId, spanIndex++, spanWindow)
+        }
+        documentSpanCounts[recordId] = spans.size
+    }
+
+    private fun storeVector(recordId: Long, vector: FloatArray) {
+        writeVector(recordId, vector)
+    }
+
+    private fun storeSpan(recordId: Long, spanIndex: Int, spanWindow: SpanWindow) {
+        val prepared = prepareSpan(spanWindow.normalized)
+        val spanId = spanId(recordId, spanIndex)
+
+        updateTokenDocumentFrequency(prepared.uniqueTokens, 1)
+        updateFeatureDocumentFrequency(prepared.uniqueFeatures, 1)
+        incrementStat(totalSpanCountKey, 1)
+        incrementStat(totalTokenCountKey, prepared.tokenCount.toLong())
+
+        val vector = buildVectorFromFeatures(prepared.featureFrequencies)
+        writeVector(spanId, vector)
+
+        allSpanIds[spanId] = null
+        spanMeta[spanId] = SpanMeta(recordId, spanWindow.start, spanWindow.length)
+        spanText[spanId] = prepared.normalizedText
+        spanTokenFrequency[spanId] = HashMap(prepared.tokenFrequencies)
+        spanTokenCounts[spanId] = prepared.tokenCount
+
+        addCharNgramsForSpan(spanId, prepared.charTrigrams)
+    }
+
+    private fun writeVector(recordId: Long, vector: FloatArray) {
         require(vector.size == embeddingDimension) {
             "Vector dimension mismatch: got ${vector.size}, expected $embeddingDimension"
         }
-
-        vectors[newReferenceId] = floatsToBytes(vector)
-        allRecordIds[newReferenceId] = null
+        vectors[recordId] = floatsToBytes(vector)
 
         for (tableIndex in 0 until lshTableCount) {
             val signature = calculateSignature(vector, planes[tableIndex], maxBitsPerTable)
-            inverseTableMap(tableIndex)[newReferenceId] = signature
-            addRecordToPostingList(newReferenceId, signature, tableIndex)
+            inverseTableMap(tableIndex)[recordId] = signature
+            addRecordToPostingList(recordId, signature, tableIndex)
         }
     }
 
@@ -160,15 +311,7 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
             val recordId = records.getRecID(entry.key)
             if (recordId > 0) {
                 val indexValue = extractIndexFieldValue(entry.value)
-                val vector = anyToVector(indexValue) ?: return@forEach
-                vectors[recordId] = floatsToBytes(vector)
-                allRecordIds[recordId] = null
-
-                for (tableIndex in 0 until lshTableCount) {
-                    val signature = calculateSignature(vector, planes[tableIndex], maxBitsPerTable)
-                    inverseTableMap(tableIndex)[recordId] = signature
-                    addRecordToPostingList(recordId, signature, tableIndex)
-                }
+                indexValueForRecord(recordId, indexValue)
             }
         }
     }
@@ -192,91 +335,57 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         }
 
         val candidateCapacity = maxCandidates.coerceAtLeast(limit).coerceAtLeast(1)
-        val candidates = LinkedHashSet<Long>(candidateCapacity.coerceAtLeast(1024))
+        val candidates = LinkedHashSet<Long>(candidateCapacity.coerceAtLeast(256))
 
-        // The number of bits used for probing must match the number used at index time.
-        val bitsPerTable = maxBitsPerTable
-
-        val baseSignatures = IntArray(lshTableCount) { tableIndex ->
-            calculateSignature(queryVector, planes[tableIndex], bitsPerTable)
+        val queryText = (indexValue as? String)
+        val trimmedQuery = queryText?.trim()
+        val charCandidates = if (trimmedQuery != null && shouldUseCharCandidates(trimmedQuery)) {
+            gatherCharNgramCandidates(trimmedQuery, candidateCapacity)
+        } else {
+            emptyList()
         }
 
-        // Helper to probe a bucket and add results to the candidate set.
-        fun probe(tableIndex: Int, signature: Int) {
-            val header = tableMap(tableIndex)[signature] ?: return
-            val postings: DiskMap<Long, Any?> = dataFile.getHashMap(Long::class.java, header)
-            for (recordId in postings.keys) {
-                if (candidates.add(recordId) && candidates.size >= candidateCapacity) return
-            }
-        }
-
-        // --- LSH Probing Stage 1: Exact Buckets ---
-        for (tableIndex in 0 until lshTableCount) {
-            probe(tableIndex, baseSignatures[tableIndex])
+        for (candidate in charCandidates) {
+            candidates.add(candidate)
             if (candidates.size >= candidateCapacity) break
         }
 
-        // --- LSH Probing Stage 2 & 3: Multi-probe adjacent buckets ---
-        // Explore buckets within a small Hamming distance to find near misses.
-        val bitsToFlip = min(bitsPerTable, 16) // Cap flips for performance.
-
-        // Hamming distance r=1
-        if (candidates.size < candidateCapacity) {
-            for (tableIndex in 0 until lshTableCount) {
-                val baseSignature = baseSignatures[tableIndex]
-                for (bitIndex in 0 until bitsToFlip) {
-                    probe(tableIndex, baseSignature xor (1 shl bitIndex))
-                    if (candidates.size >= candidateCapacity) break
-                }
-                if (candidates.size >= candidateCapacity) break
-            }
-        }
-
-        // Hamming distance r=2
-        if (candidates.size < candidateCapacity) {
-            for (tableIndex in 0 until lshTableCount) {
-                val baseSignature = baseSignatures[tableIndex]
-                for (bitIndex1 in 0 until bitsToFlip) {
-                    val signatureR1 = baseSignature xor (1 shl bitIndex1)
-                    for (bitIndex2 in (bitIndex1 + 1) until bitsToFlip) {
-                        probe(tableIndex, signatureR1 xor (1 shl bitIndex2))
-                        if (candidates.size >= candidateCapacity) break
-                    }
-                    if (candidates.size >= candidateCapacity) break
-                }
-                if (candidates.size >= candidateCapacity) break
-            }
+        if (candidates.isEmpty()) {
+            candidates.addAll(gatherCandidatesFromLsh(queryVector, candidateCapacity))
         }
 
         if (candidates.isEmpty()) return emptyMap()
 
-        // --- Scoring and Ranking Stage ---
-        // Use a priority queue to find the top-k candidates based on cosine similarity.
-        val topCandidatesQueue = java.util.PriorityQueue<Pair<Float, Long>>(limit, compareBy { it.first })
-        for (recordId in candidates) {
-            val vectorBytes = vectors[recordId] ?: continue
-            val recordVector = bytesToFloats(vectorBytes)
-            val score = dotProduct(queryVector, recordVector)
-
-            if (topCandidatesQueue.size < limit) {
-                topCandidatesQueue.offer(score to recordId)
-            } else if (score > topCandidatesQueue.peek().first) {
-                topCandidatesQueue.poll()
-                topCandidatesQueue.offer(score to recordId)
-            }
+        val lexicalNormalized = trimmedQuery?.let {
+            val literalContent = if (isQuoted(it)) it.substring(1, it.length - 1) else it
+            normalizeForIndexing(literalContent)
         }
 
-        if (topCandidatesQueue.isEmpty() || topCandidatesQueue.maxByOrNull { it.first }!!.first < minReturnedScore) {
-            return emptyMap()
+        val queryTokens = lexicalNormalized?.let { tokenizeForScoring(it) } ?: emptyList()
+        val queryTokenFrequency = if (queryTokens.isEmpty()) emptyMap() else queryTokens.groupingBy { it }.eachCount()
+
+        val lexicalScores = if (queryTokenFrequency.isNotEmpty()) {
+            scoreCandidatesWithBm25(candidates, queryTokenFrequency)
+        } else {
+            emptyMap()
         }
 
-        val sortedResults = ArrayList<Pair<Float, Long>>(topCandidatesQueue.size)
-        while (topCandidatesQueue.isNotEmpty()) sortedResults.add(topCandidatesQueue.poll())
-        sortedResults.sortByDescending { it.first }
+        val rerankPool = selectRerankPool(candidates, lexicalScores, candidateCapacity)
+        if (rerankPool.isEmpty()) return emptyMap()
+
+        val docScores = computeCosineScores(rerankPool, queryVector)
+        if (docScores.isEmpty()) return emptyMap()
+
+        val sortedResults = docScores.entries
+            .sortedByDescending { it.value }
+            .filter { it.value >= minReturnedScore }
+            .take(limit)
+
+        if (sortedResults.isEmpty()) return emptyMap()
 
         val results = LinkedHashMap<Long, Any?>(sortedResults.size)
-        for ((score, recordId) in sortedResults) {
-            if (score >= minReturnedScore) results[recordId] = score
+        for (entry in sortedResults) {
+            results[entry.key] = entry.value
         }
         return results
     }
@@ -286,15 +395,78 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
     /** Deletes all vector-related data for a given record ID without touching the main index. */
     private fun deleteVectorOnly(referenceId: Long) {
         if (referenceId <= 0L) return
+        removeSpansForDocument(referenceId)
+        removeVector(referenceId)
+        documentSpanCounts.remove(referenceId)
+    }
+
+    /** Clears all vector-related data from the index. */
+    private fun clearVectorOnly() {
+        vectors.clear()
+        spanMeta.clear()
+        spanText.clear()
+        spanTokenFrequency.clear()
+        spanTokenCounts.clear()
+        documentSpanCounts.clear()
+        allSpanIds.clear()
+        tokenDocumentFrequency.clear()
+        featureDocumentFrequency.clear()
+        stats.clear()
+
+        for (entry in charNgramIndex.entries.toList()) {
+            val header = entry.value
+            val postings: DiskMap<Long, Any?> = dataFile.getHashMap(Long::class.java, header)
+            postings.clear()
+        }
+        charNgramIndex.clear()
+
+        for (tableIndex in 0 until lshTableCount) {
+            tableMap(tableIndex).clear()
+            inverseTableMap(tableIndex).clear()
+        }
+    }
+
+    private fun removeSpansForDocument(documentId: Long) {
+        val spanCount = documentSpanCounts[documentId] ?: return
+        documentSpanCounts.remove(documentId)
+        for (index in 0 until spanCount) {
+            val sid = spanId(documentId, index)
+            removeSpan(sid)
+        }
+    }
+
+    private fun removeSpan(spanId: Long) {
+        val normalized = spanText.remove(spanId)
+        val prepared = normalized?.let { prepareSpan(it) }
+
+        spanMeta.remove(spanId)
+        spanTokenFrequency.remove(spanId)
+        val tokenCount = spanTokenCounts.remove(spanId)
+        allSpanIds.remove(spanId)
+
+        prepared?.let {
+            updateTokenDocumentFrequency(it.uniqueTokens, -1)
+            updateFeatureDocumentFrequency(it.uniqueFeatures, -1)
+            removeCharNgramsForSpan(spanId, it.charTrigrams)
+            incrementStat(totalSpanCountKey, -1)
+            incrementStat(totalTokenCountKey, -it.tokenCount.toLong())
+        } ?: run {
+            tokenCount?.let { incrementStat(totalTokenCountKey, -it.toLong()) }
+            incrementStat(totalSpanCountKey, -1)
+        }
+
+        removeVector(spanId)
+    }
+
+    private fun removeVector(recordId: Long) {
         for (tableIndex in 0 until lshTableCount) {
             val inverseTable = inverseTableMap(tableIndex)
-            val signature = inverseTable.remove(referenceId) ?: continue
+            val signature = inverseTable.remove(recordId) ?: continue
 
             val table = tableMap(tableIndex)
             table.computeIfPresent(signature) { _, header ->
                 val postings: DiskMap<Long, Any?> = dataFile.getHashMap(Long::class.java, header!!)
-                postings.remove(referenceId)
-                // Persist changes to the header
+                postings.remove(recordId)
                 header.also {
                     it.firstNode = postings.reference.firstNode
                     it.position = postings.reference.position
@@ -302,18 +474,405 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
                 }
             }
         }
-        vectors.remove(referenceId)
-        allRecordIds.remove(referenceId)
+        vectors.remove(recordId)
     }
 
-    /** Clears all vector-related data from the index. */
-    private fun clearVectorOnly() {
-        vectors.clear()
-        allRecordIds.clear()
-        for (tableIndex in 0 until lshTableCount) {
-            tableMap(tableIndex).clear()
-            inverseTableMap(tableIndex).clear()
+    private fun addCharNgramsForSpan(spanId: Long, trigrams: Set<String>) {
+        if (trigrams.isEmpty()) return
+        for (gram in trigrams) {
+            charNgramIndex.compute(gram) { _, existingHeader ->
+                val header = existingHeader ?: dataFile.newMapHeader()
+                val postings: DiskMap<Long, Any?> = dataFile.getHashMap(Long::class.java, header)
+                postings[spanId] = null
+                header.also {
+                    it.firstNode = postings.reference.firstNode
+                    it.position = postings.reference.position
+                    it.recordCount.set(postings.reference.recordCount.get())
+                }
+                header
+            }
         }
+    }
+
+    private fun removeCharNgramsForSpan(spanId: Long, trigrams: Set<String>) {
+        if (trigrams.isEmpty()) return
+        for (gram in trigrams) {
+            val header = charNgramIndex[gram] ?: continue
+            val postings: DiskMap<Long, Any?> = dataFile.getHashMap(Long::class.java, header)
+            if (postings.remove(spanId) != null) {
+                header.also {
+                    it.firstNode = postings.reference.firstNode
+                    it.position = postings.reference.position
+                    it.recordCount.set(postings.reference.recordCount.get())
+                }
+                if (postings.isEmpty()) {
+                    charNgramIndex.remove(gram)
+                }
+            }
+        }
+    }
+
+    private fun shouldUseCharCandidates(trimmedQuery: String): Boolean {
+        if (trimmedQuery.isEmpty()) return false
+        if (trimmedQuery.length <= 32) return true
+        return isQuoted(trimmedQuery)
+    }
+
+    private fun isQuoted(trimmedQuery: String): Boolean =
+        trimmedQuery.length >= 2 && trimmedQuery.first() == '"' && trimmedQuery.last() == '"'
+
+    private fun gatherCharNgramCandidates(trimmedQuery: String, candidateCapacity: Int): List<Long> {
+        val content = if (isQuoted(trimmedQuery)) {
+            trimmedQuery.substring(1, trimmedQuery.length - 1)
+        } else {
+            trimmedQuery
+        }
+        val normalized = normalizeForIndexing(content)
+        val trigrams = extractCharTrigrams(normalized)
+        if (trigrams.isEmpty()) return emptyList()
+
+        val orderedTrigrams = trigrams.sortedBy { gram: String ->
+            (charNgramIndex[gram]?.recordCount?.get() ?: Int.MAX_VALUE).toLong()
+        }
+
+        var intersection: MutableSet<Long>? = null
+        for (gram in orderedTrigrams) {
+            val postings = getCharGramPostings(gram)
+            if (postings.isEmpty()) return emptyList()
+            intersection = if (intersection == null) {
+                postings
+            } else {
+                intersection.apply { retainAll(postings) }
+            }
+            if (intersection!!.isEmpty()) return emptyList()
+        }
+
+        val resultSet = intersection ?: return emptyList()
+        val limit = min(candidateCapacity, resultSet.size)
+        val results = ArrayList<Long>(limit)
+        var count = 0
+        for (id in resultSet) {
+            results.add(id)
+            count++
+            if (count >= limit) break
+        }
+        return results
+    }
+
+    private fun getCharGramPostings(gram: String): MutableSet<Long> {
+        val header = charNgramIndex[gram] ?: return mutableSetOf()
+        val postings: DiskMap<Long, Any?> = dataFile.getHashMap(Long::class.java, header)
+        val estimatedSize = header.recordCount.get().coerceAtLeast(1)
+        val result = LinkedHashSet<Long>()
+        for (id in postings.keys) {
+            result.add(id)
+        }
+        return result
+    }
+
+    private fun incrementStat(key: String, delta: Long) {
+        if (delta == 0L) return
+        val current = stats[key] ?: 0L
+        val updated = current + delta
+        if (updated <= 0L) {
+            stats.remove(key)
+        } else {
+            stats[key] = updated
+        }
+    }
+
+    private fun totalSpanCount(): Long = stats[totalSpanCountKey] ?: 0L
+
+    private fun totalTokenCount(): Long = stats[totalTokenCountKey] ?: 0L
+
+    private fun updateTokenDocumentFrequency(tokens: Collection<String>, delta: Int) {
+        if (tokens.isEmpty() || delta == 0) return
+        for (token in tokens) {
+            val current = tokenDocumentFrequency[token] ?: 0
+            val updated = current + delta
+            if (updated <= 0) {
+                tokenDocumentFrequency.remove(token)
+            } else {
+                tokenDocumentFrequency[token] = updated
+            }
+        }
+    }
+
+    private fun updateFeatureDocumentFrequency(features: Collection<String>, delta: Int) {
+        if (features.isEmpty() || delta == 0) return
+        for (feature in features) {
+            val current = featureDocumentFrequency[feature] ?: 0
+            val updated = current + delta
+            if (updated <= 0) {
+                featureDocumentFrequency.remove(feature)
+            } else {
+                featureDocumentFrequency[feature] = updated
+            }
+        }
+    }
+
+    private fun gatherCandidatesFromLsh(queryVector: FloatArray, candidateCapacity: Int): LinkedHashSet<Long> {
+        val candidates = LinkedHashSet<Long>(candidateCapacity.coerceAtLeast(256))
+        val bitsPerTable = maxBitsPerTable
+        val baseSignatures = IntArray(lshTableCount) { tableIndex ->
+            calculateSignature(queryVector, planes[tableIndex], bitsPerTable)
+        }
+
+        fun probe(tableIndex: Int, signature: Int) {
+            val header = tableMap(tableIndex)[signature] ?: return
+            val postings: DiskMap<Long, Any?> = dataFile.getHashMap(Long::class.java, header)
+            for (recordId in postings.keys) {
+                if (candidates.add(recordId) && candidates.size >= candidateCapacity) return
+            }
+        }
+
+        for (tableIndex in 0 until lshTableCount) {
+            probe(tableIndex, baseSignatures[tableIndex])
+            if (candidates.size >= candidateCapacity) return candidates
+        }
+
+        val bitsToFlip = min(bitsPerTable, 16)
+
+        if (candidates.size < candidateCapacity) {
+            for (tableIndex in 0 until lshTableCount) {
+                val baseSignature = baseSignatures[tableIndex]
+                for (bitIndex in 0 until bitsToFlip) {
+                    probe(tableIndex, baseSignature xor (1 shl bitIndex))
+                    if (candidates.size >= candidateCapacity) return candidates
+                }
+            }
+        }
+
+        if (candidates.size < candidateCapacity) {
+            for (tableIndex in 0 until lshTableCount) {
+                val baseSignature = baseSignatures[tableIndex]
+                for (bitIndex1 in 0 until bitsToFlip) {
+                    val signatureR1 = baseSignature xor (1 shl bitIndex1)
+                    for (bitIndex2 in (bitIndex1 + 1) until bitsToFlip) {
+                        probe(tableIndex, signatureR1 xor (1 shl bitIndex2))
+                        if (candidates.size >= candidateCapacity) return candidates
+                    }
+                }
+            }
+        }
+
+        return candidates
+    }
+
+    private fun scoreCandidatesWithBm25(
+        candidates: Collection<Long>,
+        queryTokenFrequency: Map<String, Int>
+    ): Map<Long, Float> {
+        if (queryTokenFrequency.isEmpty()) return emptyMap()
+        val spanCount = totalSpanCount()
+        if (spanCount <= 0L) return emptyMap()
+
+        val averageLength = if (spanCount > 0) totalTokenCount().toDouble() / spanCount else 0.0
+        val scores = LinkedHashMap<Long, Float>()
+
+        for (candidate in candidates) {
+            val tokenFrequency = spanTokenFrequency[candidate] ?: continue
+            val spanLength = spanTokenCounts[candidate] ?: tokenFrequency.values.sum()
+            val score = computeBm25Score(tokenFrequency, spanLength, queryTokenFrequency, spanCount, averageLength)
+            if (score > 0f) {
+                scores[candidate] = score
+            }
+        }
+
+        return scores
+    }
+
+    private fun computeBm25Score(
+        spanTokenFrequency: Map<String, Int>,
+        spanLength: Int,
+        queryTokenFrequency: Map<String, Int>,
+        documentCount: Long,
+        averageLength: Double
+    ): Float {
+        if (spanLength <= 0) return 0f
+        val avgLength = if (averageLength > 0.0) averageLength else spanLength.toDouble()
+        var score = 0.0
+        for ((token, queryFreq) in queryTokenFrequency) {
+            val termFrequency = spanTokenFrequency[token] ?: continue
+            val documentFrequency = tokenDocumentFrequency[token]?.toLong() ?: 0L
+            if (documentFrequency == 0L) continue
+            val idf = ln((documentCount + 1.0) / (documentFrequency + 1.0))
+            val lengthNormalization = 1.0 - bm25B + bm25B * (spanLength / avgLength)
+            val denominator = termFrequency + bm25K1 * lengthNormalization
+            if (denominator == 0.0) continue
+            val tfComponent = (termFrequency * (bm25K1 + 1.0)) / denominator
+            score += idf * tfComponent * queryFreq
+        }
+        return score.toFloat()
+    }
+
+    private fun selectRerankPool(
+        candidates: LinkedHashSet<Long>,
+        lexicalScores: Map<Long, Float>,
+        candidateCapacity: Int
+    ): List<Long> {
+        val rerankLimit = min(maxRerankCandidates, candidateCapacity)
+        if (rerankLimit <= 0) return emptyList()
+        return if (lexicalScores.isNotEmpty()) {
+            lexicalScores.entries
+                .sortedByDescending { it.value }
+                .take(rerankLimit)
+                .map { it.key }
+        } else {
+            takeFirst(candidates, rerankLimit)
+        }
+    }
+
+    private fun takeFirst(source: Collection<Long>, limit: Int): List<Long> {
+        if (limit <= 0) return emptyList()
+        val results = ArrayList<Long>(min(limit, source.size))
+        var count = 0
+        for (id in source) {
+            results.add(id)
+            count++
+            if (count >= limit) break
+        }
+        return results
+    }
+
+    private fun computeCosineScores(
+        candidates: Collection<Long>,
+        queryVector: FloatArray
+    ): Map<Long, Float> {
+        val scores = LinkedHashMap<Long, Float>()
+        for (candidate in candidates) {
+            val vectorBytes = vectors[candidate] ?: continue
+            val recordVector = bytesToFloats(vectorBytes)
+            val score = dotProduct(queryVector, recordVector)
+            if (score < minReturnedScore) continue
+            val meta = spanMeta[candidate]
+            val documentId = meta?.documentId ?: candidate
+            val current = scores[documentId]
+            if (current == null || score > current) {
+                scores[documentId] = score
+            }
+        }
+        return scores
+    }
+
+    private fun sliceTextIntoWindows(rawText: String): List<SpanWindow> {
+        if (rawText.isEmpty()) {
+            val normalized = normalizeForIndexing(rawText)
+            return if (normalized.isEmpty()) emptyList() else listOf(SpanWindow(rawText, 0, rawText.length, normalized))
+        }
+
+        val matches = tokenPattern.findAll(rawText).toList()
+        if (matches.isEmpty()) {
+            val normalized = normalizeForIndexing(rawText)
+            return if (normalized.isEmpty()) emptyList() else listOf(SpanWindow(rawText, 0, rawText.length, normalized))
+        }
+
+        val stride = if (matches.size <= spanWindowSizeTokens) spanWindowSizeTokens else max(1, spanStrideTokens)
+        val windows = ArrayList<SpanWindow>()
+        var startIndex = 0
+        while (startIndex < matches.size) {
+            val endExclusive = min(matches.size, startIndex + spanWindowSizeTokens)
+            val spanStart = matches[startIndex].range.first
+            val spanEnd = if (endExclusive < matches.size) matches[endExclusive].range.first else rawText.length
+            val length = (spanEnd - spanStart).coerceAtLeast(0)
+            val text = if (length > 0) rawText.substring(spanStart, spanEnd) else ""
+            val normalized = normalizeForIndexing(text)
+            if (normalized.isNotEmpty()) {
+                windows.add(SpanWindow(text, spanStart, length, normalized))
+            }
+            if (endExclusive >= matches.size) break
+            startIndex += stride
+        }
+
+        if (windows.isEmpty()) {
+            val normalized = normalizeForIndexing(rawText)
+            if (normalized.isNotEmpty()) {
+                windows.add(SpanWindow(rawText, 0, rawText.length, normalized))
+            }
+        }
+
+        return windows
+    }
+
+    private fun prepareSpan(normalizedText: String): PreparedSpan {
+        val featureFrequencies = computeFeatureFrequencies(normalizedText)
+        val (tokenFrequencies, tokenCount) = computeTokenFrequencies(normalizedText)
+        val charTrigrams = extractCharTrigrams(normalizedText)
+
+        return PreparedSpan(
+            normalizedText = normalizedText,
+            featureFrequencies = featureFrequencies,
+            uniqueFeatures = featureFrequencies.keys.toSet(),
+            tokenFrequencies = tokenFrequencies,
+            uniqueTokens = tokenFrequencies.keys.toSet(),
+            tokenCount = tokenCount,
+            charTrigrams = charTrigrams
+        )
+    }
+
+    private fun computeFeatureFrequencies(normalizedText: String): Map<String, Int> {
+        val features = tokenizeForEmbeddingNormalized(normalizedText)
+        if (features.isEmpty()) return emptyMap()
+        val frequencies = LinkedHashMap<String, Int>(features.size)
+        for (feature in features) {
+            frequencies[feature] = (frequencies[feature] ?: 0) + 1
+        }
+        return frequencies
+    }
+
+    private fun computeTokenFrequencies(normalizedText: String): Pair<Map<String, Int>, Int> {
+        val tokens = tokenizeForScoring(normalizedText)
+        if (tokens.isEmpty()) return emptyMap<String, Int>() to 0
+        val frequencies = LinkedHashMap<String, Int>(tokens.size)
+        for (token in tokens) {
+            frequencies[token] = (frequencies[token] ?: 0) + 1
+        }
+        return frequencies to tokens.size
+    }
+
+    private fun buildVectorFromFeatures(featureFrequencies: Map<String, Int>): FloatArray {
+        if (featureFrequencies.isEmpty()) return FloatArray(embeddingDimension)
+
+        val vector = FloatArray(embeddingDimension)
+        val documentCount = max(1L, totalSpanCount())
+        var hasNonZeroWeight = false
+        val hashedFrequencies = ArrayList<Pair<Int, Float>>(featureFrequencies.size)
+
+        for ((feature, frequency) in featureFrequencies) {
+            val bucketIndex = getBucket(feature, embeddingDimension)
+            val tfWeight = (1.0 + ln(frequency.toDouble())).toFloat()
+            val df = featureDocumentFrequency[feature]?.toLong() ?: 0L
+            val idf = ln((documentCount + 1.0) / (df + 1.0))
+            val weighted = (tfWeight * idf.toFloat())
+            if (weighted != 0f) {
+                vector[bucketIndex] += weighted
+                hasNonZeroWeight = true
+            }
+            hashedFrequencies.add(bucketIndex to tfWeight)
+        }
+
+        if (!hasNonZeroWeight) {
+            for ((bucketIndex, tfWeight) in hashedFrequencies) {
+                vector[bucketIndex] += tfWeight
+            }
+        }
+
+        l2NormalizeInPlace(vector)
+        return vector
+    }
+
+    private fun extractCharTrigrams(normalizedText: String): Set<String> {
+        val builder = StringBuilder(normalizedText.length)
+        for (ch in normalizedText) {
+            if (ch.isLetterOrDigit()) builder.append(ch)
+        }
+        if (builder.length < 3) return emptySet()
+        val trigrams = LinkedHashSet<String>()
+        val cleaned = builder.toString()
+        for (index in 0..(cleaned.length - 3)) {
+            trigrams.add(cleaned.substring(index, index + 3))
+        }
+        return trigrams
     }
 
     // ---------------- Helpers ----------------
@@ -389,64 +948,67 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
     /** Counts the number of tokens in a query value, used for gating trivial queries. */
     private fun countTokensForQuery(value: Any?): Int = when (value) {
         null -> 0
-        is String -> tokenizeForQuery(value.lowercase()).size
-        else -> tokenizeForQuery(value.toString().lowercase()).size
+        is String -> tokenizeForQuery(value).size
+        else -> tokenizeForQuery(value.toString()).size
     }
 
     // --- Text to Vector Embedding ---
 
     /**
-     * Converts raw text into a normalized vector using a bag-of-words and n-grams model.
-     * Each token/n-gram hashes to a dimension and contributes +1 or -1 to it.
+     * Converts raw text into a normalized vector using a bag-of-words and n-grams model
+     * weighted with tf-idf and feature hashing.
      */
     private fun embedText(rawText: String): FloatArray {
-        val text = rawText.lowercase()
-        val tokens = tokenizeForEmbedding(text)
-        if (tokens.isEmpty()) return FloatArray(embeddingDimension)
-
-        val vector = FloatArray(embeddingDimension)
-        for (token in tokens) {
-            val bucketIndex = getBucket(token, embeddingDimension)
-            vector[bucketIndex] += getSign(token)
-        }
-        l2NormalizeInPlace(vector)
-        return vector
+        val normalized = normalizeForIndexing(rawText)
+        val featureFrequencies = computeFeatureFrequencies(normalized)
+        if (featureFrequencies.isEmpty()) return FloatArray(embeddingDimension)
+        return buildVectorFromFeatures(featureFrequencies)
     }
 
     /** Tokenizes text for query gating purposes (simple word splitting). */
     private fun tokenizeForQuery(text: String): List<String> =
-        text.split(Regex("[^\\p{L}\\p{N}]+"))
-            .filter { it.length >= tokenMinLength }
+        tokenizeForScoring(normalizeForIndexing(text))
 
     /** Tokenizes text for embedding, potentially including character n-grams. */
-    private fun tokenizeForEmbedding(text: String): List<String> {
-        val baseTokens = tokenizeForQuery(text)
-        val useNgrams = useCharNgrams && text.length >= shortQueryNgramThreshold
-        if (!useNgrams) return baseTokens
+    private fun tokenizeForEmbedding(text: String): List<String> =
+        tokenizeForEmbeddingNormalized(normalizeForIndexing(text))
 
-        val ngrams = ArrayList<String>(baseTokens.size * 2)
+    private fun tokenizeForEmbeddingNormalized(normalizedText: String): List<String> {
+        val baseTokens = tokenizeForScoring(normalizedText)
+        if (!useCharNgrams || normalizedText.length < shortQueryNgramThreshold) return baseTokens
+
+        val features = ArrayList<String>(baseTokens.size * 2)
+        features.addAll(baseTokens)
         for (word in baseTokens) {
             for (ngramLength in ngramMinLength..ngramMaxLength) {
                 if (word.length >= ngramLength) {
                     for (index in 0..(word.length - ngramLength)) {
-                        ngrams.add("§$ngramLength:${word.substring(index, index + ngramLength)}")
+                        features.add("§$ngramLength:${word.substring(index, index + ngramLength)}")
                     }
                 }
             }
         }
-        return baseTokens + ngrams
+        return features
     }
+
+    private fun tokenizeForScoring(normalizedText: String): List<String> {
+        val tokens = ArrayList<String>()
+        for (match in tokenPattern.findAll(normalizedText)) {
+            val token = match.value
+            if (token.length >= tokenMinLength && token !in stopWords) {
+                tokens.add(token)
+            }
+        }
+        return tokens
+    }
+
+    private fun normalizeForIndexing(rawText: String): String =
+        Normalizer.normalize(rawText, Normalizer.Form.NFKC).lowercase()
 
     /** Hashes a feature string to a dimension index (bucket). */
     private fun getBucket(feature: String, dimension: Int): Int {
         val hash = mix64(feature.hashCode().toLong())
         return ((hash and Long.MAX_VALUE) % dimension.toLong()).toInt()
-    }
-
-    /** Determines the sign (+1.0f or -1.0f) for a feature's contribution to its bucket. */
-    private fun getSign(feature: String): Float {
-        val hash = mix64(feature.hashCode().toLong() xor 0x9E3779B97F4A7L)
-        return if ((hash and 1L) == 0L) 1.0f else -1.0f
     }
 
     // --- LSH and Math Helpers ---
