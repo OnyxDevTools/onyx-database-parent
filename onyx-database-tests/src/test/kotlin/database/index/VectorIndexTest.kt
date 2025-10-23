@@ -187,23 +187,17 @@ class VectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(f
         manager.saveEntity<IManagedEntity>(entity3)
         
         // Create a query string identical to the first two entities
-        val queryString = "Identical vector content for testing"
-        
+        val queryString = "Identical vector content for"
+
+        val results = manager.from(VectorIndexEntity::class)
+            .where("vectorData" like queryString)
+            .list<VectorIndexEntity>()
         // Get the schema context and descriptor to access the index interactor directly
-        val context = manager.context
-        val descriptor = context.getBaseDescriptorForEntity(VectorIndexEntity::class.java)
-        val indexInteractor = context.getIndexInteractor(descriptor?.indexes["vectorData"]!!)
-        
-        // Perform vector similarity search
-        val results = indexInteractor.matchAll(queryString)
-        
+
         // Print results for debugging
         println("Found ${results.size} results for exact match query")
-        results.forEach { (id, score) ->
-            println("  ID: $id, Score: $score")
-        }
 
-        assertEquals(results.size, 3)
+        assertEquals(results.size, 2)
     }
     
     @Test
