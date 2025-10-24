@@ -89,8 +89,8 @@ open class VectorIndexScanner @Throws(OnyxException::class) constructor(
         // Get k from query limit if it exists, otherwise use maxCardinality
         val k = if (query.maxResults > 0) query.maxResults else context.maxCardinality
         // Use maxCardinality as maxCandidates
-        val maxCandidates = context.maxCardinality
-        
+        val maxCandidates = context.maxCardinality - 1
+
         return indexInteractor.matchAll(queryValue, k, maxCandidates)
     }
     

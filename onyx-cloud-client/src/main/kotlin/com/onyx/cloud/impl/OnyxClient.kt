@@ -68,6 +68,7 @@ import kotlin.reflect.KClass
  * @param databaseId Target database identifier.
  * @param apiKey API key header value.
  * @param apiSecret API secret header value.
+ * @param authToken Optional Authorization header value.
  * @param fetch Optional custom HTTP implementation. When provided, all non-streaming
  * requests will delegate to this function instead of the default `HttpURLConnection`
  * transport.
@@ -89,6 +90,7 @@ class OnyxClient(
     private val databaseId: String,
     private val apiKey: String,
     private val apiSecret: String,
+    private val authToken: String? = null,
     private val fetch: FetchImpl? = null,
     internal val defaultPartition: String? = null,
     private val requestLoggingEnabled: Boolean = false,
@@ -583,6 +585,7 @@ class OnyxClient(
             "Accept" to "application/json",
             "Connection" to "keep-alive"
         )
+        authToken?.let { headers["Authorization"] = it }
         ttl?.let { headers["x-onyx-ttl"] = it.toString() }
         headers.putAll(extra)
         return headers
