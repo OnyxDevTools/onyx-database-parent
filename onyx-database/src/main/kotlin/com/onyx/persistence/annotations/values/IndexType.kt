@@ -5,5 +5,6 @@ package com.onyx.persistence.annotations.values
  */
 enum class IndexType {
     DEFAULT,
-    VECTOR
+    VECTOR,
+    LUCENE
 }

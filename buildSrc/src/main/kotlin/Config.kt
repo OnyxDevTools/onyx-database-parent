@@ -10,6 +10,9 @@ object Config {
     const val KOTLIN_VERSION = "2.2.10"
     const val GSON_VERSION = "2.13.1"
 
+    // Search
+    const val LUCENE_VERSION = "9.10.0"
+
     // 3rd Party Dependencies ( HTTP Client )
     const val KTOR_VERSION = "3.2.3"
 }

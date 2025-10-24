@@ -111,7 +111,7 @@ object ScannerFactory {
             QueryCriteriaOperator.STARTS_WITH,
         )
         
-        if (indexDescriptor != null && indexDescriptor.indexType == IndexType.VECTOR && 
+        if (indexDescriptor != null && indexDescriptor.indexType in setOf(IndexType.VECTOR, IndexType.LUCENE) &&
             criteria.operator in vectorOperators) {
             return if (descriptor.hasPartition) {
                 PartitionVectorIndexScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
