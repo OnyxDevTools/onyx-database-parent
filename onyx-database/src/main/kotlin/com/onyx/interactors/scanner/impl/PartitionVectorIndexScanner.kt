@@ -194,13 +194,10 @@ class PartitionVectorIndexScanner @Throws(OnyxException::class) constructor(
     protected fun findMatches(queryValue: Any?, interactor: IndexInteractor): Map<Long, Any?> {
         val context = Contexts.get(contextId)!!
 
-        // Determine 'k' (number of nearest neighbors) from the query limit or fallback to max cardinality.
-        val k = if (query.maxResults > 0) query.maxResults else context.maxCardinality
-
         // The maximum number of candidates to evaluate during the search.
         val maxCandidates = context.maxCardinality - 1
 
-        return interactor.matchAll(queryValue, k, maxCandidates)
+        return interactor.matchAll(queryValue, maxCandidates, maxCandidates)
     }
     
     /**
