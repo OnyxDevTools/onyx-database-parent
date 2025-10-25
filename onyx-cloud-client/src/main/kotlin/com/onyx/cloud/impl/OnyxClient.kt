@@ -578,14 +578,22 @@ class OnyxClient(
     // ---------------------------------------------------------------------
 
     private fun defaultHeaders(extra: Map<String, String> = emptyMap()): MutableMap<String, String> {
-        val headers = mutableMapOf(
-            "x-onyx-key" to apiKey,
-            "x-onyx-secret" to apiSecret,
-            "Content-Type" to "application/json",
-            "Accept" to "application/json",
-            "Connection" to "keep-alive"
-        )
-        authToken?.let { headers["Authorization"] = it }
+        val headers = if (apiKey.isNotEmpty()) {
+            mutableMapOf(
+                "x-onyx-key" to apiKey,
+                "x-onyx-secret" to apiSecret,
+                "Content-Type" to "application/json",
+                "Accept" to "application/json",
+                "Connection" to "keep-alive"
+            )
+        } else {
+            mutableMapOf(
+                "Content-Type" to "application/json",
+                "Accept" to "application/json",
+                "Connection" to "keep-alive"
+            )
+        }
+        authToken?.let { headers["Authorization"] = "Bearer $it" }
         ttl?.let { headers["x-onyx-ttl"] = it.toString() }
         headers.putAll(extra)
         return headers

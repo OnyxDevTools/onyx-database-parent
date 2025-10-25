@@ -604,6 +604,7 @@ This annotation marks a field as indexed, which can significantly improve the pe
 * `type: IndexType` (optional, defaults to `IndexType.DEFAULT`): Specifies the type of index to create.
   * `IndexType.DEFAULT`: Standard index for exact matching.
   * `IndexType.VECTOR`: Vector index for text fuzzy searching using cosine similarity.
+  * `IndexType.LUCENE`: Full-text index backed by Apache Lucene for rich text search semantics.
 * `embeddingDimensions: Int` (optional, defaults to `512` for vector indexes): The dimensionality of the embedding vectors for vector indexes. Once defined, this value cannot be changed as it affects the storage format.
 * `minimumScore: Float` (optional, defaults to `0.18f` for vector indexes): Search results with a cosine similarity score below this threshold will be discarded.
 * `hashTableCount: Int` (optional, defaults to `12` for vector indexes): The number of LSH hash tables to use for vector indexes. More tables improve accuracy but increase index size.

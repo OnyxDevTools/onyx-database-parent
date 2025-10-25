@@ -530,4 +530,13 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         }
         return floatArray
     }
+
+    /**
+     * Shutdown the index interactor and release any resources
+     *
+     * @since 1.0.0
+     */
+    override fun shutdown() {
+        // Default implementation does nothing
+    }
 }

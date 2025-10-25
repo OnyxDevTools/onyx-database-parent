@@ -172,6 +172,11 @@ open class DefaultSchemaContext : SchemaContext {
 
         memoryAlertJob?.cancel()
 
+        // Shutdown all index interactors
+        indexInteractors.forEach { (_, interactor) ->
+            catchAll { interactor.shutdown() }
+        }
+
         // Shutdown all databases
         dataFiles.forEach {
             catchAll {
@@ -630,9 +635,24 @@ open class DefaultSchemaContext : SchemaContext {
         indexInteractors.getOrPut(indexDescriptor) {
             return@getOrPut when (indexDescriptor.indexType) {
                 com.onyx.persistence.annotations.values.IndexType.VECTOR -> VectorIndexInteractor(indexDescriptor.entityDescriptor, indexDescriptor, this)
+                com.onyx.persistence.annotations.values.IndexType.LUCENE -> createLuceneInteractor(indexDescriptor)
                 else -> DefaultIndexInteractor(indexDescriptor.entityDescriptor, indexDescriptor, this)
             }
         }
+
+    private fun createLuceneInteractor(indexDescriptor: IndexDescriptor): IndexInteractor {
+        val className = "com.onyx.lucene.interactors.index.impl.LuceneIndexInteractor"
+        return try {
+            val clazz = Class.forName(className)
+            val constructor = clazz.getConstructor(EntityDescriptor::class.java, IndexDescriptor::class.java, SchemaContext::class.java)
+            constructor.newInstance(indexDescriptor.entityDescriptor, indexDescriptor, this) as IndexInteractor
+        } catch (classNotFound: ClassNotFoundException) {
+            throw IllegalStateException(
+                "Lucene index support is not available. Add the onyx-lucene-index module to the classpath to enable IndexType.LUCENE.",
+                classNotFound
+            )
+        }
+    }
 
     // endregion
 
