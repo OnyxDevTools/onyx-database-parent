@@ -226,4 +226,13 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(priv
     override fun clear() {
         references.clear()
     }
+
+    /**
+     * Shutdown the index interactor and release any resources
+     *
+     * @since 1.0.0
+     */
+    override fun shutdown() {
+        // Default implementation does nothing
+    }
 }
