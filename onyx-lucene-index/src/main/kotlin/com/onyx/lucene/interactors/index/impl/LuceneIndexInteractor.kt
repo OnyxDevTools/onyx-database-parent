@@ -4,6 +4,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.IndexDescriptor
 import com.onyx.diskmap.DiskMap
 import com.onyx.exception.OnyxException
+import com.onyx.extension.identifier
 import com.onyx.interactors.index.impl.DefaultIndexInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
@@ -21,7 +22,6 @@ import org.apache.lucene.queryparser.classic.QueryParser
 import org.apache.lucene.search.SearcherManager
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.FSDirectory
-import org.apache.lucene.store.RAMDirectory
 import java.lang.ref.WeakReference
 import java.nio.file.Files
 import java.nio.file.InvalidPathException
@@ -65,9 +65,8 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         searcherManager = SearcherManager(indexWriter, true, true, null)
         queryParser = QueryParser(CONTENT_FIELD, analyzer).apply {
             defaultOperator = QueryParser.Operator.AND
+            allowLeadingWildcard = true
         }
-
-        rebuildLuceneIndex()
 
         Runtime.getRuntime().addShutdownHook(Thread {
             lock.write {
@@ -129,10 +128,11 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
             try {
                 val topDocs = searcher.search(parsedQuery, maxResults)
                 val results = LinkedHashMap<Long, Any?>(topDocs.scoreDocs.size)
-                for (scoreDoc in topDocs.scoreDocs) {
-                    val doc = searcher.doc(scoreDoc.doc)
+                for (sd in topDocs.scoreDocs) {
+                    val docId = sd.doc
+                    val doc = searcher.storedFields().document(docId, setOf(ID_FIELD))
                     val id = doc.get(ID_FIELD)?.toLongOrNull() ?: continue
-                    results[id] = scoreDoc.score
+                    results[id] = sd.score
                     if (results.size == limit) break
                 }
                 results
@@ -229,10 +229,9 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
 
     private fun createDirectory(): Directory {
         val safeFolderName = buildString {
-            append(entityDescriptor.entityClass.name.replace('.', '_'))
+            append((entityDescriptor.entityClass.name.replace('.', '_')))
             append('_')
             append(indexDescriptor.name)
-            append("_lucene")
         }
 
         val basePath = try {
@@ -243,12 +242,21 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
             null
         }
 
-        return if (basePath != null) {
-            val directoryPath = basePath.resolve(safeFolderName)
-            Files.createDirectories(directoryPath)
-            FSDirectory.open(directoryPath)
-        } else {
-            RAMDirectory()
+        val directoryPath = basePath!!.resolve(safeFolderName)
+        Files.createDirectories(directoryPath)
+        return FSDirectory.open(directoryPath)
+    }
+
+    /**
+     * Shutdown the index interactor and release any resources
+     *
+     * @since 1.0.0
+     */
+    override fun shutdown() {
+        lock.write {
+            runCatching { searcherManager.close() }
+            runCatching { indexWriter.close() }
+            runCatching { directory.close() }
         }
     }
 

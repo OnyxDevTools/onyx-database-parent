@@ -172,6 +172,11 @@ open class DefaultSchemaContext : SchemaContext {
 
         memoryAlertJob?.cancel()
 
+        // Shutdown all index interactors
+        indexInteractors.forEach { (_, interactor) ->
+            catchAll { interactor.shutdown() }
+        }
+
         // Shutdown all databases
         dataFiles.forEach {
             catchAll {

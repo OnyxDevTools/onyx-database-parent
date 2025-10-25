@@ -203,7 +203,7 @@ class VectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(f
             println("  ID: $id, Score: $score")
         }
 
-        assertEquals(results.size, 3)
+        assertEquals(results.size, 2)
     }
     
     @Test

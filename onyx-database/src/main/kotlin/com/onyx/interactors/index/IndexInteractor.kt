@@ -101,6 +101,13 @@ interface IndexInteractor {
     fun clear()
 
     /**
+     * Shutdown the index interactor and release any resources
+     *
+     * @since 1.0.0
+     */
+    fun shutdown()
+
+    /**
      * Match all items that have similar vectors as the search value
      *
      * @param indexValue search text

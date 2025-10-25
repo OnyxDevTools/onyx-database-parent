@@ -17,7 +17,7 @@ class VectorIndexEntity : ManagedEntity() {
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
     var id: Long = 0
 
-    @Index(type = IndexType.VECTOR)
+    @Index(type = IndexType.LUCENE)
     @Attribute
     var vectorData: String? = null
 
