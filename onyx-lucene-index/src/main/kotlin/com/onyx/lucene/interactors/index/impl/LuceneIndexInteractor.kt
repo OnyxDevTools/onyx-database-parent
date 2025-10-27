@@ -173,6 +173,7 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
      * @param newReferenceId The new record ID for the entity.
      */
     @Throws(OnyxException::class)
+    @Synchronized
     override fun save(indexValue: Any?, oldReferenceId: Long, newReferenceId: Long) {
         super.save(indexValue, oldReferenceId, newReferenceId)
         val valueForIndex = indexValue ?: extractIndexFieldValue(loadEntity(newReferenceId))
@@ -185,6 +186,7 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
      * @param reference The record ID of the entity to delete.
      */
     @Throws(OnyxException::class)
+    @Synchronized
     override fun delete(reference: Long) {
         super.delete(reference)
         indexWriter.deleteDocuments(Term(ID_FIELD, reference.toString()))
@@ -195,6 +197,7 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
      * documents and re-indexing every entity from the primary data file.
      */
     @Throws(OnyxException::class)
+    @Synchronized
     override fun rebuild() {
         super.rebuild()
         rebuildLuceneIndex()
@@ -203,6 +206,7 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
     /**
      * Clears all documents from the Lucene index.
      */
+    @Synchronized
     override fun clear() {
         super.clear()
         indexWriter.deleteAll()
