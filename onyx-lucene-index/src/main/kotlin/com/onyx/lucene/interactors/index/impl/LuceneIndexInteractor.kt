@@ -4,7 +4,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.IndexDescriptor
 import com.onyx.diskmap.DiskMap
 import com.onyx.exception.OnyxException
-import com.onyx.extension.identifier
+import com.onyx.extension.get
 import com.onyx.interactors.index.impl.DefaultIndexInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
@@ -23,14 +23,14 @@ import org.apache.lucene.search.SearcherManager
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.index.TieredMergePolicy
+import java.io.File
 import java.lang.ref.WeakReference
 import java.nio.file.Files
-import java.nio.file.InvalidPathException
-import java.nio.file.Paths
 import java.util.LinkedHashMap
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.io.path.Path
 
 /**
  * Holds the shared, thread-safe Lucene components for a specific index.
@@ -87,14 +87,14 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         get() = contextRef.get() ?: throw IllegalStateException("SchemaContext has been garbage collected.")
 
     private val analyzer: Analyzer = StandardAnalyzer()
-    private val directory: Directory = createDirectory(context, entityDescriptor, indexDescriptor)
+    private lateinit var directory: Directory
     private lateinit var indexWriter: IndexWriter
     private lateinit var searcherManager: SearcherManager
     private lateinit var queryParser: QueryParser
 
     /**
      * Near-Real-Time (NRT) background thread.
-     * This thread periodically calls [SearcherManager.maybeRefresh] to make
+     * This thread periodically calls [SearcherManager.maybeRefreshBlocking] to make
      * recent index changes visible to new searchers.
      */
     private lateinit var reopenThread: ControlledRealTimeReopenThread<IndexSearcher>
@@ -117,8 +117,9 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
      * exists per physical index, allowing multiple interactors to safely share resources.
      */
     private fun hydrateStates() {
-        val key = generateKey(entityDescriptor, indexDescriptor)
-        val luceneState = luceneStates.getOrPut(key) {
+        val key = generateKey(entityDescriptor, indexDescriptor, context)
+        val luceneState = luceneStates.computeIfAbsent(key) {
+            directory = createDirectory(key)
             // Configuration optimized for write throughput
             val writerConfig = IndexWriterConfig(analyzer).apply {
                 openMode = IndexWriterConfig.OpenMode.CREATE_OR_APPEND
@@ -176,8 +177,7 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
     @Synchronized
     override fun save(indexValue: Any?, oldReferenceId: Long, newReferenceId: Long) {
         super.save(indexValue, oldReferenceId, newReferenceId)
-        val valueForIndex = indexValue ?: extractIndexFieldValue(loadEntity(newReferenceId))
-        updateDocument(newReferenceId, valueForIndex)
+        updateDocument(newReferenceId, indexValue)
     }
 
     /**
@@ -228,7 +228,7 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         val parsedQuery = parseQuery(queryText)
 
         // Ensure the searcher is up-to-date with recent writes
-        searcherManager.maybeRefresh()
+        searcherManager.maybeRefreshBlocking()
 
         val searcher = searcherManager.acquire()
         try {
@@ -266,7 +266,7 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         for (entry in records.entries) {
             val recordId = records.getRecID(entry.key)
             if (recordId <= 0) continue
-            val value = extractIndexFieldValue(entry.value) ?: continue
+            val value = entry.value.get<Any?>(context, entityDescriptor, indexDescriptor.name) ?: continue
             val text = valueToText(value)
             if (text.isNotBlank()) documentBatch.add(createDocument(recordId, text))
 
@@ -280,7 +280,7 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         // Single commit at end of rebuild
         indexWriter.commit()
         // Make results visible
-        searcherManager.maybeRefresh()
+        searcherManager.maybeRefreshBlocking()
     }
 
     /**
@@ -366,46 +366,6 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
     }
 
     /**
-     * Extracts the value of the indexed field from a managed entity using reflection.
-     * If reflection fails, it falls back to using the entity's identifier.
-     *
-     * @param entity The entity to extract the value from.
-     * @return The extracted value, or the entity's identifier as a fallback.
-     */
-    private fun extractIndexFieldValue(entity: IManagedEntity): Any? {
-        val fieldName = indexDescriptor.name
-        return try {
-            val field = entity.javaClass.getDeclaredField(fieldName)
-            field.isAccessible = true
-            field.get(entity)
-        } catch (_: Throwable) {
-            // Fallback to the entity's primary key if field extraction fails
-            entity.identifier(context, entityDescriptor)
-        }
-    }
-
-    /**
-     * Loads an entity by its internal record ID (recID).
-     * This is a potentially slow operation as it requires iterating over the data file.
-     *
-     * @param recordId The record ID to search for.
-     * @return The [IManagedEntity] corresponding to the record ID.
-     * @throws OnyxException if no entity is found for the given ID.
-     */
-    private fun loadEntity(recordId: Long): IManagedEntity {
-        val records = context.getDataFile(entityDescriptor)
-            .getHashMap<DiskMap<Any, IManagedEntity>>(
-                entityDescriptor.identifier!!.type,
-                entityDescriptor.entityClass.name
-            )
-        // This is inefficient but necessary for reverse lookup by recID
-        for (entry in records.entries) {
-            if (records.getRecID(entry.key) == recordId) return entry.value
-        }
-        throw OnyxException("Entity with recordId=$recordId not found for ${entityDescriptor.entityClass.name}")
-    }
-
-    /**
      * Shuts down the interactor and releases all associated Lucene resources.
      * This includes stopping the NRT thread, closing the searcher,
      * committing final changes, and closing the index writer and directory.
@@ -421,6 +381,11 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         runCatching { indexWriter.commit() } // Final fsync
         runCatching { indexWriter.close() }
         runCatching { directory.close() }
+
+        val key = generateKey(entityDescriptor, indexDescriptor, context)
+
+        luceneStates.remove(key)
+        luceneDirectories.remove(key)
     }
 
     companion object {
@@ -456,8 +421,16 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
          *
          * @return A string key, e.g., "MyDataFile_MyEntity__MyIndexName"
          */
-        private fun generateKey(entityDescriptor: EntityDescriptor, indexDescriptor: IndexDescriptor): String {
-            return "${entityDescriptor.fileName}_${entityDescriptor.entityClass.simpleName}_${entityDescriptor.partition?.partitionValue ?: ""}_${indexDescriptor.name}"
+        private fun generateKey(entityDescriptor: EntityDescriptor, indexDescriptor: IndexDescriptor, context: SchemaContext): String {
+            return buildString {
+                append(context.location)
+                append(File.separator)
+                append(entityDescriptor.fileName)
+                append("_${entityDescriptor.entityClass.simpleName}")
+                append("_${entityDescriptor.partition?.partitionValue ?: ""}")
+                append("_${indexDescriptor.name}")
+                append(".idx")
+            }
         }
 
         /**
@@ -468,34 +441,12 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
          *
          * @return The cached [Directory] instance.
          */
-        @Synchronized
         private fun createDirectory(
-            context: SchemaContext,
-            entityDescriptor: EntityDescriptor,
-            indexDescriptor: IndexDescriptor
-        ): Directory {
-            val safeFolderName = buildString {
-                append(entityDescriptor.fileName)
-                append("_${entityDescriptor.entityClass.simpleName}")
-                append("_${entityDescriptor.partition?.partitionValue ?: ""}")
-                append("_${indexDescriptor.name}")
-                append(".idx")
-            }
-
-            // Get-or-put ensures we only open the directory once per path
-            return luceneDirectories.getOrPut(safeFolderName) {
-                val basePath = try {
-                    Paths.get(context.location)
-                } catch (_: InvalidPathException) {
-                    null
-                } catch (_: UnsupportedOperationException) {
-                    null
-                }
-
-                val directoryPath = basePath!!.resolve(safeFolderName)
-                Files.createDirectories(directoryPath)
-                return@getOrPut FSDirectory.open(directoryPath)
-            }
+            key: String,
+        ): Directory = luceneDirectories.computeIfAbsent(key) {
+            val path = Path(key)
+            Files.createDirectories(path)
+            return@computeIfAbsent FSDirectory.open(path)
         }
     }
 }

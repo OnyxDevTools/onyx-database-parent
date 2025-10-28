@@ -213,12 +213,12 @@ class PartitionVectorIndexScanner @Throws(OnyxException::class) constructor(
         // For operators that should use the default index interactor, return all results
         // as they will be filtered by the default index interactor
         return when (operator) {
+            com.onyx.persistence.query.QueryCriteriaOperator.MATCHES,
             com.onyx.persistence.query.QueryCriteriaOperator.LIKE -> {
                 // For MATCHES and LIKE operators, we use the vector similarity search directly
                 // No additional filtering is needed
                 results
             }
-            com.onyx.persistence.query.QueryCriteriaOperator.MATCHES,
             com.onyx.persistence.query.QueryCriteriaOperator.CONTAINS,
             com.onyx.persistence.query.QueryCriteriaOperator.CONTAINS_IGNORE_CASE,
             com.onyx.persistence.query.QueryCriteriaOperator.NOT_CONTAINS,

@@ -203,7 +203,7 @@ class VectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(f
             println("  ID: $id, Score: $score")
         }
 
-        assertEquals(results.size, 2)
+        assertEquals(results.size, 3)
     }
     
     @Test
@@ -273,7 +273,7 @@ class VectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(f
             println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
         }
 
-        assertEquals(results.size, 1)
+        assertEquals(results.size, 3)
         // We should get some results since we're doing a similarity search
         // The exact number may vary depending on the similarity algorithm
     }
@@ -552,5 +552,58 @@ class VectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(f
         // We should get entities 1 and 3 since they don't match the query vector
         // Note: The exact number may vary depending on the similarity algorithm
         assertTrue(results.isNotEmpty(), "Should find non-matching vectors")
+    }
+    
+    @Test
+    fun testVectorIndexWithPartition() {
+        // Save an entity with vector data in a specific partition
+        val entity = VectorIndexEntity()
+        entity.partitionId = 1L
+        entity.label = "partition_test"
+        entity.vectorData = "This is a test vector string for partition testing"
+        
+        val savedEntity = manager.saveEntity<IManagedEntity>(entity)
+        
+        // Close and reopen the database
+        factory.close()
+        initialize()
+        
+        // Query for the entity in the specific partition
+        val results = manager.from(VectorIndexEntity::class)
+            .where("partitionId" eq 1L)
+            .and("vectorData" like "This is a test vector string for partition testing")
+            .list<VectorIndexEntity>()
+        
+        // Verify we found the entity
+        assertEquals(1, results.size, "Should find exactly one entity in the partition")
+        assertEquals("partition_test", results[0].label, "Should have the correct label")
+        assertEquals(1L, results[0].partitionId, "Should have the correct partition ID")
+    }
+    
+    @Test
+    fun testVectorIndexWithTwoVectorsInSameEntity() {
+        // Save an entity with two vector fields
+        val entity = VectorIndexEntity()
+        entity.label = "two_vectors_test"
+        entity.vectorData = "This is the first vector string for testing"
+        entity.vectorData2 = "This is the second vector string for testing"
+        
+        val savedEntity = manager.saveEntity<IManagedEntity>(entity)
+        
+        // Query using the first vector field
+        val results1 = manager.from(VectorIndexEntity::class)
+            .where("vectorData" like "first vector string")
+            .list<VectorIndexEntity>()
+        
+        // Query using the second vector field
+        val results2 = manager.from(VectorIndexEntity::class)
+            .where("vectorData2" like "second vector string")
+            .list<VectorIndexEntity>()
+        
+        // Verify we found the entity with both queries
+        assertEquals(1, results1.size, "Should find exactly one entity with first vector")
+        assertEquals(1, results2.size, "Should find exactly one entity with second vector")
+        assertEquals("two_vectors_test", results1[0].label, "Should have the correct label")
+        assertEquals("two_vectors_test", results2[0].label, "Should have the correct label")
     }
 }
