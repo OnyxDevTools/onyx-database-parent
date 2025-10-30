@@ -89,7 +89,7 @@ open class VectorIndexScanner @Throws(OnyxException::class) constructor(
         // Use maxCardinality as maxCandidates
         val maxCandidates = context.maxCardinality - 1
 
-        return indexInteractor.matchAll(queryValue, maxCandidates, maxCandidates)
+        return indexInteractor.matchAll(queryValue, if (query.maxResults > 0) query.maxResults else maxCandidates, maxCandidates)
     }
     
     /**

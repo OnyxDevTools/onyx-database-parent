@@ -43,7 +43,7 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
      * The dimensionality of the embedding vectors. 
      * Once defined, this value cannot be changed as it affects the storage format.
      */
-    private val embeddingDimension: Int = if (indexDescriptor.embeddingDimensions > 0) indexDescriptor.embeddingDimensions else 512
+    private val embeddingDimension: Int = if (indexDescriptor.embeddingDimensions > 0) indexDescriptor.embeddingDimensions else 128
 
     /** 
      * The number of LSH hash tables to use. More tables improve accuracy but increase index size.

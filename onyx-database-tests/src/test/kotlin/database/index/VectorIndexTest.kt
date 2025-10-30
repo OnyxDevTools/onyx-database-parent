@@ -75,7 +75,7 @@ class VectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(f
         val savedEntity = manager.saveEntity<IManagedEntity>(entity)
         
         // Create a query string similar to our saved string
-        val queryString = "This is a test vector"
+        val queryString = "vector string for embedding"
         
         // Get the schema context and descriptor to access the index interactor directly
         val context = manager.context
@@ -262,7 +262,7 @@ class VectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(f
         manager.saveEntity<IManagedEntity>(entity3)
         
         // Query using the like operator on vectorData
-        val queryVector = "identical"
+        val queryVector = "Different vector content for testing"
         val results = manager.from(VectorIndexEntity::class)
             .where("vectorData" like queryVector)
             .list<VectorIndexEntity>()
@@ -273,7 +273,7 @@ class VectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(f
             println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
         }
 
-        assertEquals(results.size, 2)
+        assertEquals(results.size, 1)
         // We should get some results since we're doing a similarity search
         // The exact number may vary depending on the similarity algorithm
     }
@@ -333,7 +333,7 @@ class VectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(f
         
         // Import the startsWith operator
         val results = manager.from(VectorIndexEntity::class)
-            .where("vectorData" startsWith "This")
+            .where("vectorData" startsWith "This is a")
             .list<VectorIndexEntity>()
         
         // Print results for debugging

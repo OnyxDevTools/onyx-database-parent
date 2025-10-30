@@ -105,6 +105,7 @@ object ScannerFactory {
         // Vector index with operators that can use vector similarity search
         val vectorOperators = setOf(
             QueryCriteriaOperator.LIKE,
+            QueryCriteriaOperator.MATCHES,
         )
         
         if (indexDescriptor != null && indexDescriptor.indexType in setOf(IndexType.VECTOR, IndexType.LUCENE) &&

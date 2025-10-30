@@ -14,29 +14,58 @@ import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.document.StringField
 import org.apache.lucene.document.TextField
-import org.apache.lucene.index.IndexWriter
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.index.Term
+import org.apache.lucene.index.*
 import org.apache.lucene.queryparser.classic.ParseException
 import org.apache.lucene.queryparser.classic.QueryParser
+import org.apache.lucene.search.ControlledRealTimeReopenThread
+import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.SearcherManager
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.FSDirectory
+import org.apache.lucene.index.TieredMergePolicy
 import java.lang.ref.WeakReference
 import java.nio.file.Files
 import java.nio.file.InvalidPathException
 import java.nio.file.Paths
 import java.util.LinkedHashMap
 import java.util.Locale
-import java.util.concurrent.locks.ReentrantReadWriteLock
-import kotlin.concurrent.read
-import kotlin.concurrent.write
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Lucene-backed implementation of [IndexInteractor] that supports full-text search for indexed fields.
+ * Holds the shared, thread-safe Lucene components for a specific index.
+ * These components are expensive to create and are shared across all interactor
+ * instances pointing to the same physical index path.
  *
- * The interactor mirrors the lifecycle of [DefaultIndexInteractor] to maintain the on-disk index metadata
- * while delegating fuzzy matching to a Lucene index stored alongside the entity data files.
+ * @property indexWriter The central component for adding, updating, and deleting documents.
+ * @property searcherManager Manages [IndexSearcher] instances, handling reopening for NRT search.
+ * @property reopenThread A background thread that periodically reopens the [searcherManager] to make recent changes visible.
+ * @property indexWriterConfig The configuration used to create the [indexWriter].
+ * @property queryParser The parser used to convert user-facing query strings into Lucene Queries.
+ */
+data class LuceneState(
+    val indexWriter: IndexWriter,
+    val searcherManager: SearcherManager,
+    val reopenThread: ControlledRealTimeReopenThread<IndexSearcher>,
+    val indexWriterConfig: IndexWriterConfig,
+    val queryParser: QueryParser
+)
+
+/**
+ * A Lucene-backed implementation of [DefaultIndexInteractor] that provides full-text search
+ * capabilities for indexed fields.
+ *
+ * This implementation is optimized for high write throughput by using Lucene's
+ * Near-Real-Time (NRT) search features. It batches writes and uses a background
+ * thread to refresh searchers, avoiding costly per-document commits.
+ *
+ * Index components ([IndexWriter], [SearcherManager], etc.) are shared per-index
+ * via the [luceneStates] companion object map to ensure thread safety and resource efficiency.
+ *
+ * @param entityDescriptor Descriptor for the entity being indexed.
+ * @param indexDescriptor Descriptor for the specific index field.
+ * @param context The schema context, used to access data files and index locations.
+ * @throws OnyxException if the index directory cannot be created.
  */
 class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
     private val entityDescriptor: EntityDescriptor,
@@ -44,39 +73,105 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
     context: SchemaContext
 ) : DefaultIndexInteractor(entityDescriptor, indexDescriptor, context) {
 
+    /**
+     * Holds a [WeakReference] to the [SchemaContext] to prevent this interactor
+     * from causing a memory leak by holding onto a closed schema.
+     */
     private val contextRef = WeakReference(context)
+
+    /**
+     * Safely retrieves the [SchemaContext], throwing an [IllegalStateException]
+     * if the context has already been garbage collected.
+     */
     private val context: SchemaContext
         get() = contextRef.get() ?: throw IllegalStateException("SchemaContext has been garbage collected.")
 
     private val analyzer: Analyzer = StandardAnalyzer()
-    private val directory: Directory
-    private val indexWriter: IndexWriter
-    private val searcherManager: SearcherManager
-    private val queryParser: QueryParser
-    private val lock = ReentrantReadWriteLock()
+    private val directory: Directory = createDirectory(context, entityDescriptor, indexDescriptor)
+    private lateinit var indexWriter: IndexWriter
+    private lateinit var searcherManager: SearcherManager
+    private lateinit var queryParser: QueryParser
+
+    /**
+     * Near-Real-Time (NRT) background thread.
+     * This thread periodically calls [SearcherManager.maybeRefresh] to make
+     * recent index changes visible to new searchers.
+     */
+    private lateinit var reopenThread: ControlledRealTimeReopenThread<IndexSearcher>
+
+    /**
+     * A counter to track updates since the last explicit commit.
+     * This counter is *shared* across all interactor instances pointing to the
+     * same physical index to ensure commits happen periodically.
+     */
+    private lateinit var updateCountSinceCommit: AtomicLong
 
     init {
-        directory = createDirectory()
-
-        val config = IndexWriterConfig(analyzer).apply {
-            openMode = IndexWriterConfig.OpenMode.CREATE_OR_APPEND
-        }
-        indexWriter = IndexWriter(directory, config)
-        searcherManager = SearcherManager(indexWriter, true, true, null)
-        queryParser = QueryParser(CONTENT_FIELD, analyzer).apply {
-            defaultOperator = QueryParser.Operator.AND
-            allowLeadingWildcard = true
-        }
-
-        Runtime.getRuntime().addShutdownHook(Thread {
-            lock.write {
-                runCatching { searcherManager.close() }
-                runCatching { indexWriter.close() }
-                runCatching { directory.close() }
-            }
-        })
+        // Hydrate the stateful Lucene components from the shared companion map
+        hydrateStates()
     }
 
+    /**
+     * Initializes or retrieves the shared [LuceneState] for this specific index.
+     * This method ensures that only one set of [IndexWriter], [SearcherManager], etc.,
+     * exists per physical index, allowing multiple interactors to safely share resources.
+     */
+    private fun hydrateStates() {
+        val key = generateKey(entityDescriptor, indexDescriptor)
+        val luceneState = luceneStates.getOrPut(key) {
+            // Configuration optimized for write throughput
+            val writerConfig = IndexWriterConfig(analyzer).apply {
+                openMode = IndexWriterConfig.OpenMode.CREATE_OR_APPEND
+                ramBufferSizeMB = 256.0                          // Large in-memory buffer for documents
+                useCompoundFile = false                          // Write multiple files (faster merges)
+                mergePolicy = (mergePolicy as TieredMergePolicy).apply {
+                    segmentsPerTier = 10.0
+                    maxMergeAtOnce = 10
+                    floorSegmentMB = 16.0
+                }
+            }
+
+            val writer = IndexWriter(directory, writerConfig)
+            val manager = SearcherManager(writer, null)
+
+            // NRT: Keep searchers reasonably fresh (max 5s stale)
+            // without blocking every write operation.
+            val thread = ControlledRealTimeReopenThread(
+                writer,
+                manager,
+                /* targetMaxStaleSec = */ 5.0,   // At most ~5s stale
+                /* targetMinStaleSec = */ 0.1    // But try to reopen quickly if write pressure is high
+            ).apply {
+                isDaemon = true
+                name = "lucene-nrt-reopen-$key"
+                start()
+            }
+
+            val parser = QueryParser(CONTENT_FIELD, analyzer).apply {
+                defaultOperator = QueryParser.Operator.OR
+                allowLeadingWildcard = true
+            }
+
+            LuceneState(writer, manager, thread, writerConfig, parser)
+        }
+
+        // Assign the shared components to this instance
+        this.indexWriter = luceneState.indexWriter
+        this.searcherManager = luceneState.searcherManager
+        this.reopenThread = luceneState.reopenThread
+        this.queryParser = luceneState.queryParser
+        // Retrieve the shared counter for periodic commits
+        this.updateCountSinceCommit = sharedUpdateCounters.getOrPut(key) { AtomicLong(0L) }
+    }
+
+    /**
+     * Saves or updates an entity in the Lucene index.
+     * This method maps the entity's record ID to its indexed value.
+     *
+     * @param indexValue The value of the field being indexed (can be null).
+     * @param oldReferenceId The previous record ID (not used by Lucene, handled by superclass).
+     * @param newReferenceId The new record ID for the entity.
+     */
     @Throws(OnyxException::class)
     @Synchronized
     override fun save(indexValue: Any?, oldReferenceId: Long, newReferenceId: Long) {
@@ -85,17 +180,22 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         updateDocument(newReferenceId, valueForIndex)
     }
 
+    /**
+     * Deletes an entity from the Lucene index using its record ID.
+     *
+     * @param reference The record ID of the entity to delete.
+     */
     @Throws(OnyxException::class)
     @Synchronized
     override fun delete(reference: Long) {
         super.delete(reference)
-        lock.write {
-            indexWriter.deleteDocuments(Term(ID_FIELD, reference.toString()))
-            indexWriter.commit()
-            searcherManager.maybeRefreshBlocking()
-        }
+        indexWriter.deleteDocuments(Term(ID_FIELD, reference.toString()))
     }
 
+    /**
+     * Triggers a full rebuild of the Lucene index, clearing all existing
+     * documents and re-indexing every entity from the primary data file.
+     */
     @Throws(OnyxException::class)
     @Synchronized
     override fun rebuild() {
@@ -103,94 +203,155 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         rebuildLuceneIndex()
     }
 
+    /**
+     * Clears all documents from the Lucene index.
+     */
     @Synchronized
     override fun clear() {
         super.clear()
-        lock.write {
-            indexWriter.deleteAll()
-            indexWriter.commit()
-            searcherManager.maybeRefreshBlocking()
-        }
+        indexWriter.deleteAll()
     }
 
+    /**
+     * Performs a full-text search against the Lucene index.
+     *
+     * @param indexValue The query string to search for.
+     * @param limit The maximum number of results to return.
+     * @param maxCandidates (Not used in this implementation)
+     * @return A map of [Long, Any?] where the key is the matching entity's record ID
+     * and the value is the search score (as a [Float]).
+     */
     override fun matchAll(indexValue: Any?, limit: Int, maxCandidates: Int): Map<Long, Any?> {
         val queryText = indexValue?.toString()?.trim().orEmpty()
-        if (queryText.isEmpty()) {
-            return emptyMap()
-        }
+        if (queryText.isEmpty()) return emptyMap()
 
         val parsedQuery = parseQuery(queryText)
-        val maxResults = maxCandidates.coerceAtLeast(limit).coerceAtLeast(1)
 
-        return lock.read {
-            searcherManager.maybeRefreshBlocking()
-            val searcher = searcherManager.acquire()
-            try {
-                val topDocs = searcher.search(parsedQuery, maxResults)
-                val results = LinkedHashMap<Long, Any?>(topDocs.scoreDocs.size)
-                for (sd in topDocs.scoreDocs) {
-                    val docId = sd.doc
-                    val doc = searcher.storedFields().document(docId, setOf(ID_FIELD))
-                    val id = doc.get(ID_FIELD)?.toLongOrNull() ?: continue
-                    results[id] = sd.score
-                    if (results.size == limit) break
-                }
-                results
-            } finally {
-                searcherManager.release(searcher)
+        // Ensure the searcher is up-to-date with recent writes
+        searcherManager.maybeRefresh()
+
+        val searcher = searcherManager.acquire()
+        try {
+            val topDocs = searcher.search(parsedQuery, limit)
+            val results = LinkedHashMap<Long, Any?>(topDocs.scoreDocs.size)
+            for (scoreDoc in topDocs.scoreDocs) {
+                val documentId = scoreDoc.doc
+                // Retrieve only the ID_FIELD, which is all we need
+                val document = searcher.storedFields().document(documentId, setOf(ID_FIELD))
+                val recordId = document.get(ID_FIELD)?.toLongOrNull() ?: continue
+                results[recordId] = scoreDoc.score
+                if (results.size == limit) break
             }
+            return results
+        } finally {
+            searcherManager.release(searcher)
         }
     }
 
+    /**
+     * Helper method to perform a full index rebuild.
+     * It iterates over all entities in the main data file, converts them to
+     * Lucene documents, and adds them to the index in batches.
+     */
     private fun rebuildLuceneIndex() {
-        lock.write {
-            indexWriter.deleteAll()
-            val records = context.getDataFile(entityDescriptor)
-                .getHashMap<DiskMap<Any, IManagedEntity>>(
-                    entityDescriptor.identifier!!.type,
-                    entityDescriptor.entityClass.name
-                )
-            for (entry in records.entries) {
-                val recordId = records.getRecID(entry.key)
-                if (recordId <= 0) continue
-                val value = extractIndexFieldValue(entry.value)
-                if (value != null) {
-                    indexWriter.addDocument(createDocument(recordId, value))
-                }
+        indexWriter.deleteAll()
+
+        val records = context.getDataFile(entityDescriptor)
+            .getHashMap<DiskMap<Any, IManagedEntity>>(
+                entityDescriptor.identifier!!.type,
+                entityDescriptor.entityClass.name
+            )
+
+        val documentBatch = ArrayList<Document>(8192)
+        for (entry in records.entries) {
+            val recordId = records.getRecID(entry.key)
+            if (recordId <= 0) continue
+            val value = extractIndexFieldValue(entry.value) ?: continue
+            val text = valueToText(value)
+            if (text.isNotBlank()) documentBatch.add(createDocument(recordId, text))
+
+            if (documentBatch.size >= 8192) {
+                indexWriter.addDocuments(documentBatch)
+                documentBatch.clear()
             }
-            indexWriter.commit()
-            searcherManager.maybeRefreshBlocking()
         }
+        if (documentBatch.isNotEmpty()) indexWriter.addDocuments(documentBatch)
+
+        // Single commit at end of rebuild
+        indexWriter.commit()
+        // Make results visible
+        searcherManager.maybeRefresh()
     }
 
+    /**
+     * Updates or deletes a single document in the index based on its record ID and new value.
+     * If the value is null or converts to blank text, the document is deleted.
+     * Otherwise, it is updated.
+     *
+     * This method also triggers a periodic [IndexWriter.commit] every 5000 updates
+     * to manage memory and persist changes to disk.
+     *
+     * @param recordId The entity's unique record ID.
+     * @param value The new value for the indexed field.
+     */
     private fun updateDocument(recordId: Long, value: Any?) {
-        lock.write {
-            if (value == null) {
+        if (value == null) {
+            indexWriter.deleteDocuments(Term(ID_FIELD, recordId.toString()))
+        } else {
+            val text = valueToText(value)
+            if (text.isBlank()) {
+                // If the new value is blank, treat it as a deletion
                 indexWriter.deleteDocuments(Term(ID_FIELD, recordId.toString()))
             } else {
-                indexWriter.updateDocument(Term(ID_FIELD, recordId.toString()), createDocument(recordId, value))
+                // Atomically update the document or add it if it doesn't exist
+                indexWriter.updateDocument(Term(ID_FIELD, recordId.toString()), createDocument(recordId, text))
             }
+        }
+        // Periodically commit to disk. NRT refresh is handled by the background thread,
+        // but committing flushes segments to disk and controls RAM usage.
+        if (updateCountSinceCommit.incrementAndGet().rem(5000L) == 0L) {
             indexWriter.commit()
-            searcherManager.maybeRefreshBlocking()
         }
     }
 
-    private fun createDocument(recordId: Long, value: Any?): Document {
+    /**
+     * Creates a Lucene [Document] from an entity's record ID and indexed text content.
+     *
+     * @param recordId The entity's record ID. This is stored and indexed to link search results back to the entity.
+     * @param text The text content to be indexed for full-text search. This is not stored.
+     * @return A new [Document] instance.
+     */
+    private fun createDocument(recordId: Long, text: String): Document {
         val document = Document()
+        // ID_FIELD: Stored and indexed for exact-match lookups and retrieval
         document.add(StringField(ID_FIELD, recordId.toString(), Field.Store.YES))
-        val text = valueToText(value)
-        if (text.isNotBlank()) {
-            document.add(TextField(CONTENT_FIELD, text, Field.Store.NO))
-        }
+        // CONTENT_FIELD: Tokenized and indexed for search, but not stored to save space
+        document.add(TextField(CONTENT_FIELD, text, Field.Store.NO))
         return document
     }
 
+    /**
+     * Parses a query string, with a fallback mechanism.
+     * If the initial parse fails (e.g., due to syntax errors),
+     * it escapes the query text and tries again.
+     *
+     * @param queryText The raw user-provided query string.
+     * @return A Lucene [Query] object.
+     */
     private fun parseQuery(queryText: String) = try {
         queryParser.parse(queryText)
     } catch (_: ParseException) {
+        // Fallback: escape special characters and parse again
         queryParser.parse(QueryParser.escape(queryText))
     }
 
+    /**
+     * Converts an arbitrary value into a space-separated string suitable for indexing.
+     * Handles collections, arrays, and various primitive types.
+     *
+     * @param value The value to convert.
+     * @return A string representation.
+     */
     private fun valueToText(value: Any?): String = when (value) {
         null -> ""
         is String -> value
@@ -204,6 +365,13 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         else -> value.toString()
     }
 
+    /**
+     * Extracts the value of the indexed field from a managed entity using reflection.
+     * If reflection fails, it falls back to using the entity's identifier.
+     *
+     * @param entity The entity to extract the value from.
+     * @return The extracted value, or the entity's identifier as a fallback.
+     */
     private fun extractIndexFieldValue(entity: IManagedEntity): Any? {
         val fieldName = indexDescriptor.name
         return try {
@@ -211,57 +379,123 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
             field.isAccessible = true
             field.get(entity)
         } catch (_: Throwable) {
+            // Fallback to the entity's primary key if field extraction fails
             entity.identifier(context, entityDescriptor)
         }
     }
 
+    /**
+     * Loads an entity by its internal record ID (recID).
+     * This is a potentially slow operation as it requires iterating over the data file.
+     *
+     * @param recordId The record ID to search for.
+     * @return The [IManagedEntity] corresponding to the record ID.
+     * @throws OnyxException if no entity is found for the given ID.
+     */
     private fun loadEntity(recordId: Long): IManagedEntity {
         val records = context.getDataFile(entityDescriptor)
             .getHashMap<DiskMap<Any, IManagedEntity>>(
                 entityDescriptor.identifier!!.type,
                 entityDescriptor.entityClass.name
             )
+        // This is inefficient but necessary for reverse lookup by recID
         for (entry in records.entries) {
             if (records.getRecID(entry.key) == recordId) return entry.value
         }
         throw OnyxException("Entity with recordId=$recordId not found for ${entityDescriptor.entityClass.name}")
     }
 
-    private fun createDirectory(): Directory {
-        val safeFolderName = buildString {
-            append((entityDescriptor.entityClass.name.replace('.', '_')))
-            append('_')
-            append(indexDescriptor.name)
-        }
-
-        val basePath = try {
-            Paths.get(context.location)
-        } catch (_: InvalidPathException) {
-            null
-        } catch (_: UnsupportedOperationException) {
-            null
-        }
-
-        val directoryPath = basePath!!.resolve(safeFolderName)
-        Files.createDirectories(directoryPath)
-        return FSDirectory.open(directoryPath)
-    }
-
     /**
-     * Shutdown the index interactor and release any resources
-     *
-     * @since 1.0.0
+     * Shuts down the interactor and releases all associated Lucene resources.
+     * This includes stopping the NRT thread, closing the searcher,
+     * committing final changes, and closing the index writer and directory.
      */
     override fun shutdown() {
-        lock.write {
-            runCatching { searcherManager.close() }
-            runCatching { indexWriter.close() }
-            runCatching { directory.close() }
+        // Gracefully shut down the NRT thread
+        runCatching {
+            reopenThread.interrupt()
+            reopenThread.join(2000)
         }
+        // Close all other components, swallowing exceptions
+        runCatching { searcherManager.close() }
+        runCatching { indexWriter.commit() } // Final fsync
+        runCatching { indexWriter.close() }
+        runCatching { directory.close() }
     }
 
     companion object {
+        /** The document field name for the entity's record ID. */
         private const val ID_FIELD = "record_id"
+
+        /** The document field name for the indexed text content. */
         private const val CONTENT_FIELD = "content"
+
+        /**
+         * Caches [Directory] instances by their folder name.
+         * This prevents multiple `FSDirectory.open()` calls on the same path,
+         * which can cause locking issues.
+         */
+        val luceneDirectories = ConcurrentHashMap<String, Directory>()
+
+        /**
+         * A map to store and share [LuceneState] instances.
+         * The key is a unique string generated by [generateKey], ensuring that
+         * all interactors for the same index share the same [IndexWriter] and [SearcherManager].
+         */
+        val luceneStates = ConcurrentHashMap<String, LuceneState>()
+
+        /**
+         * A map to store and share [AtomicLong] counters for periodic commits.
+         * This ensures that the commit logic works correctly even with multiple
+         * interactor instances pointing to the same shared [IndexWriter].
+         */
+        private val sharedUpdateCounters = ConcurrentHashMap<String, AtomicLong>()
+
+        /**
+         * Generates a unique, file-system-safe key for a given entity and index.
+         *
+         * @return A string key, e.g., "MyDataFile_MyEntity__MyIndexName"
+         */
+        private fun generateKey(entityDescriptor: EntityDescriptor, indexDescriptor: IndexDescriptor): String {
+            return "${entityDescriptor.fileName}_${entityDescriptor.entityClass.simpleName}_${entityDescriptor.partition?.partitionValue ?: ""}_${indexDescriptor.name}"
+        }
+
+        /**
+         * Creates or opens the [FSDirectory] for the Lucene index.
+         * The directory is placed in a subfolder named after the generated key.
+         * This method is synchronized and caches the [Directory] instance in [luceneDirectories]
+         * to prevent concurrent access issues.
+         *
+         * @return The cached [Directory] instance.
+         */
+        @Synchronized
+        private fun createDirectory(
+            context: SchemaContext,
+            entityDescriptor: EntityDescriptor,
+            indexDescriptor: IndexDescriptor
+        ): Directory {
+            val safeFolderName = buildString {
+                append(entityDescriptor.fileName)
+                append("_${entityDescriptor.entityClass.simpleName}")
+                append("_${entityDescriptor.partition?.partitionValue ?: ""}")
+                append("_${indexDescriptor.name}")
+                append(".idx")
+            }
+
+            // Get-or-put ensures we only open the directory once per path
+            return luceneDirectories.getOrPut(safeFolderName) {
+                val basePath = try {
+                    Paths.get(context.location)
+                } catch (_: InvalidPathException) {
+                    null
+                } catch (_: UnsupportedOperationException) {
+                    null
+                }
+
+                val directoryPath = basePath!!.resolve(safeFolderName)
+                Files.createDirectories(directoryPath)
+                return@getOrPut FSDirectory.open(directoryPath)
+            }
+        }
     }
 }

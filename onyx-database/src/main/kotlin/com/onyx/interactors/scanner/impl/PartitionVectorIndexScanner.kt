@@ -197,7 +197,7 @@ class PartitionVectorIndexScanner @Throws(OnyxException::class) constructor(
         // The maximum number of candidates to evaluate during the search.
         val maxCandidates = context.maxCardinality - 1
 
-        return interactor.matchAll(queryValue, maxCandidates, maxCandidates)
+        return interactor.matchAll(queryValue, if (query.maxResults > 0) query.maxResults else maxCandidates, maxCandidates)
     }
     
     /**
