@@ -517,6 +517,13 @@ class OnyxClient(
     inline fun <reified T> from(): IQueryBuilder = QueryBuilder(this, T::class)
 
     /**
+     * Creates a [QueryBuilder] inferring the table from table.
+     *
+     * @param table Entity type.
+     */
+    fun from(table: String): IQueryBuilder = QueryBuilder(this, table = table)
+
+    /**
      * Starts a select query with the desired fields.
      *
      * @param fields Field names or aggregate expressions.
