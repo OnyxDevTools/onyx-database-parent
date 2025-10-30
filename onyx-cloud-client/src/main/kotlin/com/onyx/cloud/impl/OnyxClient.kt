@@ -1057,7 +1057,7 @@ class QueryBuilder(
         val jsonResponse = client.executeQuery(targetTable, queryPayload, requestOptions)
 
         val isProjection = fields?.isNotEmpty() == true
-        val clazz = if (isProjection) HashMap::class else this.type
+        val clazz = if (isProjection || (this.table != null && this.type == null)) HashMap::class else this.type
             ?: throw IllegalStateException("Result class cannot be determined. Use from<T>() or provide fields.")
 
         val results = jsonResponse.toQueryResults<T>(gson, clazz)
