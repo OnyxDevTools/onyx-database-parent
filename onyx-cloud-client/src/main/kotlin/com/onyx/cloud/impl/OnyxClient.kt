@@ -517,6 +517,13 @@ class OnyxClient(
     inline fun <reified T> from(): IQueryBuilder = QueryBuilder(this, T::class)
 
     /**
+     * Creates a [QueryBuilder] inferring the table from table.
+     *
+     * @param table Entity type.
+     */
+    fun from(table: String): IQueryBuilder = QueryBuilder(this, table = table)
+
+    /**
      * Starts a select query with the desired fields.
      *
      * @param fields Field names or aggregate expressions.
@@ -1050,7 +1057,7 @@ class QueryBuilder(
         val jsonResponse = client.executeQuery(targetTable, queryPayload, requestOptions)
 
         val isProjection = fields?.isNotEmpty() == true
-        val clazz = if (isProjection) HashMap::class else this.type
+        val clazz = if (isProjection || (this.table != null && this.type == null)) HashMap::class else this.type
             ?: throw IllegalStateException("Result class cannot be determined. Use from<T>() or provide fields.")
 
         val results = jsonResponse.toQueryResults<T>(gson, clazz)
