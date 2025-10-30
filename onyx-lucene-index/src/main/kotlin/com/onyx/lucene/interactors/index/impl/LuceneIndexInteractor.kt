@@ -228,7 +228,7 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         val parsedQuery = parseQuery(queryText)
 
         // Ensure the searcher is up-to-date with recent writes
-        searcherManager.maybeRefreshBlocking()
+        searcherManager.maybeRefresh()
 
         val searcher = searcherManager.acquire()
         try {
