@@ -1013,11 +1013,11 @@ class QueryBuilder(
             "nextPage" to nextPageValue
         ).filterValues { it != null }
 
-    private fun buildSelectQueryPayload(): Map<String, Any?> =
+    private fun buildSelectQueryPayload(visitedBuilders: MutableSet<QueryBuilder> = mutableSetOf()): Map<String, Any?> =
         mapOf(
             "type" to "SelectQuery",
             "fields" to fields,
-            "conditions" to conditions,
+            "conditions" to serializeConditions(visitedBuilders),
             "sort" to sort,
             "limit" to limitValue,
             "distinct" to distinctValue,
@@ -1026,20 +1026,65 @@ class QueryBuilder(
             "partition" to partitionValue
         ).filterValues { it != null }
 
-    private fun buildUpdateQueryPayload(): Map<String, Any?> =
+    private fun buildUpdateQueryPayload(): Map<String, Any?> = buildUpdateQueryPayload(mutableSetOf())
+
+    private fun buildUpdateQueryPayload(visitedBuilders: MutableSet<QueryBuilder>): Map<String, Any?> =
         mapOf(
             "type" to "UpdateQuery",
-            "conditions" to conditions,
+            "conditions" to serializeConditions(visitedBuilders),
             "updates" to updates?.mapValues { it.value?.toString() },
             "partition" to partitionValue
         ).filterValues { it != null && !(it is List<*> && it.isEmpty()) }
 
-    private fun buildDeleteQueryPayload(): Map<String, Any?> =
+    private fun buildDeleteQueryPayload(): Map<String, Any?> = buildDeleteQueryPayload(mutableSetOf())
+
+    private fun buildDeleteQueryPayload(visitedBuilders: MutableSet<QueryBuilder>): Map<String, Any?> =
         mapOf(
             "type" to "SelectQuery",
-            "conditions" to conditions,
+            "conditions" to serializeConditions(visitedBuilders),
             "partition" to partitionValue
         ).filterValues { it != null }
+
+    private fun serializeConditions(visitedBuilders: MutableSet<QueryBuilder>): QueryCondition? =
+        conditions?.let { serializeCondition(it, visitedBuilders) }
+
+    private fun serializeCondition(
+        condition: QueryCondition,
+        visitedBuilders: MutableSet<QueryBuilder>
+    ): QueryCondition = when (condition) {
+        is QueryCondition.SingleCondition -> condition.copy(
+            criteria = condition.criteria.copy(value = serializeValue(condition.criteria.value, visitedBuilders))
+        )
+
+        is QueryCondition.CompoundCondition -> condition.copy(
+            conditions = condition.conditions.map { serializeCondition(it, visitedBuilders) }
+        )
+    }
+
+    private fun serializeValue(value: Any?, visitedBuilders: MutableSet<QueryBuilder>): Any? = when (value) {
+        is QueryBuilder -> value.toSubQueryPayload(visitedBuilders)
+        is Collection<*> -> value.map { serializeValue(it, visitedBuilders) }
+        is Array<*> -> value.map { serializeValue(it, visitedBuilders) }
+        is Map<*, *> -> value.mapValues { (_, v) -> serializeValue(v, visitedBuilders) }
+        else -> value
+    }
+
+    private fun QueryBuilder.toSubQueryPayload(visitedBuilders: MutableSet<QueryBuilder>): Map<String, Any?> {
+        if (!visitedBuilders.add(this)) {
+            throw IllegalArgumentException("Circular query reference detected.")
+        }
+
+        val targetTable = table ?: type?.simpleName
+            ?: throw IllegalStateException("Table name must be specified using from() before building a sub-query.")
+
+        val payload = buildSelectQueryPayload(visitedBuilders)
+        visitedBuilders.remove(this)
+
+        return mapOf(
+            "table" to targetTable,
+            "query" to payload
+        )
+    }
 
     /**
      * Executes the (SELECT) query and returns the first page of results.
