@@ -8,6 +8,7 @@ import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.extension.common.compare
 import com.onyx.extension.common.get
+import com.onyx.extension.identifier
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.relationship
@@ -47,13 +48,14 @@ fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, con
             if (it.attributeDescriptor == null)
                 it.attributeDescriptor = descriptor.attributes[it.attribute!!]
 
-            if (it.attributeDescriptor != null) {
-                val attribute = entity?.get<Any?>(context = context, descriptor = descriptor, name = it.attribute!!)
-                subCriteria = it.value.compare(attribute, it.operator!!)
+            val attribute = if (it.attributeDescriptor != null) {
+                entity?.get<Any?>(context = context, descriptor = descriptor, name = it.attribute!!)
             } else {
-                val attribute = entity?.get<Any?>(it.attribute!!) // Use Kotlin property accessors
-                subCriteria = it.value.compare(attribute, it.operator!!)
+                entity?.get<Any?>(it.attribute!!) // Use Kotlin property accessors
             }
+
+            val comparableAttribute = attribute.normalizeForComparison(it.operator, context)
+            subCriteria = it.value.compare(comparableAttribute, it.operator!!)
         }
         it.meetsCriteria = subCriteria
     }
@@ -123,12 +125,17 @@ private fun relationshipMeetsCriteria(entity: IManagedEntity?, entityReference: 
 
     // If there are relationship values, check to see if they meet criteria
     if (relationshipEntities?.isNotEmpty() == true) {
-        val items = criteria.attribute!!.split(".")
-        val attribute = items[items.size - 1]
+        val attribute = criteria.attribute!!.split(".").lastOrNull()
 
         // All we need is a single match.  If there is a relationship that meets the criteria, move along
         for (relationshipEntity in relationshipEntities) {
-            meetsCriteria = criteria.value.compare(relationshipEntity?.get(context = context, name = attribute), operator!!)
+            val comparisonValue = if (criteria.attribute!!.contains(".")) {
+                relationshipEntity?.get(context = context, name = attribute!!)
+            } else {
+                relationshipEntity?.identifier(context)
+            }
+
+            meetsCriteria = criteria.value.compare(comparisonValue.normalizeForComparison(operator, context), operator!!)
             if (meetsCriteria)
                 break
         }
@@ -158,8 +165,20 @@ private fun graphMeetsCriteria(entity: IManagedEntity?, criteria: QueryCriteria)
     val value = entity.get<Any?>(criteria.attribute!!)
     if (value is List<*>) {
         return value.any {
-            criteria.value.compare(it, criteria.operator!!)
+            criteria.value.compare(it.normalizeForComparison(criteria.operator, null), criteria.operator!!)
         }
     }
-    return criteria.value.compare(value, criteria.operator!!)
+    return criteria.value.compare(value.normalizeForComparison(criteria.operator, null), criteria.operator!!)
+}
+
+private fun Any?.normalizeForComparison(operator: QueryCriteriaOperator?, context: SchemaContext?): Any? {
+    if (operator != QueryCriteriaOperator.IN && operator != QueryCriteriaOperator.NOT_IN) return this
+
+    return when (this) {
+        is IManagedEntity -> runCatching { this.identifier(context) }.getOrNull() ?: this
+        is Map<*, *> -> if (this.size == 1) this.values.firstOrNull() else this
+        is Iterable<*> -> this.map { it.normalizeForComparison(operator, context) }
+        is Array<*> -> this.map { it.normalizeForComparison(operator, context) }
+        else -> this
+    }
 }

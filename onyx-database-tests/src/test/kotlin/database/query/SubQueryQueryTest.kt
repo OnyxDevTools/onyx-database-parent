@@ -11,6 +11,7 @@ import com.onyx.persistence.query.select
 import database.base.PrePopulatedDatabaseTest
 import entities.AllAttributeForFetch
 import entities.AllAttributeForFetchChild
+import entities.AllAttributeV2Entity
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -101,6 +102,51 @@ class SubQueryQueryTest(override var factoryClass: KClass<*>) : PrePopulatedData
             .mapNotNull { it.id }
 
         assertEquals(listOf(parent.child?.id), childIds)
+    }
+
+    @Test
+    fun `relationship attributes default to identifiers when using subqueries`() {
+        val childIdsSubQuery = manager.from(AllAttributeForFetchChild::class)
+            .where("someOtherField" eq "HIYA")
+
+        val inferredResults = manager.from(AllAttributeForFetch::class)
+            .where("child" inOp childIdsSubQuery)
+            .list<AllAttributeForFetch>()
+            .mapNotNull { it.child?.id }
+            .sorted()
+
+        val explicitResults = manager.from(AllAttributeForFetch::class)
+            .where("child.id" inOp childIdsSubQuery)
+            .list<AllAttributeForFetch>()
+            .mapNotNull { it.child?.id }
+            .sorted()
+
+        assertEquals(explicitResults, inferredResults)
+        assertTrue(inferredResults.isNotEmpty())
+    }
+
+    @Test
+    fun `embedded entity attributes compare by identifier in subqueries`() {
+        val savedEntity = AllAttributeV2Entity().apply { id = "ASDF" }
+        manager.saveEntity(savedEntity)
+
+        val entitySubQuery = manager.from(AllAttributeV2Entity::class)
+            .where("id" eq "ASDF")
+
+        val inferredResults = manager.from(AllAttributeForFetch::class)
+            .where("entity" inOp entitySubQuery)
+            .list<AllAttributeForFetch>()
+            .mapNotNull { it.id }
+            .sorted()
+
+        val explicitResults = manager.from(AllAttributeForFetch::class)
+            .where("entity.id" inOp entitySubQuery)
+            .list<AllAttributeForFetch>()
+            .mapNotNull { it.id }
+            .sorted()
+
+        assertEquals(explicitResults, inferredResults)
+        assertTrue(inferredResults.isNotEmpty())
     }
 
     companion object {
