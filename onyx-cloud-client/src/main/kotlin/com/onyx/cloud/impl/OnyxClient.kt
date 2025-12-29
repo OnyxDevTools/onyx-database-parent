@@ -1053,6 +1053,7 @@ class QueryBuilder(
             "sort" to sort,
             "limit" to limitValue,
             "distinct" to distinctValue,
+            "table" to table,
             "groupBy" to groupByValues,
             "resolvers" to resolvers.ifEmpty { null },
             "partition" to partitionValue
@@ -1061,6 +1062,7 @@ class QueryBuilder(
     private fun buildUpdateQueryPayload(): Map<String, Any?> =
         mapOf(
             "type" to "UpdateQuery",
+            "table" to table,
             "conditions" to serializableConditions(),
             "updates" to updates?.mapValues { it.value?.toString() },
             "partition" to partitionValue
@@ -1069,6 +1071,7 @@ class QueryBuilder(
     private fun buildDeleteQueryPayload(): Map<String, Any?> =
         mapOf(
             "type" to "SelectQuery",
+            "table" to table,
             "conditions" to serializableConditions(),
             "partition" to partitionValue
         ).filterValues { it != null }
