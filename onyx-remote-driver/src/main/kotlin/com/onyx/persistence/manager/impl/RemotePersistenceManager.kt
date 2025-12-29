@@ -445,7 +445,9 @@ open class RemotePersistenceManager : PersistenceManager {
      * @since 1.3.0 Implemented with feature request #71
      */
     @Throws(OnyxException::class)
-    override fun countForQuery(query: Query): Long = proxy.countForQuery(query)
+    override fun countForQuery(query: Query): Long {
+        return proxy.countForQuery(query)
+    }
 
     /**
      * Un-register a query listener.  This will remove the listener from observing changes for that query.

@@ -390,7 +390,24 @@ infix fun <T> String.notStartsWith(value: T): QueryCriteria =
 fun String.notNull(): QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.NOT_NULL)
 
 @Suppress("UNUSED")
-fun String.isNull(): QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.IS_NULL)
+    fun String.isNull(): QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.IS_NULL)
+
+@Suppress("unused")
+infix fun String.inOp(values: Any): QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.IN, values)
+
+@Suppress("unused")
+infix fun String.notIn(values: Any): QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.NOT_IN, values)
+
+infix fun String.IN(values: Any): QueryCriteria = when (values) {
+    is List<*> -> QueryCriteria(this, QueryCriteriaOperator.IN, values)
+    else -> QueryCriteria(this, QueryCriteriaOperator.IN, values)
+}
+
+infix fun String.notIn(values: QueryBuilder): QueryCriteria =
+    QueryCriteria(this, QueryCriteriaOperator.NOT_IN, values)
+
+infix fun String.IN(values: QueryBuilder): QueryCriteria =
+    QueryCriteria(this, QueryCriteriaOperator.IN, values)
 
 // endregion
 
