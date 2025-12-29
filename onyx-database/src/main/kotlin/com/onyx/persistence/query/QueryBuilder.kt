@@ -9,7 +9,10 @@ import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.reflect.KClass
 
-class QueryBuilder(var manager: PersistenceManager, var query: Query) {
+class QueryBuilder(
+    @Transient
+    var manager: PersistenceManager, var query: Query
+) {
     var onItemAdded: ((Any) -> Unit)? = null
     var onItemDeleted: ((Any) -> Unit)? = null
     var onItemUpdated: ((Any) -> Unit)? = null

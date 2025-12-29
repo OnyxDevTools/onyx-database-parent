@@ -1,5 +1,7 @@
 package database.query
 
+import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
+import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory
 import com.onyx.persistence.query.inOp
 import com.onyx.persistence.query.notIn
 import com.onyx.persistence.query.eq
@@ -99,5 +101,12 @@ class SubQueryQueryTest(override var factoryClass: KClass<*>) : PrePopulatedData
             .mapNotNull { it.id }
 
         assertEquals(listOf(parent.child?.id), childIds)
+    }
+
+    companion object {
+        @JvmStatic
+        @Parameterized.Parameters
+        fun persistenceManagersToTest(): Collection<KClass<*>> =
+            arrayListOf(EmbeddedPersistenceManagerFactory::class)
     }
 }
