@@ -933,6 +933,38 @@ class QueryBuilder(
         }
     }
 
+    private fun serializableConditions(): QueryCondition? =
+        this.conditions?.normalizeSubQueries()
+
+    private fun QueryCondition.normalizeSubQueries(): QueryCondition =
+        when (this) {
+            is QueryCondition.SingleCondition -> copy(criteria = criteria.normalizeValue())
+            is QueryCondition.CompoundCondition -> copy(conditions = conditions.map { it.normalizeSubQueries() })
+        }
+
+    private fun QueryCriteria.normalizeValue(): QueryCriteria {
+        val normalizedValue = when (val currentValue = value) {
+            is QueryBuilder -> currentValue.toSerializableQueryObject()
+            else -> currentValue
+        }
+
+        return if (normalizedValue === value) this else copy(value = normalizedValue)
+    }
+
+    private fun toSerializableQueryObject(): Map<String, Any?> {
+        val payload = when (mode) {
+            Mode.SELECT -> buildSelectQueryPayload()
+            Mode.UPDATE -> buildUpdateQueryPayload()
+            Mode.DELETE -> buildDeleteQueryPayload()
+        }
+
+        val tableName = table ?: type?.simpleName
+
+        return payload
+            .plus("table" to tableName)
+            .filterValues { it != null }
+    }
+
     /**
      * Limits the number of rows returned by the server.
      */
@@ -1017,7 +1049,7 @@ class QueryBuilder(
         mapOf(
             "type" to "SelectQuery",
             "fields" to fields,
-            "conditions" to conditions,
+            "conditions" to serializableConditions(),
             "sort" to sort,
             "limit" to limitValue,
             "distinct" to distinctValue,
@@ -1029,7 +1061,7 @@ class QueryBuilder(
     private fun buildUpdateQueryPayload(): Map<String, Any?> =
         mapOf(
             "type" to "UpdateQuery",
-            "conditions" to conditions,
+            "conditions" to serializableConditions(),
             "updates" to updates?.mapValues { it.value?.toString() },
             "partition" to partitionValue
         ).filterValues { it != null && !(it is List<*> && it.isEmpty()) }
@@ -1037,7 +1069,7 @@ class QueryBuilder(
     private fun buildDeleteQueryPayload(): Map<String, Any?> =
         mapOf(
             "type" to "SelectQuery",
-            "conditions" to conditions,
+            "conditions" to serializableConditions(),
             "partition" to partitionValue
         ).filterValues { it != null }
 
