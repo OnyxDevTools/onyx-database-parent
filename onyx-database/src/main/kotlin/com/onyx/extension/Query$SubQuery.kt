@@ -14,15 +14,38 @@ import com.onyx.persistence.query.QueryCriteriaOperator
  * nested query and replacing the value with the resulting identifier list.
  */
 fun Query.resolveSubQueries(persistenceManager: PersistenceManager) {
-    criteria?.let { resolveCriteria(it, persistenceManager) }
+    criteria?.let { resolveCriteria(this, it, persistenceManager) }
 }
 
-private fun resolveCriteria(criteria: QueryCriteria, persistenceManager: PersistenceManager) {
+private fun resolveCriteria(query: Query, criteria: QueryCriteria, persistenceManager: PersistenceManager) {
     if (criteria.operator == QueryCriteriaOperator.IN || criteria.operator == QueryCriteriaOperator.NOT_IN) {
+        resolveRelationshipAttribute(criteria, query, persistenceManager)
         criteria.value = resolveInOperatorValue(criteria.value, persistenceManager)
     }
 
-    criteria.subCriteria.forEach { resolveCriteria(it, persistenceManager) }
+    criteria.subCriteria.forEach { resolveCriteria(query, it, persistenceManager) }
+}
+
+private fun resolveRelationshipAttribute(
+    criteria: QueryCriteria,
+    query: Query,
+    persistenceManager: PersistenceManager,
+) {
+    val attribute = criteria.attribute ?: return
+    if (attribute.contains(".")) return
+
+    val descriptor = query.entityType?.let {
+        runCatching { persistenceManager.context.getDescriptorForEntity(it, query.partition) }.getOrNull()
+    } ?: return
+
+    val relationship = descriptor.relationships[attribute] ?: return
+    val identifier = runCatching {
+        persistenceManager.context.getDescriptorForEntity(relationship.inverseClass, query.partition).identifier?.name
+    }.getOrNull()
+
+    if (!identifier.isNullOrBlank()) {
+        criteria.attribute = "$attribute.$identifier"
+    }
 }
 
 private fun resolveInOperatorValue(value: Any?, persistenceManager: PersistenceManager): Any? {
