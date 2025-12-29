@@ -154,6 +154,8 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
     override fun executeDelete(query: Query): Int {
         context.checkForKillSwitch()
 
+        query.resolveSubQueries(this)
+
         // We want to lock the index controller so that it does not do background indexing
         val descriptor = context.getDescriptorForEntity(query.entityType, query.partition)
 
@@ -194,6 +196,8 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
     override fun executeUpdate(query: Query): Int {
         context.checkForKillSwitch()
 
+        query.resolveSubQueries(this)
+
         // We want to lock the index controller so that it does not do background indexing
         val descriptor = context.getDescriptorForEntity(query.entityType, query.partition)
         query.isUpdateOrDelete = true
@@ -224,6 +228,8 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
     override fun <E> executeQuery(query: Query): List<E> {
         context.checkForKillSwitch()
 
+        query.resolveSubQueries(this)
+
         val descriptor = context.getDescriptorForEntity(query.entityType, query.partition)
         query.validate(context, descriptor)
 
@@ -247,6 +253,8 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
     @Suppress("UNCHECKED_CAST")
     override fun <E : IManagedEntity> executeLazyQuery(query: Query): List<E> {
         context.checkForKillSwitch()
+
+        query.resolveSubQueries(this)
 
         query.isLazy = true
         val descriptor = context.getDescriptorForEntity(query.entityType, query.partition)
@@ -516,6 +524,8 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
     @Throws(OnyxException::class)
     override fun countForQuery(query: Query): Long {
         context.checkForKillSwitch()
+
+        query.resolveSubQueries(this)
 
         val clazz = query.entityType
 
