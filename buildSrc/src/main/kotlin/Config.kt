@@ -2,7 +2,7 @@ import org.gradle.api.JavaVersion
 
 object Config {
     // Onyx Version
-    const val ONYX_VERSION = "3.7.0"
+    const val ONYX_VERSION = "3.7.1"
 
     // Took Versions
     const val JAVA_VERSION = 21
