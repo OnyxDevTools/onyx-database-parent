@@ -81,7 +81,7 @@ fun <T> Any?.get(propertyPath: String): T? {
                     }
                     return currentObject.map { it.get<T>(remainingPath) } as? T
                 } else {
-                    return null
+                    return currentObject.map { it.get<T>(property) } as? T
                 }
             }
             else -> {

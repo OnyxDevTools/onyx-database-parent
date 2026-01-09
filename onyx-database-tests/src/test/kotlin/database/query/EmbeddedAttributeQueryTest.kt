@@ -47,6 +47,82 @@ class EmbeddedAttributeQueryTest(override var factoryClass: KClass<*>) : PrePopu
     }
 
     @Test
+    fun testResolver() {
+        val entity = EmbeddedTestEntity().apply {
+            id = 1L
+        }
+
+        manager.save(entity)
+
+        val results = manager
+            .from<EmbeddedTestEntity>()
+            .where("child.name" eq "test")
+            .list<EmbeddedTestEntity>()
+
+        val item = results.firstOrNull()
+
+        assertNotNull(results)
+        assertEquals(item, entity)
+    }
+
+    @Test
+    fun testResolverNegative() {
+        val entity = EmbeddedTestEntity().apply {
+            id = 1L
+        }
+
+        manager.save(entity)
+
+        val results = manager
+            .from<EmbeddedTestEntity>()
+            .where("child.name" eq "tesst")
+            .list<EmbeddedTestEntity>()
+
+        val item = results.firstOrNull()
+
+        assertNotNull(results)
+        assertNull(item)
+    }
+
+    @Test
+    fun testResolverList() {
+        val entity = EmbeddedTestEntity().apply {
+            id = 1L
+        }
+
+        manager.save(entity)
+
+        val results = manager
+            .from<EmbeddedTestEntity>()
+            .where("children.name" eq "test")
+            .list<EmbeddedTestEntity>()
+
+        val item = results.firstOrNull()
+
+        assertNotNull(results)
+        assertEquals(item, entity)
+    }
+
+    @Test
+    fun testResolverListNegative() {
+        val entity = EmbeddedTestEntity().apply {
+            id = 1L
+        }
+
+        manager.save(entity)
+
+        val results = manager
+            .from<EmbeddedTestEntity>()
+            .where("children.name" eq "tests")
+            .list<EmbeddedTestEntity>()
+
+        val item = results.firstOrNull()
+
+        assertNotNull(results)
+        assertNull(item)
+    }
+
+    @Test
     fun testChildPredicate() {
         val entity = EmbeddedTestEntity().apply {
             id = 1L
