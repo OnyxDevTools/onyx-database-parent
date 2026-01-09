@@ -22,7 +22,6 @@ import com.onyx.interactors.encryption.EncryptionInteractor
 import com.onyx.interactors.encryption.data.Base64
 import com.onyx.interactors.index.IndexInteractor
 import com.onyx.interactors.index.impl.DefaultIndexInteractor
-import com.onyx.interactors.index.impl.VectorIndexInteractor
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.interactors.record.impl.DefaultRecordInteractor
 import com.onyx.interactors.record.impl.SequenceRecordInteractor
@@ -231,7 +230,7 @@ open class DefaultSchemaContext : SchemaContext {
                 clazz = metadata(this.contextId).classForName(it!!, this)
             }
             clazz ?: return@forEach
-            getBaseDescriptorForEntity(clazz!!)
+            getBaseDescriptorForEntity(clazz)
         }
     }
 
@@ -634,7 +633,7 @@ open class DefaultSchemaContext : SchemaContext {
     override fun getIndexInteractor(indexDescriptor: IndexDescriptor): IndexInteractor =
         indexInteractors.getOrPut(indexDescriptor) {
             return@getOrPut when (indexDescriptor.indexType) {
-                com.onyx.persistence.annotations.values.IndexType.VECTOR -> VectorIndexInteractor(indexDescriptor.entityDescriptor, indexDescriptor, this)
+                com.onyx.persistence.annotations.values.IndexType.VECTOR -> createVectorInteractor(indexDescriptor)
                 com.onyx.persistence.annotations.values.IndexType.LUCENE -> createLuceneInteractor(indexDescriptor)
                 else -> DefaultIndexInteractor(indexDescriptor.entityDescriptor, indexDescriptor, this)
             }
@@ -653,6 +652,21 @@ open class DefaultSchemaContext : SchemaContext {
             )
         }
     }
+
+    private fun createVectorInteractor(indexDescriptor: IndexDescriptor): IndexInteractor {
+        val className = "com.onyx.lucene.interactors.index.impl.VectorIndexInteractor"
+        return try {
+            val clazz = Class.forName(className)
+            val constructor = clazz.getConstructor(EntityDescriptor::class.java, IndexDescriptor::class.java, SchemaContext::class.java)
+            constructor.newInstance(indexDescriptor.entityDescriptor, indexDescriptor, this) as IndexInteractor
+        } catch (classNotFound: ClassNotFoundException) {
+            throw IllegalStateException(
+                "Vector index support is not available. Add the onyx-lucene-index module to the classpath to enable IndexType.VECTOR.",
+                classNotFound
+            )
+        }
+    }
+
 
     // endregion
 
