@@ -11,6 +11,7 @@ import com.onyx.extension.common.get
 import com.onyx.extension.identifier
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.query.QueryCriteriaOperator
+import com.onyx.persistence.query.resolveFullTextQuery
 import com.onyx.persistence.query.relationship
 import com.onyx.interactors.record.FullTextRecordInteractor
 
@@ -77,11 +78,15 @@ private fun Query.resolveFullTextMatches(
     context: SchemaContext,
     descriptor: EntityDescriptor
 ): Set<Long> {
-    val queryText = criteria.value?.toString()?.trim().orEmpty()
+    val fullTextQuery = resolveFullTextQuery(criteria.value)
+    val queryText = fullTextQuery?.queryText?.trim().orEmpty()
     if (queryText.isEmpty()) return emptySet()
     val interactor = context.getRecordInteractor(descriptor) as? FullTextRecordInteractor ?: return emptySet()
     val maxResults = if (maxResults > 0) maxResults else context.maxCardinality - 1
-    return interactor.searchAll(queryText, maxResults).keys
+    val minScore = fullTextQuery?.minScore
+    return interactor.searchAll(queryText, maxResults)
+        .filter { (_, score) -> minScore == null || score >= minScore }
+        .keys
 }
 
 /**

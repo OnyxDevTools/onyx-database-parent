@@ -273,8 +273,12 @@ class QueryBuilder(
     /**
      * Apply a Lucene full-text query across the entire record.
      */
-    fun fullText(queryText: String): QueryBuilder {
-        val criteria = QueryCriteria(Query.FULL_TEXT_ATTRIBUTE, QueryCriteriaOperator.MATCHES, queryText)
+    fun fullText(queryText: String, minScore: Float? = null): QueryBuilder {
+        val criteria = QueryCriteria(
+            Query.FULL_TEXT_ATTRIBUTE,
+            QueryCriteriaOperator.MATCHES,
+            FullTextQuery(queryText, minScore)
+        )
         if (query.criteria == null) {
             query.criteria = criteria
         } else {
@@ -282,6 +286,11 @@ class QueryBuilder(
         }
         return this
     }
+
+    /**
+     * Apply a Lucene full-text query across the entire record.
+     */
+    fun search(queryText: String, minScore: Float? = null): QueryBuilder = fullText(queryText, minScore)
 
     fun <T> first(): T {
         limit(1)
@@ -357,7 +366,11 @@ fun PersistenceManager.select(vararg properties: String): QueryBuilder {
 /**
  * Execute a full-text search across all tables that support Lucene-backed record interactors.
  */
-fun PersistenceManager.searchAllTables(queryText: String, limit: Int = 100): List<FullTextSearchResult> {
+fun PersistenceManager.searchAllTables(
+    queryText: String,
+    limit: Int = 100,
+    minScore: Float? = null
+): List<FullTextSearchResult> {
     val context = this.context
     val systemEntities = context.serializedPersistenceManager
         .from(SystemEntity::class)
@@ -382,7 +395,7 @@ fun PersistenceManager.searchAllTables(queryText: String, limit: Int = 100): Lis
         }
 
         val queryBuilder = this.from(entityClass.kotlin)
-            .fullText(queryText)
+            .search(queryText, minScore)
             .inPartition(QueryPartitionMode.ALL)
 
         if (limit > 0) {
@@ -397,6 +410,13 @@ fun PersistenceManager.searchAllTables(queryText: String, limit: Int = 100): Lis
     }
 
     return results
+}
+
+/**
+ * Execute a full-text search across all tables that support Lucene-backed record interactors.
+ */
+fun PersistenceManager.search(queryText: String, minScore: Float? = null): FullTextSearchBuilder {
+    return FullTextSearchBuilder(this, queryText, minScore)
 }
 
 // endregion
@@ -422,6 +442,13 @@ infix fun <T> String.lte(value: T): QueryCriteria =
 
 infix fun <T> String.lt(value: T): QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.LESS_THAN, value)
 infix fun <T> String.match(value: T): QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.MATCHES, value)
+fun search(queryText: String, minScore: Float? = null): QueryCriteria {
+    return QueryCriteria(
+        Query.FULL_TEXT_ATTRIBUTE,
+        QueryCriteriaOperator.MATCHES,
+        FullTextQuery(queryText, minScore)
+    )
+}
 infix fun <T> String.between(range: Pair<T, T>): QueryCriteria =
     QueryCriteria(this, QueryCriteriaOperator.BETWEEN, range)
 infix fun <T> String.notBetween(range: Pair<T, T>): QueryCriteria =

@@ -8,6 +8,7 @@ import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.QueryPartitionMode
 import com.onyx.persistence.query.eq
 import com.onyx.persistence.query.from
+import com.onyx.persistence.query.search
 import com.onyx.persistence.query.searchAllTables
 import database.base.DatabaseBaseTest
 import entities.LucenePartitionedEntity
@@ -65,6 +66,9 @@ class FullTextSearchTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
         assertTrue(results.any { it.entityType == LuceneSearchEntity::class.java })
         assertTrue(results.any { it.entityType == LucenePartitionedEntity::class.java })
         results.forEach { result -> assertNotNull(result.id) }
+
+        val builderResults = manager.search("fox").list()
+        assertEquals(results.size, builderResults.size)
     }
 
     @Test
@@ -83,13 +87,13 @@ class FullTextSearchTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
         manager.saveEntity<IManagedEntity>(southEntity)
 
         val allPartitions = manager.from<LucenePartitionedEntity>()
-            .fullText("delta")
+            .search("delta")
             .inPartition(QueryPartitionMode.ALL)
             .list<LucenePartitionedEntity>()
         assertEquals(2, allPartitions.size)
 
         val northOnly = manager.from<LucenePartitionedEntity>()
-            .fullText("delta")
+            .search("delta")
             .inPartition("north")
             .list<LucenePartitionedEntity>()
         assertEquals(1, northOnly.size)
@@ -118,7 +122,7 @@ class FullTextSearchTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
         manager.saveEntity<IManagedEntity>(calmNews)
 
         val andResults = manager.from<LuceneSearchEntity>()
-            .fullText("storm")
+            .where(search("storm"))
             .and("category" eq "news")
             .list<LuceneSearchEntity>()
         assertEquals(1, andResults.size)
@@ -132,5 +136,21 @@ class FullTextSearchTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
         assertEquals(2, orResults.size)
         assertTrue(orResults.any { it.category == "sports" })
         assertTrue(orResults.any { it.category == "news" })
+    }
+
+    @Test
+    fun testMinScoreFiltersResults() {
+        val stormNews = LuceneSearchEntity().apply {
+            title = "Storm Alert"
+            body = "storm warning across the coast"
+            category = "news"
+        }
+        manager.saveEntity<IManagedEntity>(stormNews)
+
+        val filtered = manager.from<LuceneSearchEntity>()
+            .search("storm", Float.MAX_VALUE)
+            .list<LuceneSearchEntity>()
+
+        assertTrue(filtered.isEmpty())
     }
 }
