@@ -38,6 +38,9 @@ import kotlin.collections.LinkedHashSet
  * @see PersistenceManager.executeQuery
  */
 class Query : BufferStreamable {
+    companion object {
+        const val FULL_TEXT_ATTRIBUTE = "__full_text__"
+    }
 
     /**
      * Gets the selection fields used to limit the result fields when doing a fetch

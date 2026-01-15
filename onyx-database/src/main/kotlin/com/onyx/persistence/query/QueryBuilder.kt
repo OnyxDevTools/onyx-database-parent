@@ -1,7 +1,10 @@
 package com.onyx.persistence.query
 
+import com.onyx.entity.SystemEntity
 import com.onyx.extension.common.async
 import com.onyx.extension.common.get
+import com.onyx.extension.identifier
+import com.onyx.interactors.record.FullTextRecordInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.stream.QueryMapStream
@@ -267,6 +270,19 @@ class QueryBuilder(
         return this
     }
 
+    /**
+     * Apply a Lucene full-text query across the entire record.
+     */
+    fun fullText(queryText: String): QueryBuilder {
+        val criteria = QueryCriteria(Query.FULL_TEXT_ATTRIBUTE, QueryCriteriaOperator.MATCHES, queryText)
+        if (query.criteria == null) {
+            query.criteria = criteria
+        } else {
+            query.criteria?.and(criteria)
+        }
+        return this
+    }
+
     fun <T> first(): T {
         limit(1)
         return list<T>().first()
@@ -336,6 +352,51 @@ fun PersistenceManager.select(vararg properties: String): QueryBuilder {
     val query = Query()
     query.selections = properties.toList()
     return QueryBuilder(this, query)
+}
+
+/**
+ * Execute a full-text search across all tables that support Lucene-backed record interactors.
+ */
+fun PersistenceManager.searchAllTables(queryText: String, limit: Int = 100): List<FullTextSearchResult> {
+    val context = this.context
+    val systemEntities = context.serializedPersistenceManager
+        .from(SystemEntity::class)
+        .where(("isLatestVersion" eq true) and ("name" notStartsWith "com.onyx.entity.System"))
+        .list<SystemEntity>()
+
+    val results = ArrayList<FullTextSearchResult>()
+    val maxResults = if (limit > 0) limit else Int.MAX_VALUE
+
+    systemEntities.forEach { systemEntity ->
+        val entityClass = runCatching { systemEntity.type(context.contextId) }
+            .getOrNull()
+            ?.takeIf { IManagedEntity::class.java.isAssignableFrom(it) }
+            ?: return@forEach
+
+        val descriptor = runCatching { context.getDescriptorForEntity(entityClass, "") }
+            .getOrNull()
+            ?: return@forEach
+
+        if (context.getRecordInteractor(descriptor) !is FullTextRecordInteractor) {
+            return@forEach
+        }
+
+        val queryBuilder = this.from(entityClass.kotlin)
+            .fullText(queryText)
+            .inPartition(QueryPartitionMode.ALL)
+
+        if (limit > 0) {
+            queryBuilder.limit(limit)
+        }
+
+        val tableResults = queryBuilder.list<IManagedEntity>()
+        tableResults.forEach { entity ->
+            if (results.size >= maxResults) return results
+            results.add(FullTextSearchResult(entity.identifier(context), entityClass, entity))
+        }
+    }
+
+    return results
 }
 
 // endregion

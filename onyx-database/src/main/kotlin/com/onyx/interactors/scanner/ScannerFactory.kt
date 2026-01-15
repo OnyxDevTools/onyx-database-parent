@@ -71,6 +71,14 @@ object ScannerFactory {
         val attributeToScan = criteria.attribute
         val segments = attributeToScan!!.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
 
+        if (attributeToScan == Query.FULL_TEXT_ATTRIBUTE) {
+            return if (descriptor.hasPartition) {
+                PartitionLuceneRecordScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
+            } else {
+                LuceneRecordScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
+            }
+        }
+
         // This has a dot in it, it must be a relationship or a typo
         if (segments.size > 1 && descriptor.relationships.get(segments.first()) != null) {
             return RelationshipScanner(criteria, classToScan, descriptor, query, context, persistenceManager)

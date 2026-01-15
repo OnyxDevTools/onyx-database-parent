@@ -4,6 +4,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.data.PutResult
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
+import com.onyx.interactors.record.FullTextRecordInteractor
 import com.onyx.interactors.record.impl.DefaultRecordInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
@@ -48,7 +49,7 @@ import kotlin.io.path.Path
 open class LuceneRecordInteractor(
     entityDescriptor: EntityDescriptor,
     context: SchemaContext
-) : DefaultRecordInteractor(entityDescriptor, context) {
+) : DefaultRecordInteractor(entityDescriptor, context), FullTextRecordInteractor {
 
     private val contextRef = WeakReference(context)
     private val ctx: SchemaContext
@@ -148,7 +149,7 @@ open class LuceneRecordInteractor(
      * "Search anywhere" entry point for query engine routing.
      * Returns referenceId (recID) -> score.
      */
-    fun searchAll(queryText: String, limit: Int): Map<Long, Float> {
+    override fun searchAll(queryText: String, limit: Int): Map<Long, Float> {
         val q = queryText.trim()
         if (q.isEmpty()) return emptyMap()
 

@@ -12,6 +12,7 @@ import com.onyx.extension.identifier
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.relationship
+import com.onyx.interactors.record.FullTextRecordInteractor
 
 /**
  * Entity meets the query criteria.  This method is used to determine whether the entity meets all the
@@ -31,11 +32,18 @@ import com.onyx.persistence.query.relationship
 fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, context: SchemaContext, descriptor: EntityDescriptor): Boolean = synchronized(this) {
 
     var subCriteria: Boolean
+    val fullTextMatches = mutableMapOf<QueryCriteria, Set<Long>>()
 
     // Iterate through
     for(it in this.getAllCriteria()) {
         if(it.flip)
             continue
+        else if (it.attribute == Query.FULL_TEXT_ATTRIBUTE) {
+            val matches = fullTextMatches.getOrPut(it) {
+                resolveFullTextMatches(it, context, descriptor)
+            }
+            subCriteria = matches.contains(entityReference.reference)
+        }
         else if (it.isRelationship!!) {
             subCriteria = if(descriptor.relationships.contains(it.relationship)) {
                 relationshipMeetsCriteria(entity, entityReference, it, context)
@@ -62,6 +70,18 @@ fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, con
 
     this.criteria ?: return@synchronized true
     return calculateCriteriaMet(this.criteria!!)
+}
+
+private fun Query.resolveFullTextMatches(
+    criteria: QueryCriteria,
+    context: SchemaContext,
+    descriptor: EntityDescriptor
+): Set<Long> {
+    val queryText = criteria.value?.toString()?.trim().orEmpty()
+    if (queryText.isEmpty()) return emptySet()
+    val interactor = context.getRecordInteractor(descriptor) as? FullTextRecordInteractor ?: return emptySet()
+    val maxResults = if (maxResults > 0) maxResults else context.maxCardinality - 1
+    return interactor.searchAll(queryText, maxResults).keys
 }
 
 /**
