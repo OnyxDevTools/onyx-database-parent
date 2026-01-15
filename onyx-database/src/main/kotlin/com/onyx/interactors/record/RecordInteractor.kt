@@ -153,4 +153,9 @@ interface RecordInteractor {
      * Iterate through all the records
      */
     fun <T> forEach(action: (T) -> Boolean)
+
+    /**
+     * Shutdown the record interactor and close cleanly
+     */
+    fun shutdown() = Unit
 }

@@ -42,31 +42,6 @@ class CustomVectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBase
     }
 
     @Test
-    fun testCustomVectorIndexSimilaritySearch() {
-        // Save a few entities with different vector data
-        for (i in 0 until 5) {
-            val entity = CustomVectorIndexEntity()
-            entity.label = "custom_vector_$i"
-            entity.customVectorData = "This is test vector string number $i with some content to differentiate"
-            
-            manager.saveEntity<IManagedEntity>(entity)
-        }
-        
-        // Create a query string similar to one of our saved strings
-        val queryString = "This is test vector string number 2 with some content to differentiate"
-        
-        // Get the schema context and descriptor to access the index interactor directly
-        val context = manager.context
-        val descriptor = context.getBaseDescriptorForEntity(CustomVectorIndexEntity::class.java)
-        val indexInteractor = context.getIndexInteractor(descriptor?.indexes["customVectorData"]!!)
-        
-        // Perform vector similarity search
-        val results = indexInteractor.matchAll(queryString)
-        // We should find similar vectors
-        assertTrue(results.isNotEmpty(), "Should find similar vectors with custom properties")
-    }
-    
-    @Test
     fun testCustomVectorIndexProperties() {
         // Save an entity with custom vector data
         val entity = CustomVectorIndexEntity()

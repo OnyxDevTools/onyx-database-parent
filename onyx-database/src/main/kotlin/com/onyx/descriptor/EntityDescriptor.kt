@@ -283,6 +283,9 @@ constructor(
 
     val hasPartition:Boolean
         get() = partition != null
+
+    val entityType: EntityType
+        get() = entity?.type ?: EntityType.DEFAULT
 }
 
 const val DEFAULT_DATA_FILE = "data.dat"

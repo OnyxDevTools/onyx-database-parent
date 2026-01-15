@@ -1,4 +1,4 @@
-package com.onyx.interactors.record.impl
+package com.onyx.lucene.interactors.record.impl
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.data.PutResult
@@ -8,7 +8,7 @@ import com.onyx.extension.set
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 
-open class UUIDRecordInteractor(entityDescriptor: EntityDescriptor, context: SchemaContext) : DefaultRecordInteractor(entityDescriptor, context) {
+open class LuceneUUIDRecordInteractor(entityDescriptor: EntityDescriptor, context: SchemaContext) : LuceneRecordInteractor(entityDescriptor, context) {
 
     override fun save(entity: IManagedEntity): PutResult {
         val identifierValue = entity.identifier(context)

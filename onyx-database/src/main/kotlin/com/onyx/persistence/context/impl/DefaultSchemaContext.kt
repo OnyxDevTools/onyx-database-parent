@@ -36,6 +36,7 @@ import com.onyx.interactors.transaction.impl.DefaultTransactionStore
 import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity
+import com.onyx.persistence.annotations.EntityType
 import com.onyx.persistence.annotations.values.IdentifierGenerator
 import com.onyx.persistence.annotations.values.RelationshipType
 import com.onyx.persistence.context.Contexts
@@ -46,8 +47,6 @@ import com.onyx.persistence.query.*
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.reflect.KClass
 
 /**
@@ -170,6 +169,10 @@ open class DefaultSchemaContext : SchemaContext {
         killSwitch = true
 
         memoryAlertJob?.cancel()
+
+        recordInteractors.forEach {(_, interactor) ->
+            catchAll { interactor.shutdown() }
+        }
 
         // Shutdown all index interactors
         indexInteractors.forEach { (_, interactor) ->
@@ -684,12 +687,63 @@ open class DefaultSchemaContext : SchemaContext {
      */
     override fun getRecordInteractor(descriptor: EntityDescriptor): RecordInteractor =
         recordInteractors.getOrPut(descriptor) {
-            when (descriptor.identifier!!.generator) {
-                IdentifierGenerator.SEQUENCE -> SequenceRecordInteractor(descriptor, this)
-                IdentifierGenerator.UUID -> UUIDRecordInteractor(descriptor, this)
-                else -> DefaultRecordInteractor(descriptor, this)
+            return@getOrPut when (descriptor.entityType) {
+                EntityType.DOCUMENT ->
+                    when (descriptor.identifier!!.generator) {
+                        IdentifierGenerator.UUID -> createLuceneUUIDRecordInteractor(descriptor)
+                        IdentifierGenerator.SEQUENCE -> createLuceneSequenceRecordInteractor(descriptor)
+                        IdentifierGenerator.NONE -> createDefaultLuceneRecordInteractor(descriptor)
+                    }
+                EntityType.DEFAULT ->
+                    when (descriptor.identifier!!.generator) {
+                        IdentifierGenerator.SEQUENCE -> SequenceRecordInteractor(descriptor, this)
+                        IdentifierGenerator.UUID -> UUIDRecordInteractor(descriptor, this)
+                        else -> DefaultRecordInteractor(descriptor, this)
+                    }
             }
         }
+
+    private fun createDefaultLuceneRecordInteractor(descriptor: EntityDescriptor): RecordInteractor {
+        val className = "com.onyx.lucene.interactors.record.impl.LuceneRecordInteractor"
+        return try {
+            val clazz = Class.forName(className)
+            val constructor = clazz.getConstructor(EntityDescriptor::class.java, SchemaContext::class.java)
+            constructor.newInstance(descriptor, this) as RecordInteractor
+        } catch (classNotFound: ClassNotFoundException) {
+            throw IllegalStateException(
+                "Lucene document support is not available. Add the onyx-lucene-index module to the classpath to enable EntityType.DOCUMENT.",
+                classNotFound
+            )
+        }
+    }
+
+    private fun createLuceneSequenceRecordInteractor(descriptor: EntityDescriptor): RecordInteractor {
+        val className = "com.onyx.lucene.interactors.record.impl.LuceneSequenceRecordInteractor"
+        return try {
+            val clazz = Class.forName(className)
+            val constructor = clazz.getConstructor(EntityDescriptor::class.java, SchemaContext::class.java)
+            constructor.newInstance(descriptor, this) as RecordInteractor
+        } catch (classNotFound: ClassNotFoundException) {
+            throw IllegalStateException(
+                "Lucene document support is not available. Add the onyx-lucene-index module to the classpath to enable EntityType.DOCUMENT.",
+                classNotFound
+            )
+        }
+    }
+
+    private fun createLuceneUUIDRecordInteractor(descriptor: EntityDescriptor): RecordInteractor {
+        val className = "com.onyx.lucene.interactors.record.impl.LuceneUUIDRecordInteractor"
+        return try {
+            val clazz = Class.forName(className)
+            val constructor = clazz.getConstructor(EntityDescriptor::class.java, SchemaContext::class.java)
+            constructor.newInstance(descriptor, this) as RecordInteractor
+        } catch (classNotFound: ClassNotFoundException) {
+            throw IllegalStateException(
+                "Lucene UUID record support is not available. Add the onyx-lucene-index module to the classpath to enable UUID entities with Lucene.",
+                classNotFound
+            )
+        }
+    }
 
     // endregion
 

@@ -1,4 +1,4 @@
-package com.onyx.interactors.record.impl
+package com.onyx.lucene.interactors.record.impl
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.data.PutResult
@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * This implementation of the record controller will create a new sequence if the id was not defined
  */
-open class SequenceRecordInteractor(entityDescriptor: EntityDescriptor, context: SchemaContext) : DefaultRecordInteractor(entityDescriptor, context), RecordInteractor {
+open class LuceneSequenceRecordInteractor(entityDescriptor: EntityDescriptor, context: SchemaContext) : LuceneRecordInteractor(entityDescriptor, context), RecordInteractor {
     private val sequenceValue = AtomicLong(0)
     private val sequenceLock = DefaultClosureLock()
 

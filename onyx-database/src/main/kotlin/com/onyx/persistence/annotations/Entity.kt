@@ -23,5 +23,16 @@ package com.onyx.persistence.annotations
  * @see com.onyx.persistence.ManagedEntity
  */
 
+/**
+ * Entity type enum that defines the storage mechanism for the entity
+ */
+enum class EntityType {
+    DEFAULT, DOCUMENT
+}
+
 @Target(AnnotationTarget.CLASS)
-annotation class Entity(val fileName: String = "", val archiveDirectories: Array<String> = [])
+annotation class Entity(
+    val fileName: String = "",
+    val archiveDirectories: Array<String> = [],
+    val type: EntityType = EntityType.DEFAULT
+)
