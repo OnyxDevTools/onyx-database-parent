@@ -12,6 +12,7 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
+import com.onyx.persistence.query.resolveFullTextQuery
 
 /**
  * Scanner for Lucene full-text record searches.
@@ -39,13 +40,16 @@ open class LuceneRecordScanner @Throws(OnyxException::class) constructor(
         val context = Contexts.get(contextId)!!
         val maxCardinality = context.maxCardinality
         val limit = resolveLimit(maxCardinality)
-        val queryText = criteria.value?.toString()?.trim().orEmpty()
+        val fullTextQuery = resolveFullTextQuery(criteria.value)
+        val queryText = fullTextQuery?.queryText?.trim().orEmpty()
         if (queryText.isEmpty()) return mutableSetOf()
 
         val results = fullTextInteractor.searchAll(queryText, limit)
+        val minScore = fullTextQuery?.minScore
         val matching = HashSet<Reference>()
 
-        results.forEach { (recordId, _) ->
+        results.forEach { (recordId, score) ->
+            if (minScore != null && score < minScore) return@forEach
             if (matching.size > maxCardinality) {
                 throw MaxCardinalityExceededException(context.maxCardinality)
             }
