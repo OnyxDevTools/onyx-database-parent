@@ -7,6 +7,7 @@ import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.QueryPartitionMode
 import com.onyx.persistence.query.eq
+import com.onyx.persistence.query.from
 import com.onyx.persistence.query.searchAllTables
 import database.base.DatabaseBaseTest
 import entities.LucenePartitionedEntity
