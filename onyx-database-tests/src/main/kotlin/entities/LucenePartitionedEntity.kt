@@ -8,7 +8,7 @@ import com.onyx.persistence.annotations.Identifier
 import com.onyx.persistence.annotations.Partition
 import com.onyx.persistence.annotations.values.IdentifierGenerator
 
-@Entity(type = EntityType.DOCUMENT)
+@Entity(type = EntityType.SEARCHABLE)
 class LucenePartitionedEntity : ManagedEntity() {
 
     @Identifier(generator = IdentifierGenerator.SEQUENCE)

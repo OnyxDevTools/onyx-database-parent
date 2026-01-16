@@ -7,7 +7,7 @@ import com.onyx.persistence.annotations.EntityType
 import com.onyx.persistence.annotations.Identifier
 import com.onyx.persistence.annotations.values.IdentifierGenerator
 
-@Entity(type = EntityType.DOCUMENT)
+@Entity(type = EntityType.SEARCHABLE)
 class LuceneSearchEntity : ManagedEntity() {
 
     @Identifier(generator = IdentifierGenerator.SEQUENCE)

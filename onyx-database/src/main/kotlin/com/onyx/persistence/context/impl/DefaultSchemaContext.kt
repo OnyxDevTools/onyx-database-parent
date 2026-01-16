@@ -688,11 +688,11 @@ open class DefaultSchemaContext : SchemaContext {
     override fun getRecordInteractor(descriptor: EntityDescriptor): RecordInteractor =
         recordInteractors.getOrPut(descriptor) {
             return@getOrPut when (descriptor.entityType) {
-                EntityType.DOCUMENT ->
+                EntityType.SEARCHABLE ->
                     when (descriptor.identifier!!.generator) {
-                        IdentifierGenerator.UUID -> createLuceneUUIDRecordInteractor(descriptor)
-                        IdentifierGenerator.SEQUENCE -> createLuceneSequenceRecordInteractor(descriptor)
-                        IdentifierGenerator.NONE -> createDefaultLuceneRecordInteractor(descriptor)
+                        IdentifierGenerator.UUID -> createRecordInteractor(UUID_DOCUMENT_RECORD_INTERACTOR, descriptor)
+                        IdentifierGenerator.SEQUENCE -> createRecordInteractor(SEQUENCE_DOCUMENT_RECORD_INTERACTOR, descriptor)
+                        IdentifierGenerator.NONE -> createRecordInteractor(DEFAULT_DOCUMENT_RECORD_INTERACTOR, descriptor)
                     }
                 EntityType.DEFAULT ->
                     when (descriptor.identifier!!.generator) {
@@ -703,8 +703,7 @@ open class DefaultSchemaContext : SchemaContext {
             }
         }
 
-    private fun createDefaultLuceneRecordInteractor(descriptor: EntityDescriptor): RecordInteractor {
-        val className = "com.onyx.lucene.interactors.record.impl.LuceneRecordInteractor"
+    private fun createRecordInteractor(className: String, descriptor: EntityDescriptor): RecordInteractor {
         return try {
             val clazz = Class.forName(className)
             val constructor = clazz.getConstructor(EntityDescriptor::class.java, SchemaContext::class.java)
@@ -712,34 +711,6 @@ open class DefaultSchemaContext : SchemaContext {
         } catch (classNotFound: ClassNotFoundException) {
             throw IllegalStateException(
                 "Lucene document support is not available. Add the onyx-lucene-index module to the classpath to enable EntityType.DOCUMENT.",
-                classNotFound
-            )
-        }
-    }
-
-    private fun createLuceneSequenceRecordInteractor(descriptor: EntityDescriptor): RecordInteractor {
-        val className = "com.onyx.lucene.interactors.record.impl.LuceneSequenceRecordInteractor"
-        return try {
-            val clazz = Class.forName(className)
-            val constructor = clazz.getConstructor(EntityDescriptor::class.java, SchemaContext::class.java)
-            constructor.newInstance(descriptor, this) as RecordInteractor
-        } catch (classNotFound: ClassNotFoundException) {
-            throw IllegalStateException(
-                "Lucene document support is not available. Add the onyx-lucene-index module to the classpath to enable EntityType.DOCUMENT.",
-                classNotFound
-            )
-        }
-    }
-
-    private fun createLuceneUUIDRecordInteractor(descriptor: EntityDescriptor): RecordInteractor {
-        val className = "com.onyx.lucene.interactors.record.impl.LuceneUUIDRecordInteractor"
-        return try {
-            val clazz = Class.forName(className)
-            val constructor = clazz.getConstructor(EntityDescriptor::class.java, SchemaContext::class.java)
-            constructor.newInstance(descriptor, this) as RecordInteractor
-        } catch (classNotFound: ClassNotFoundException) {
-            throw IllegalStateException(
-                "Lucene UUID record support is not available. Add the onyx-lucene-index module to the classpath to enable UUID entities with Lucene.",
                 classNotFound
             )
         }
@@ -858,5 +829,11 @@ open class DefaultSchemaContext : SchemaContext {
     protected fun watchMemoryUsage(): Job = runJob(5, TimeUnit.MINUTES) {
         if(Runtime.getRuntime().freeMemory().toDouble() / Runtime.getRuntime().totalMemory().toDouble() <= .50)
             this.flush()
+    }
+
+    companion object {
+        private const val DEFAULT_DOCUMENT_RECORD_INTERACTOR = "com.onyx.lucene.interactors.record.impl.LuceneRecordInteractor"
+        private const val SEQUENCE_DOCUMENT_RECORD_INTERACTOR = "com.onyx.lucene.interactors.record.impl.LuceneSequenceRecordInteractor"
+        private const val UUID_DOCUMENT_RECORD_INTERACTOR = "com.onyx.lucene.interactors.record.impl.LuceneUUIDRecordInteractor"
     }
 }

@@ -27,7 +27,7 @@ package com.onyx.persistence.annotations
  * Entity type enum that defines the storage mechanism for the entity
  */
 enum class EntityType {
-    DEFAULT, DOCUMENT
+    DEFAULT, SEARCHABLE
 }
 
 @Target(AnnotationTarget.CLASS)
