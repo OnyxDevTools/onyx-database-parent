@@ -4,6 +4,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.data.PutResult
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
+import com.onyx.extension.common.castTo
 import com.onyx.interactors.record.FullTextRecordInteractor
 import com.onyx.interactors.record.impl.DefaultRecordInteractor
 import com.onyx.persistence.IManagedEntity
@@ -122,33 +123,6 @@ open class LuceneRecordInteractor(
     }
 
     /**
-     * Full rebuild of Lucene record index from DiskMap contents.
-     * Use when you first enable this interactor or detect drift.
-     */
-    @Synchronized
-    open fun rebuildLucene() {
-        indexWriter.deleteAll()
-
-        val batch = ArrayList<Document>(BATCH_SIZE)
-        for (entry in records.entries) {
-            val referenceId = records.getRecID(entry.key)
-            if (referenceId <= 0L) continue
-
-            val text = entityToText(entry.value)
-            batch.add(createDocument(referenceId, text, entry.value))
-            if (batch.size >= BATCH_SIZE) {
-                indexWriter.addDocuments(batch)
-                batch.clear()
-            }
-        }
-
-            if (batch.isNotEmpty()) indexWriter.addDocuments(batch)
-
-        indexWriter.commit()
-        searcherManager.maybeRefreshBlocking()
-    }
-
-    /**
      * "Search anywhere" entry point for query engine routing.
      * Returns referenceId (recID) -> score.
      */
@@ -252,7 +226,6 @@ open class LuceneRecordInteractor(
         reopenThread = state.reopenThread
         queryParser = state.queryParser
         updateCountSinceCommit = sharedUpdateCounters.getOrPut(key) { AtomicLong(0L) }
-        ensureSchemaSignature(key)
     }
 
     private fun updateDocument(referenceId: Long, entity: IManagedEntity) {
@@ -286,50 +259,6 @@ open class LuceneRecordInteractor(
         queryParser.parse(QueryParser.escape(queryText))
     }
 
-    private fun ensureSchemaSignature(key: String) {
-        val currentSignature = schemaSignature()
-        val cached = schemaSignatures[key] ?: readSchemaSignature(key)
-        if (cached == currentSignature) {
-            schemaSignatures[key] = currentSignature
-            return
-        }
-
-        if (cached != null && cached != currentSignature) {
-            rebuildLucene()
-        }
-
-        writeSchemaSignature(key, currentSignature)
-        schemaSignatures[key] = currentSignature
-    }
-
-    private fun schemaSignature(): String {
-        val attributes = entityDescriptor.attributes.keys.sorted()
-        val identifierName = entityDescriptor.identifier?.name.orEmpty()
-        val partitionName = entityDescriptor.partition?.name.orEmpty()
-        return buildString {
-            append("id=")
-            append(identifierName)
-            append(";partition=")
-            append(partitionName)
-            append(";attributes=")
-            append(attributes.joinToString(","))
-        }
-    }
-
-    private fun schemaSignaturePath(key: String) = Path(key, SCHEMA_SIGNATURE_FILE)
-
-    private fun readSchemaSignature(key: String): String? = runCatching {
-        val path = schemaSignaturePath(key)
-        if (Files.exists(path)) Files.readString(path) else null
-    }.getOrNull()
-
-    private fun writeSchemaSignature(key: String, signature: String) {
-        runCatching {
-            val path = schemaSignaturePath(key)
-            Files.writeString(path, signature)
-        }
-    }
-
     /**
      * Convert entity to "whole record" text.
      * Uses cached reflect fields to avoid re-scanning on every save.
@@ -337,8 +266,8 @@ open class LuceneRecordInteractor(
     private fun entityToText(entity: IManagedEntity): String {
         val parts = ArrayList<String>(64)
 
-        runCatching { parts.add(valueToText(entity.identifier(ctx))) }
-        runCatching { parts.add(valueToText(entity.partitionId(ctx))) }
+        runCatching { parts.add(entity.identifier(ctx).castTo(String::class.java) as String) }
+        runCatching { parts.add(entity.partitionId(ctx).castTo(String::class.java) as String) }
 
         val fields = fieldCache.computeIfAbsent(entity.javaClass) { cls ->
             buildList {
@@ -362,29 +291,12 @@ open class LuceneRecordInteractor(
         for (f in fields) {
             runCatching {
                 val v = f.get(entity)
-                val t = valueToText(v)
+                val t = v.castTo(String::class.java) as String
                 if (t.isNotBlank()) parts.add(t)
             }
         }
 
         return parts.joinToString(" ").trim()
-    }
-
-    private fun valueToText(value: Any?): String = when (value) {
-        null -> ""
-        is String -> value
-        is CharSequence -> value.toString()
-        is Boolean -> value.toString()
-        is Number -> value.toString()
-        is Enum<*> -> value.name
-        is Map<*, *> -> value.entries.joinToString(" ") { "${it.key}:${it.value}" }
-        is Collection<*> -> value.joinToString(" ") { it?.toString().orEmpty() }
-        is Array<*> -> value.joinToString(" ") { it?.toString().orEmpty() }
-        is IntArray -> value.joinToString(" ")
-        is LongArray -> value.joinToString(" ")
-        is FloatArray -> value.joinToString(" ") { String.format(Locale.US, "%.6f", it) }
-        is DoubleArray -> value.joinToString(" ") { String.format(Locale.US, "%.6f", it) }
-        else -> value.toString()
     }
 
     private fun addAttributeFields(doc: Document, entity: IManagedEntity) {
@@ -440,15 +352,12 @@ open class LuceneRecordInteractor(
         private const val ATTRIBUTE_LOWER_SUFFIX = "__lc"
 
         private const val COMMIT_EVERY = 5_000L
-        private const val BATCH_SIZE = 8_192
-        private const val SCHEMA_SIGNATURE_FILE = "schema.sig"
 
         private val fieldCache = ConcurrentHashMap<Class<*>, List<ReflectField>>()
 
         private val luceneDirectories = ConcurrentHashMap<String, Directory>()
         private val luceneStates = ConcurrentHashMap<String, LuceneRecordState>()
         private val sharedUpdateCounters = ConcurrentHashMap<String, AtomicLong>()
-        private val schemaSignatures = ConcurrentHashMap<String, String>()
 
         private fun generateKey(entityDescriptor: EntityDescriptor, context: SchemaContext): String {
             return buildString {
@@ -461,11 +370,11 @@ open class LuceneRecordInteractor(
             }
         }
 
-        private fun createDirectory(key: String): Directory = synchronized(luceneDirectories){
+        private fun createDirectory(key: String): Directory = synchronized(luceneDirectories) {
             return luceneDirectories.computeIfAbsent(key) {
-                    val path = Path(key)
-                    Files.createDirectories(path)
-                    return@computeIfAbsent FSDirectory.open(path)
+                val path = Path(key)
+                Files.createDirectories(path)
+                return@computeIfAbsent FSDirectory.open(path)
             }
         }
     }
