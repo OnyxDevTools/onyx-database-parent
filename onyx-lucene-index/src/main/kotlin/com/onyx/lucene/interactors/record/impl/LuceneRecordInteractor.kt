@@ -4,11 +4,14 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.data.PutResult
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
+import com.onyx.extension.common.castTo
 import com.onyx.interactors.record.FullTextRecordInteractor
 import com.onyx.interactors.record.impl.DefaultRecordInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import org.apache.lucene.analysis.Analyzer
+import org.apache.lucene.analysis.core.KeywordAnalyzer
+import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper
 import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
@@ -55,7 +58,10 @@ open class LuceneRecordInteractor(
     private val ctx: SchemaContext
         get() = contextRef.get() ?: throw IllegalStateException("SchemaContext has been garbage collected.")
 
-    private val analyzer: Analyzer = StandardAnalyzer()
+    private val analyzer: Analyzer = PerFieldAnalyzerWrapper(
+        KeywordAnalyzer(),
+        mapOf(CONTENT_FIELD to StandardAnalyzer())
+    )
     private lateinit var directory: Directory
     private lateinit var indexWriter: IndexWriter
     private lateinit var searcherManager: SearcherManager
@@ -117,35 +123,6 @@ open class LuceneRecordInteractor(
     }
 
     /**
-     * Full rebuild of Lucene record index from DiskMap contents.
-     * Use when you first enable this interactor or detect drift.
-     */
-    @Synchronized
-    open fun rebuildLucene() {
-        indexWriter.deleteAll()
-
-        val batch = ArrayList<Document>(BATCH_SIZE)
-        for (entry in records.entries) {
-            val referenceId = records.getRecID(entry.key)
-            if (referenceId <= 0L) continue
-
-            val text = entityToText(entry.value)
-            if (text.isBlank()) continue
-
-            batch.add(createDocument(referenceId, text))
-            if (batch.size >= BATCH_SIZE) {
-                indexWriter.addDocuments(batch)
-                batch.clear()
-            }
-        }
-
-        if (batch.isNotEmpty()) indexWriter.addDocuments(batch)
-
-        indexWriter.commit()
-        searcherManager.maybeRefreshBlocking()
-    }
-
-    /**
      * "Search anywhere" entry point for query engine routing.
      * Returns referenceId (recID) -> score.
      */
@@ -171,21 +148,6 @@ open class LuceneRecordInteractor(
         } finally {
             searcherManager.release(searcher)
         }
-    }
-
-    /**
-     * Optional helper: hydrate entities (ordered by Lucene score).
-     */
-    open fun searchEntities(queryText: String, limit: Int = 100): List<IManagedEntity> {
-        val hits = searchAll(queryText, limit)
-        if (hits.isEmpty()) return emptyList()
-
-        val out = ArrayList<IManagedEntity>(hits.size)
-        for (referenceId in hits.keys) {
-            val e = runCatching { getWithReferenceId(referenceId) }.getOrNull()
-            if (e != null) out.add(e)
-        }
-        return out
     }
 
     /**
@@ -268,14 +230,10 @@ open class LuceneRecordInteractor(
 
     private fun updateDocument(referenceId: Long, entity: IManagedEntity) {
         val text = entityToText(entity)
-        if (text.isBlank()) {
-            indexWriter.deleteDocuments(Term(ID_FIELD, referenceId.toString()))
-        } else {
-            indexWriter.updateDocument(
-                Term(ID_FIELD, referenceId.toString()),
-                createDocument(referenceId, text)
-            )
-        }
+        indexWriter.updateDocument(
+            Term(ID_FIELD, referenceId.toString()),
+            createDocument(referenceId, text, entity)
+        )
         maybeCommitPeriodically()
     }
 
@@ -285,10 +243,13 @@ open class LuceneRecordInteractor(
         }
     }
 
-    private fun createDocument(referenceId: Long, text: String): Document {
+    private fun createDocument(referenceId: Long, text: String, entity: IManagedEntity): Document {
         val doc = Document()
         doc.add(StringField(ID_FIELD, referenceId.toString(), Field.Store.YES))
-        doc.add(TextField(CONTENT_FIELD, text, Field.Store.NO))
+        if (text.isNotBlank()) {
+            doc.add(TextField(CONTENT_FIELD, text, Field.Store.NO))
+        }
+        addAttributeFields(doc, entity)
         return doc
     }
 
@@ -305,8 +266,8 @@ open class LuceneRecordInteractor(
     private fun entityToText(entity: IManagedEntity): String {
         val parts = ArrayList<String>(64)
 
-        runCatching { parts.add(valueToText(entity.identifier(ctx))) }
-        runCatching { parts.add(valueToText(entity.partitionId(ctx))) }
+        runCatching { parts.add(entity.identifier(ctx).castTo(String::class.java) as String) }
+        runCatching { parts.add(entity.partitionId(ctx).castTo(String::class.java) as String) }
 
         val fields = fieldCache.computeIfAbsent(entity.javaClass) { cls ->
             buildList {
@@ -330,7 +291,7 @@ open class LuceneRecordInteractor(
         for (f in fields) {
             runCatching {
                 val v = f.get(entity)
-                val t = valueToText(v)
+                val t = v.castTo(String::class.java) as String
                 if (t.isNotBlank()) parts.add(t)
             }
         }
@@ -338,29 +299,59 @@ open class LuceneRecordInteractor(
         return parts.joinToString(" ").trim()
     }
 
-    private fun valueToText(value: Any?): String = when (value) {
-        null -> ""
-        is String -> value
-        is CharSequence -> value.toString()
-        is Boolean -> value.toString()
-        is Number -> value.toString()
-        is Enum<*> -> value.name
-        is Map<*, *> -> value.entries.joinToString(" ") { "${it.key}:${it.value}" }
-        is Collection<*> -> value.joinToString(" ") { it?.toString().orEmpty() }
-        is Array<*> -> value.joinToString(" ") { it?.toString().orEmpty() }
-        is IntArray -> value.joinToString(" ")
-        is LongArray -> value.joinToString(" ")
-        is FloatArray -> value.joinToString(" ") { String.format(Locale.US, "%.6f", it) }
-        is DoubleArray -> value.joinToString(" ") { String.format(Locale.US, "%.6f", it) }
-        else -> value.toString()
+    private fun addAttributeFields(doc: Document, entity: IManagedEntity) {
+        val added = HashSet<String>()
+
+        entityDescriptor.attributes.keys.forEach { attributeName ->
+            val value = runCatching<Any?> {
+                entity.get(context = ctx, descriptor = entityDescriptor, name = attributeName)
+            }.getOrNull()
+            if (added.add(attributeName)) {
+                addAttributeFieldValue(doc, attributeName, value)
+            }
+        }
+
+        val identifierName = entityDescriptor.identifier?.name
+        if (identifierName != null && added.add(identifierName)) {
+            addAttributeFieldValue(doc, identifierName, entity.identifier(ctx))
+        }
+
+        val partitionName = entityDescriptor.partition?.name
+        if (partitionName != null && added.add(partitionName)) {
+            val value = runCatching<Any?> {
+                entity.get(context = ctx, descriptor = entityDescriptor, name = partitionName)
+            }.getOrNull()
+            addAttributeFieldValue(doc, partitionName, value)
+        }
+    }
+
+    private fun addAttributeFieldValue(doc: Document, fieldName: String, value: Any?) {
+        when (value) {
+            null -> return
+            is Map<*, *> -> value.entries.forEach { entry ->
+                addAttributeFieldValue(doc, fieldName, "${entry.key}:${entry.value}")
+            }
+            is Collection<*> -> value.forEach { addAttributeFieldValue(doc, fieldName, it) }
+            is Array<*> -> value.forEach { addAttributeFieldValue(doc, fieldName, it) }
+            is IntArray -> value.forEach { addAttributeFieldValue(doc, fieldName, it) }
+            is LongArray -> value.forEach { addAttributeFieldValue(doc, fieldName, it) }
+            is FloatArray -> value.forEach { addAttributeFieldValue(doc, fieldName, it) }
+            is DoubleArray -> value.forEach { addAttributeFieldValue(doc, fieldName, it) }
+            else -> addAttributeFieldText(doc, fieldName, value.toString())
+        }
+    }
+
+    private fun addAttributeFieldText(doc: Document, fieldName: String, rawValue: String) {
+        doc.add(StringField(fieldName, rawValue, Field.Store.YES))
+        doc.add(StringField(fieldName + ATTRIBUTE_LOWER_SUFFIX, rawValue.lowercase(Locale.US), Field.Store.YES))
     }
 
     companion object {
         private const val ID_FIELD = "record_id"
         private const val CONTENT_FIELD = "content"
+        private const val ATTRIBUTE_LOWER_SUFFIX = "__lc"
 
         private const val COMMIT_EVERY = 5_000L
-        private const val BATCH_SIZE = 8_192
 
         private val fieldCache = ConcurrentHashMap<Class<*>, List<ReflectField>>()
 
@@ -379,11 +370,11 @@ open class LuceneRecordInteractor(
             }
         }
 
-        private fun createDirectory(key: String): Directory = synchronized(luceneDirectories){
+        private fun createDirectory(key: String): Directory = synchronized(luceneDirectories) {
             return luceneDirectories.computeIfAbsent(key) {
-                    val path = Path(key)
-                    Files.createDirectories(path)
-                    return@computeIfAbsent FSDirectory.open(path)
+                val path = Path(key)
+                Files.createDirectories(path)
+                return@computeIfAbsent FSDirectory.open(path)
             }
         }
     }
