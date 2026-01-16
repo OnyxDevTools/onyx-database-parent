@@ -26,6 +26,9 @@ data class SystemEntity @JvmOverloads constructor(
     var fileName: String? = null,
 
     @Attribute
+    var entityType: EntityType = EntityType.DEFAULT,
+
+    @Attribute
     var attributes: MutableList<SystemAttribute> = ArrayList(),
 
     @Attribute
@@ -58,7 +61,8 @@ data class SystemEntity @JvmOverloads constructor(
             relationships = ArrayList(),
             attributes = ArrayList(),
             partitionName = descriptor.partition?.name,
-            fileName = descriptor.fileName) {
+            fileName = descriptor.fileName,
+            entityType = descriptor.entityType) {
 
         this.identifier = SystemIdentifier(descriptor.identifier!!)
         this.attributes = descriptor.attributes.values.map { SystemAttribute(it) }.sortedBy { it.name }.toMutableList()

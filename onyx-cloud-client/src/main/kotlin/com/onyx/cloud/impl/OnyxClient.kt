@@ -9,6 +9,7 @@ import com.onyx.cloud.api.FetchImpl
 import com.onyx.cloud.api.FetchInit
 import com.onyx.cloud.api.FindOptions
 import com.onyx.cloud.api.FullTextQuery
+import com.onyx.cloud.api.FULL_TEXT_ALL_TABLE
 import com.onyx.cloud.api.FULL_TEXT_ATTRIBUTE
 import com.onyx.cloud.api.FullTextSearchResult
 import com.onyx.cloud.api.ICascadeBuilder
@@ -537,6 +538,21 @@ class OnyxClient(
         val qb = QueryBuilder(this)
         qb.select(*fields)
         return qb
+    }
+
+    /**
+     * Starts a full-text search across all searchable tables.
+     *
+     * @param queryText The text to search for.
+     * @param minScore Optional minimum match score filter.
+     * @return A [IQueryBuilder] seeded with the full-text search criteria.
+     */
+    override fun search(queryText: String, minScore: Float?): IQueryBuilder {
+        return QueryBuilder(
+            client = this,
+            type = FullTextSearchResult::class,
+            table = FULL_TEXT_ALL_TABLE
+        ).search(queryText, minScore)
     }
 
     /**

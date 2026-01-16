@@ -253,9 +253,15 @@ constructor(
      * @return get file name for data storage.
      */
     val fileName: String
-        get() = if (entity!!.fileName == "") {
-            DEFAULT_DATA_FILE
-        } else entity!!.fileName
+        get() {
+            val rawFileName = if (entity!!.fileName == "") {
+                DEFAULT_DATA_FILE
+            } else entity!!.fileName
+            if (entityType != EntityType.SEARCHABLE || rawFileName.endsWith("/")) {
+                return rawFileName
+            }
+            return "$rawFileName/"
+        }
 
     val archiveDirectories: Array<String>
         get() = entity?.archiveDirectories ?: arrayOf()
