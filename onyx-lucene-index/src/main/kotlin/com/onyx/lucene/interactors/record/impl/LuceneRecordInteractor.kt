@@ -9,6 +9,8 @@ import com.onyx.interactors.record.impl.DefaultRecordInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import org.apache.lucene.analysis.Analyzer
+import org.apache.lucene.analysis.core.KeywordAnalyzer
+import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper
 import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
@@ -55,7 +57,10 @@ open class LuceneRecordInteractor(
     private val ctx: SchemaContext
         get() = contextRef.get() ?: throw IllegalStateException("SchemaContext has been garbage collected.")
 
-    private val analyzer: Analyzer = StandardAnalyzer()
+    private val analyzer: Analyzer = PerFieldAnalyzerWrapper(
+        KeywordAnalyzer(),
+        mapOf(CONTENT_FIELD to StandardAnalyzer())
+    )
     private lateinit var directory: Directory
     private lateinit var indexWriter: IndexWriter
     private lateinit var searcherManager: SearcherManager
@@ -130,16 +135,14 @@ open class LuceneRecordInteractor(
             if (referenceId <= 0L) continue
 
             val text = entityToText(entry.value)
-            if (text.isBlank()) continue
-
-            batch.add(createDocument(referenceId, text))
+            batch.add(createDocument(referenceId, text, entry.value))
             if (batch.size >= BATCH_SIZE) {
                 indexWriter.addDocuments(batch)
                 batch.clear()
             }
         }
 
-        if (batch.isNotEmpty()) indexWriter.addDocuments(batch)
+            if (batch.isNotEmpty()) indexWriter.addDocuments(batch)
 
         indexWriter.commit()
         searcherManager.maybeRefreshBlocking()
@@ -264,18 +267,15 @@ open class LuceneRecordInteractor(
         reopenThread = state.reopenThread
         queryParser = state.queryParser
         updateCountSinceCommit = sharedUpdateCounters.getOrPut(key) { AtomicLong(0L) }
+        ensureSchemaSignature(key)
     }
 
     private fun updateDocument(referenceId: Long, entity: IManagedEntity) {
         val text = entityToText(entity)
-        if (text.isBlank()) {
-            indexWriter.deleteDocuments(Term(ID_FIELD, referenceId.toString()))
-        } else {
-            indexWriter.updateDocument(
-                Term(ID_FIELD, referenceId.toString()),
-                createDocument(referenceId, text)
-            )
-        }
+        indexWriter.updateDocument(
+            Term(ID_FIELD, referenceId.toString()),
+            createDocument(referenceId, text, entity)
+        )
         maybeCommitPeriodically()
     }
 
@@ -285,10 +285,13 @@ open class LuceneRecordInteractor(
         }
     }
 
-    private fun createDocument(referenceId: Long, text: String): Document {
+    private fun createDocument(referenceId: Long, text: String, entity: IManagedEntity): Document {
         val doc = Document()
         doc.add(StringField(ID_FIELD, referenceId.toString(), Field.Store.YES))
-        doc.add(TextField(CONTENT_FIELD, text, Field.Store.NO))
+        if (text.isNotBlank()) {
+            doc.add(TextField(CONTENT_FIELD, text, Field.Store.NO))
+        }
+        addAttributeFields(doc, entity)
         return doc
     }
 
@@ -296,6 +299,50 @@ open class LuceneRecordInteractor(
         queryParser.parse(queryText)
     } catch (_: ParseException) {
         queryParser.parse(QueryParser.escape(queryText))
+    }
+
+    private fun ensureSchemaSignature(key: String) {
+        val currentSignature = schemaSignature()
+        val cached = schemaSignatures[key] ?: readSchemaSignature(key)
+        if (cached == currentSignature) {
+            schemaSignatures[key] = currentSignature
+            return
+        }
+
+        if (cached != null && cached != currentSignature) {
+            rebuildLucene()
+        }
+
+        writeSchemaSignature(key, currentSignature)
+        schemaSignatures[key] = currentSignature
+    }
+
+    private fun schemaSignature(): String {
+        val attributes = entityDescriptor.attributes.keys.sorted()
+        val identifierName = entityDescriptor.identifier?.name.orEmpty()
+        val partitionName = entityDescriptor.partition?.name.orEmpty()
+        return buildString {
+            append("id=")
+            append(identifierName)
+            append(";partition=")
+            append(partitionName)
+            append(";attributes=")
+            append(attributes.joinToString(","))
+        }
+    }
+
+    private fun schemaSignaturePath(key: String) = Path(key, SCHEMA_SIGNATURE_FILE)
+
+    private fun readSchemaSignature(key: String): String? = runCatching {
+        val path = schemaSignaturePath(key)
+        if (Files.exists(path)) Files.readString(path) else null
+    }.getOrNull()
+
+    private fun writeSchemaSignature(key: String, signature: String) {
+        runCatching {
+            val path = schemaSignaturePath(key)
+            Files.writeString(path, signature)
+        }
     }
 
     /**
@@ -355,18 +402,68 @@ open class LuceneRecordInteractor(
         else -> value.toString()
     }
 
+    private fun addAttributeFields(doc: Document, entity: IManagedEntity) {
+        val added = HashSet<String>()
+
+        entityDescriptor.attributes.keys.forEach { attributeName ->
+            val value = runCatching {
+                entity.get(context = ctx, descriptor = entityDescriptor, name = attributeName)
+            }.getOrNull()
+            if (added.add(attributeName)) {
+                addAttributeFieldValue(doc, attributeName, value)
+            }
+        }
+
+        val identifierName = entityDescriptor.identifier?.name
+        if (identifierName != null && added.add(identifierName)) {
+            addAttributeFieldValue(doc, identifierName, entity.identifier(ctx))
+        }
+
+        val partitionName = entityDescriptor.partition?.name
+        if (partitionName != null && added.add(partitionName)) {
+            val value = runCatching {
+                entity.get(context = ctx, descriptor = entityDescriptor, name = partitionName)
+            }.getOrNull()
+            addAttributeFieldValue(doc, partitionName, value)
+        }
+    }
+
+    private fun addAttributeFieldValue(doc: Document, fieldName: String, value: Any?) {
+        when (value) {
+            null -> return
+            is Map<*, *> -> value.entries.forEach { entry ->
+                addAttributeFieldValue(doc, fieldName, "${entry.key}:${entry.value}")
+            }
+            is Collection<*> -> value.forEach { addAttributeFieldValue(doc, fieldName, it) }
+            is Array<*> -> value.forEach { addAttributeFieldValue(doc, fieldName, it) }
+            is IntArray -> value.forEach { addAttributeFieldValue(doc, fieldName, it) }
+            is LongArray -> value.forEach { addAttributeFieldValue(doc, fieldName, it) }
+            is FloatArray -> value.forEach { addAttributeFieldValue(doc, fieldName, it) }
+            is DoubleArray -> value.forEach { addAttributeFieldValue(doc, fieldName, it) }
+            else -> addAttributeFieldText(doc, fieldName, value.toString())
+        }
+    }
+
+    private fun addAttributeFieldText(doc: Document, fieldName: String, rawValue: String) {
+        doc.add(StringField(fieldName, rawValue, Field.Store.YES))
+        doc.add(StringField(fieldName + ATTRIBUTE_LOWER_SUFFIX, rawValue.lowercase(Locale.US), Field.Store.YES))
+    }
+
     companion object {
         private const val ID_FIELD = "record_id"
         private const val CONTENT_FIELD = "content"
+        private const val ATTRIBUTE_LOWER_SUFFIX = "__lc"
 
         private const val COMMIT_EVERY = 5_000L
         private const val BATCH_SIZE = 8_192
+        private const val SCHEMA_SIGNATURE_FILE = "schema.sig"
 
         private val fieldCache = ConcurrentHashMap<Class<*>, List<ReflectField>>()
 
         private val luceneDirectories = ConcurrentHashMap<String, Directory>()
         private val luceneStates = ConcurrentHashMap<String, LuceneRecordState>()
         private val sharedUpdateCounters = ConcurrentHashMap<String, AtomicLong>()
+        private val schemaSignatures = ConcurrentHashMap<String, String>()
 
         private fun generateKey(entityDescriptor: EntityDescriptor, context: SchemaContext): String {
             return buildString {

@@ -13,6 +13,7 @@ dependencies {
     implementation(project(":onyx-database"))
 
     implementation("org.apache.lucene:lucene-core:${Config.LUCENE_VERSION}")
+    implementation("org.apache.lucene:lucene-analyzers-common:${Config.LUCENE_VERSION}")
     implementation("org.apache.lucene:lucene-codecs:${Config.LUCENE_VERSION}")
     implementation("org.apache.lucene:lucene-queryparser:${Config.LUCENE_VERSION}")
 }

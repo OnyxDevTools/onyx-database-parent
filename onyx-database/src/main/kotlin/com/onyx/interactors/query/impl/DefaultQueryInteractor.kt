@@ -5,6 +5,7 @@ import com.onyx.diskmap.DiskMap
 import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.ScannerFactory
 import com.onyx.exception.OnyxException
+import com.onyx.exception.MaxCardinalityExceededException
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
@@ -15,6 +16,7 @@ import com.onyx.interactors.query.QueryCollector
 import com.onyx.interactors.query.QueryCollectorFactory
 import com.onyx.persistence.context.Contexts
 import com.onyx.interactors.query.QueryInteractor
+import com.onyx.interactors.record.FullTextRecordInteractor
 import com.onyx.interactors.scanner.impl.*
 
 /**
@@ -36,6 +38,23 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
      * been moved to CompareUtil
      */
     override fun <T> getReferencesForQuery(query: Query):QueryCollector<T> {
+        if (query.isTerminated) {
+            val collector = QueryCollectorFactory.create(Contexts.get(contextId)!!, descriptor, query)
+            collector.finalizeResults()
+            return collector as QueryCollector<T>
+        }
+
+        val luceneQuery = buildLuceneCriteriaQuery(query.criteria!!, descriptor)
+        val context = Contexts.get(contextId)!!
+        if (luceneQuery != null && context.getRecordInteractor(descriptor) is FullTextRecordInteractor) {
+            val references = executeLuceneCriteriaQuery(query, luceneQuery, context)
+            val collector = QueryCollectorFactory.create(context, descriptor, query)
+            collector.setReferenceSet(references)
+            collector.finalizeResults()
+            query.resultsCount = collector.getNumberOfResults()
+            return collector as QueryCollector<T>
+        }
+
         val pair = getReferencesForCriteria<T>(query, query.criteria!!, null, query.criteria!!.isNot)
         var collector = pair.second
         if(collector == null) {
@@ -46,6 +65,61 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
         query.resultsCount = collector.getNumberOfResults()
 
         return collector
+    }
+
+    private fun executeLuceneCriteriaQuery(
+        query: Query,
+        criteriaQuery: LuceneCriteriaQuery,
+        context: SchemaContext
+    ): MutableSet<Reference> {
+        val maxCardinality = context.maxCardinality
+        val limit = if (query.maxResults > 0) query.maxResults else maxCardinality - 1
+        val matchingReferences = HashSet<Reference>()
+        val minScore = criteriaQuery.minScore
+
+        fun collectResults(partitionId: Long, interactor: FullTextRecordInteractor) {
+            val results = interactor.searchAll(criteriaQuery.queryText, limit)
+            results.forEach { (recordId, score) ->
+                if (minScore != null && score < minScore) return@forEach
+                if (matchingReferences.size > maxCardinality) {
+                    throw MaxCardinalityExceededException(context.maxCardinality)
+                }
+                matchingReferences.add(Reference(partitionId, recordId))
+            }
+        }
+
+        if (query.partition == QueryPartitionMode.ALL) {
+            val partitions = context.getAllPartitions(query.entityType!!)
+            partitions.forEach { entry ->
+                val partitionDescriptor = context.getDescriptorForEntity(query.entityType, entry.value)
+                val interactor = context.getRecordInteractor(partitionDescriptor) as? FullTextRecordInteractor
+                if (interactor != null) {
+                    collectResults(entry.index, interactor)
+                }
+            }
+            return matchingReferences
+        }
+
+        val partitionDescriptor = if (descriptor.hasPartition) {
+            context.getDescriptorForEntity(query.entityType!!, query.partition)
+        } else {
+            descriptor
+        }
+        val partitionId = if (partitionDescriptor.hasPartition) {
+            context.getPartitionWithValue(query.entityType!!, query.partition)?.index ?: 0L
+        } else {
+            0L
+        }
+        if (partitionDescriptor.hasPartition && partitionId == 0L) {
+            return mutableSetOf()
+        }
+
+        val interactor = context.getRecordInteractor(partitionDescriptor) as? FullTextRecordInteractor
+        if (interactor != null) {
+            collectResults(partitionId, interactor)
+        }
+
+        return matchingReferences
     }
 
     /**
