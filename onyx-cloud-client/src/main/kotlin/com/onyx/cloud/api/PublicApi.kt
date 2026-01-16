@@ -402,6 +402,22 @@ interface IQueryBuilder {
     fun where(builder: IConditionBuilder): IQueryBuilder
 
     /**
+     * Adds a full-text search clause to the query's `WHERE` conditions.
+     *
+     * @param queryText The text to search for.
+     * @param minScore Optional minimum score threshold for matches.
+     * @return This builder for chaining.
+     *
+     * Example usage:
+     * ```kotlin
+     * db.from<Article>()
+     * .search("storm warning")
+     * .list<Article>()
+     * ```
+     */
+    fun search(queryText: String, minScore: Float? = null): IQueryBuilder
+
+    /**
      * Adds an additional filter condition, joined with the existing one by `AND`.
      * @param builder An [IConditionBuilder] that defines the additional filter logic.
      * @return This builder for chaining.
@@ -1203,6 +1219,16 @@ fun percentile(attribute: String, p: Number): String = "percentile($attribute,$p
  */
 fun search(queryText: String, minScore: Float? = null): IConditionBuilder =
     ConditionBuilderImpl(QueryCriteria(FULL_TEXT_ATTRIBUTE, QueryCriteriaOperator.MATCHES, FullTextQuery(queryText, minScore)))
+
+/**
+ * Adds a full-text search criteria to an existing condition builder using a logical `AND`.
+ *
+ * @param queryText The text to search for.
+ * @param minScore The minimum score required for a match (optional).
+ * @return The updated [IConditionBuilder] for further chaining.
+ */
+fun IConditionBuilder.search(queryText: String, minScore: Float? = null): IConditionBuilder =
+    and(QueryCriteria(FULL_TEXT_ATTRIBUTE, QueryCriteriaOperator.MATCHES, FullTextQuery(queryText, minScore)))
 
 /**
  * Result returned from a full-text search across one or more tables.

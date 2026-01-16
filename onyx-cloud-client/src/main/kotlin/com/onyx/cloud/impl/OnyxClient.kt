@@ -908,6 +908,24 @@ class QueryBuilder(
     }
 
     /**
+     * Adds a full-text search clause to the query.
+     */
+    override fun search(queryText: String, minScore: Float?): IQueryBuilder {
+        val searchCriteria = QueryCriteria(
+            FULL_TEXT_ATTRIBUTE,
+            QueryCriteriaOperator.MATCHES,
+            FullTextQuery(queryText, minScore)
+        )
+        val condition = ConditionBuilderImpl(searchCriteria)
+        if (conditions == null) {
+            conditions = condition.toCondition()
+        } else {
+            addCondition(condition, LogicalOperator.AND)
+        }
+        return this
+    }
+
+    /**
      * Adds an `AND` condition to the current predicate.
      */
     override fun and(condition: IConditionBuilder): IQueryBuilder {
