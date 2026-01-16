@@ -57,6 +57,11 @@ enum class QueryCriteriaOperator {
 const val FULL_TEXT_ATTRIBUTE = "__full_text__"
 
 /**
+ * Default table name used for full-text searches across all tables.
+ */
+const val FULL_TEXT_ALL_TABLE = "ALL"
+
+/**
  * Defines a Lucene full-text query with an optional minimum match score.
  */
 data class FullTextQuery(
@@ -789,6 +794,20 @@ interface IOnyxDatabase<Schema : Any> {
      * ```
      */
     fun select(vararg fields: String): IQueryBuilder
+
+    /**
+     * Starts a full-text search across all tables that support full-text querying.
+     *
+     * @param queryText The text to search for.
+     * @param minScore The optional minimum match score filter.
+     * @return An [IQueryBuilder] seeded with the full-text search criteria.
+     *
+     * Example usage:
+     * ```kotlin
+     * val results = db.search("storm warning", minScore = 0.42f).list<FullTextSearchResult>()
+     * ```
+     */
+    fun search(queryText: String, minScore: Float? = null): IQueryBuilder
 
     /**
      * Starts a cascading operation to save or delete entities across specified relationships.
