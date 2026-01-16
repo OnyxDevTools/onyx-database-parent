@@ -177,21 +177,6 @@ open class LuceneRecordInteractor(
     }
 
     /**
-     * Optional helper: hydrate entities (ordered by Lucene score).
-     */
-    open fun searchEntities(queryText: String, limit: Int = 100): List<IManagedEntity> {
-        val hits = searchAll(queryText, limit)
-        if (hits.isEmpty()) return emptyList()
-
-        val out = ArrayList<IManagedEntity>(hits.size)
-        for (referenceId in hits.keys) {
-            val e = runCatching { getWithReferenceId(referenceId) }.getOrNull()
-            if (e != null) out.add(e)
-        }
-        return out
-    }
-
-    /**
      * Shut down Lucene resources for this entity index.
      * Call from your schema shutdown path.
      */
@@ -406,7 +391,7 @@ open class LuceneRecordInteractor(
         val added = HashSet<String>()
 
         entityDescriptor.attributes.keys.forEach { attributeName ->
-            val value = runCatching {
+            val value = runCatching<Any?> {
                 entity.get(context = ctx, descriptor = entityDescriptor, name = attributeName)
             }.getOrNull()
             if (added.add(attributeName)) {
@@ -421,7 +406,7 @@ open class LuceneRecordInteractor(
 
         val partitionName = entityDescriptor.partition?.name
         if (partitionName != null && added.add(partitionName)) {
-            val value = runCatching {
+            val value = runCatching<Any?> {
                 entity.get(context = ctx, descriptor = entityDescriptor, name = partitionName)
             }.getOrNull()
             addAttributeFieldValue(doc, partitionName, value)

@@ -396,7 +396,6 @@ fun PersistenceManager.searchAllTables(
 
         val queryBuilder = this.from(entityClass.kotlin)
             .search(queryText, minScore)
-            .inPartition(QueryPartitionMode.ALL)
 
         if (limit > 0) {
             queryBuilder.limit(limit)

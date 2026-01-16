@@ -195,7 +195,7 @@ private fun negateClause(clause: String?): String? {
 }
 
 private fun wrapClause(clause: String): String {
-    return if (clause.contains(' ') || clause.startsWith("NOT ")) "(${clause})" else clause
+    return if (clause.contains(' ') || clause.startsWith("NOT ", true)) "(${clause})" else clause
 }
 
 private fun extractValues(value: Any?): List<String> = when (value) {
