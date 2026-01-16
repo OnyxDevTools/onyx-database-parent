@@ -52,6 +52,19 @@ enum class QueryCriteriaOperator {
 }
 
 /**
+ * Special attribute name used for full-text search queries.
+ */
+const val FULL_TEXT_ATTRIBUTE = "__full_text__"
+
+/**
+ * Defines a Lucene full-text query with an optional minimum match score.
+ */
+data class FullTextQuery(
+    val queryText: String,
+    val minScore: Float? = null
+)
+
+/**
  * Specifies the logical operator used to join multiple conditions in a query.
  */
 enum class LogicalOperator {
@@ -1180,3 +1193,26 @@ fun replace(attribute: String, pattern: String, replacement: String): String =
 
 /** Helper to create a `percentile(attribute, p)` string for statistical analysis. */
 fun percentile(attribute: String, p: Number): String = "percentile($attribute,$p)"
+
+/**
+ * Creates a full-text search criteria for use in query conditions.
+ *
+ * @param queryText The text to search for.
+ * @param minScore The minimum score required for a match (optional).
+ * @return An [IConditionBuilder] that can be used in query conditions.
+ */
+fun search(queryText: String, minScore: Float? = null): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(FULL_TEXT_ATTRIBUTE, QueryCriteriaOperator.MATCHES, FullTextQuery(queryText, minScore)))
+
+/**
+ * Result returned from a full-text search across one or more tables.
+ *
+ * @property id The unique identifier of the entity.
+ * @property entityType The class of the entity type.
+ * @property entity The actual entity object.
+ */
+data class FullTextSearchResult(
+    val id: Any?,
+    val entityType: String,
+    val entity: Map<String, Any?>
+)

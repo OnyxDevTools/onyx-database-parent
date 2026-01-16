@@ -1,0 +1,31 @@
+package entities
+
+import com.onyx.persistence.ManagedEntity
+import com.onyx.persistence.annotations.Attribute
+import com.onyx.persistence.annotations.Entity
+import com.onyx.persistence.annotations.EntityType
+import com.onyx.persistence.annotations.Identifier
+import com.onyx.persistence.annotations.Index
+import com.onyx.persistence.annotations.Partition
+import com.onyx.persistence.annotations.values.IdentifierGenerator
+import com.onyx.persistence.annotations.values.IndexType
+
+@Entity(type = EntityType.SEARCHABLE, fileName = "lucene/")
+class LuceneIndexedPartitionedEntity : ManagedEntity() {
+
+    @Identifier(generator = IdentifierGenerator.SEQUENCE)
+    var id: Long = 0
+
+    @Partition
+    @Attribute
+    var region: String? = null
+
+    @Attribute
+    var tag: String? = null
+
+    @Attribute
+    var body: String? = null
+
+    @Index(type = IndexType.LUCENE)
+    var value: String? = null
+}

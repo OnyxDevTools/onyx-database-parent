@@ -8,6 +8,9 @@ import com.onyx.cloud.api.DocumentOptions
 import com.onyx.cloud.api.FetchImpl
 import com.onyx.cloud.api.FetchInit
 import com.onyx.cloud.api.FindOptions
+import com.onyx.cloud.api.FullTextQuery
+import com.onyx.cloud.api.FULL_TEXT_ATTRIBUTE
+import com.onyx.cloud.api.FullTextSearchResult
 import com.onyx.cloud.api.ICascadeBuilder
 import com.onyx.cloud.api.IConditionBuilder
 import com.onyx.cloud.api.IOnyxDatabase
@@ -17,6 +20,7 @@ import com.onyx.cloud.api.IStreamSubscription
 import com.onyx.cloud.api.LogicalOperator
 import com.onyx.cloud.api.OnyxDocument
 import com.onyx.cloud.api.QueryCriteria
+import com.onyx.cloud.api.QueryCriteriaOperator
 import com.onyx.cloud.api.SaveOptions
 import com.onyx.cloud.api.Sort
 import com.onyx.cloud.exceptions.NotFoundException
