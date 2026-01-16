@@ -4,6 +4,7 @@ import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferPool.withLongBuffer
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
+import com.onyx.descriptor.DEFAULT_DATA_FILE
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.InitializationException
 import com.onyx.extension.common.async
@@ -68,11 +69,25 @@ open class FileChannelStore() : Store {
      * @return Whether the file was opened or not
      */
     open fun open(filePath: String): Boolean {
-        val file = File(filePath)
+        val baseFile = File(filePath)
+        val file = if (
+            filePath.endsWith(File.separator) ||
+            filePath.endsWith("/") ||
+            baseFile.isDirectory
+        ) {
+            if (!baseFile.exists()) {
+                baseFile.mkdirs()
+            }
+            val dataFile = File(baseFile, DEFAULT_DATA_FILE)
+            this.filePath = dataFile.path
+            dataFile
+        } else {
+            baseFile
+        }
         try {
             // Create the data file if it does not exist
             if (!file.exists()) {
-                file.parentFile.mkdirs()
+                file.parentFile?.mkdirs()
                 file.createNewFile()
             }
 
