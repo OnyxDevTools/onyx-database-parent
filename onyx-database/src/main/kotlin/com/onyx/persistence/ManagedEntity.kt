@@ -79,7 +79,7 @@ abstract class ManagedEntity : IManagedEntity, BufferStreamable {
      * This method maps the keys from a structure to the attributes of the entity
      * @param mapObj Map to convert from
      */
-    fun fromMap(mapObj: Map<String, Any>, context: SchemaContext) {
+    fun fromMap(mapObj: Map<String, Any?>, context: SchemaContext) {
         val descriptor = getDescriptor(context)
 
         descriptor.attributes.values.forEach {
@@ -90,5 +90,23 @@ abstract class ManagedEntity : IManagedEntity, BufferStreamable {
                 }
             }
         }
+    }
+
+    /**
+     * This method converts the entity to a map representation
+     * @param context Owning schema context
+     * @return Map representation of the entity
+     */
+    fun toMap(context: SchemaContext): Map<String, Any?> {
+        val mapObj = mutableMapOf<String, Any?>()
+        val descriptor = getDescriptor(context)
+
+        descriptor.attributes.values.forEach {
+            catchAll {
+                mapObj[it.name] = this.get(context = context, descriptor = descriptor, name = it.name)
+            }
+        }
+
+        return mapObj
     }
 }

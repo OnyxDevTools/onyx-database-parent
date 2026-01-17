@@ -1,10 +1,14 @@
+@file:Suppress("UNCHECKED_CAST")
+
 package com.onyx.interactors.transaction.impl
 
 import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
 import com.onyx.exception.TransactionException
+import com.onyx.extension.common.metadata
 import com.onyx.extension.withBuffer
 import com.onyx.extension.common.openFileChannel
+import com.onyx.extension.createNewEntity
 import com.onyx.interactors.transaction.TransactionInteractor
 import com.onyx.interactors.transaction.data.*
 import com.onyx.persistence.IManagedEntity
@@ -36,7 +40,7 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
                     it.flip()
                     file.write(it)
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE)
             }
         }
@@ -49,7 +53,12 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
      */
     @Throws(TransactionException::class)
     override fun writeSave(entity: IManagedEntity) = synchronized(this) {
-        writeTransaction(SAVE, BufferStream.toBuffer(entity, persistenceManager.context))
+        val map = (entity as ManagedEntity).toMap(persistenceManager.context)
+        val value = hashMapOf<String, Any?>(
+            "type" to entity::class.java.canonicalName,
+            "value" to map
+        )
+        writeTransaction(SAVE, BufferStream.toBuffer(value, persistenceManager.context))
     }
 
     /**
@@ -69,7 +78,12 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
      */
     @Throws(TransactionException::class)
     override fun writeDelete(entity: IManagedEntity) = synchronized(this) {
-        writeTransaction(DELETE, BufferStream.toBuffer(entity, persistenceManager.context))
+        val map = (entity as ManagedEntity).toMap(persistenceManager.context)
+        val value = hashMapOf<String, Any?>(
+            "type" to entity::class.java.canonicalName,
+            "value" to map
+        )
+        writeTransaction(DELETE, BufferStream.toBuffer(value, persistenceManager.context))
     }
 
     /**
@@ -146,21 +160,27 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
 
                             when (transactionType) {
                                 SAVE -> {
-                                    val entity = BufferStream.fromBuffer(transactionBuffer, persistenceManager.context) as IManagedEntity
-                                    transaction = SaveTransaction(entity)
+                                    val value = BufferStream.fromBuffer(transactionBuffer, persistenceManager.context) as Map<String, Any?>
+                                    val className = value["type"] as? String ?: continue
+                                    val instance = metadata(persistenceManager.context.contextId).classForName(className).createNewEntity<ManagedEntity>(this.persistenceManager.context.contextId)
+                                    instance.fromMap(value["value"] as Map<String, Any?>, persistenceManager.context)
+                                    transaction = SaveTransaction(instance)
                                     if (executeTransaction.invoke(transaction!!)) {
-                                        (entity as ManagedEntity).ignoreListeners = true
-                                        this.persistenceManager.saveEntity<IManagedEntity>(entity)
-                                        entity.ignoreListeners = false
+                                        instance.ignoreListeners = true
+                                        this.persistenceManager.saveEntity<IManagedEntity>(instance)
+                                        instance.ignoreListeners = false
                                     }
                                 }
                                 DELETE -> {
-                                    val entity = BufferStream.fromBuffer(transactionBuffer, persistenceManager.context) as IManagedEntity
-                                    transaction = DeleteTransaction(entity)
+                                    val value = BufferStream.fromBuffer(transactionBuffer, persistenceManager.context) as Map<String, Any?>
+                                    val className = value["type"] as? String ?: continue
+                                    val instance = metadata(persistenceManager.context.contextId).classForName(className).createNewEntity<ManagedEntity>(this.persistenceManager.context.contextId)
+                                    instance.fromMap(value["value"] as Map<String, Any?>, persistenceManager.context)
+                                    transaction = DeleteTransaction(instance)
                                     if (executeTransaction.invoke(transaction!!)) {
-                                        (entity as ManagedEntity).ignoreListeners = true
-                                        this.persistenceManager.deleteEntity(entity)
-                                        entity.ignoreListeners = false
+                                        instance.ignoreListeners = true
+                                        this.persistenceManager.deleteEntity(instance)
+                                        instance.ignoreListeners = false
                                     }
                                 }
                                 UPDATE_QUERY -> {
@@ -183,10 +203,10 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
                         }
                         metadataBuffer.flip()
                     } catch (cause: Exception) {
-                        throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_EXECUTE, transaction!!, cause)
+                        println("Failed to execute transaction ${transaction.toString()}, ${cause.message}")
                     }
                 }
-            } catch (e: IOException) {
+            } catch (_: IOException) {
                 throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_READ_FILE)
             }
         }
@@ -200,4 +220,11 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
         private const val DELETE_QUERY: Byte = 3
         private const val UPDATE_QUERY: Byte = 4
     }
+}
+
+/**
+ * Helper method to apply a transaction log to an existing database
+ */
+fun PersistenceManager.recover(transactionLog: String) {
+    this.context.transactionInteractor.recoverDatabase(transactionLog) { true }
 }

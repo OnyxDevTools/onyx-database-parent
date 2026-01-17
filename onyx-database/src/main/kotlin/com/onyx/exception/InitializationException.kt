@@ -30,5 +30,6 @@ class InitializationException : OnyxException {
         const val INVALID_CREDENTIALS = "Cannot connect to database, invalid credentials"
         const val UNKNOWN_EXCEPTION = "Exception occurred when initializing the database."
         const val CONNECTION_EXCEPTION = "Cannot connect to database, endpoint is not reachable"
+        const val INVALID_ENTITY_LOCATION = "Text Searchable entities must have a fileName with a directory format ending in `/`"
     }
 }

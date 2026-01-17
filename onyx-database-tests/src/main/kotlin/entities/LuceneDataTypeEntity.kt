@@ -8,7 +8,7 @@ import com.onyx.persistence.annotations.Identifier
 import com.onyx.persistence.annotations.values.IdentifierGenerator
 import java.util.Date
 
-@Entity(type = EntityType.SEARCHABLE)
+@Entity(type = EntityType.SEARCHABLE, fileName = "lucenedt/")
 class LuceneDataTypeEntity : ManagedEntity() {
 
     @Identifier(generator = IdentifierGenerator.SEQUENCE)

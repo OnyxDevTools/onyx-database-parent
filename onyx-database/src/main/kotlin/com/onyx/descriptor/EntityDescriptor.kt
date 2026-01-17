@@ -1,6 +1,8 @@
 
 package com.onyx.descriptor
 
+import com.onyx.exception.InitializationException
+import com.onyx.exception.InitializationException.Companion.INVALID_ENTITY_LOCATION
 import com.onyx.extension.common.ClassMetadata
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.annotations.*
@@ -12,9 +14,6 @@ import java.io.Serializable
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
-import kotlin.collections.LinkedHashMap
 
 /**
  * Created by timothy.osborn on 12/11/14.
@@ -254,13 +253,13 @@ constructor(
      */
     val fileName: String
         get() {
-            val rawFileName = if (entity!!.fileName == "") {
+            if (!entity!!.fileName.endsWith("/") && entity!!.type == EntityType.SEARCHABLE) {
+                throw InitializationException(INVALID_ENTITY_LOCATION + " for ${this.entityClass.simpleName} with file location ${entity!!.fileName}")
+            }
+
+            return if (entity!!.fileName == "") {
                 DEFAULT_DATA_FILE
             } else entity!!.fileName
-            if (entityType != EntityType.SEARCHABLE || rawFileName.endsWith("/")) {
-                return rawFileName
-            }
-            return "$rawFileName/"
         }
 
     val archiveDirectories: Array<String>

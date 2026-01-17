@@ -18,6 +18,10 @@ class CascadeBuilderImplTest {
             override fun select(vararg fields: String): IQueryBuilder =
                 throw UnsupportedOperationException()
 
+            override fun search(queryText: String, minScore: Float?): IQueryBuilder {
+                TODO("Not yet implemented")
+            }
+
             // Use default cascade() from the interface (not overridden).
 
             override fun <T> save(
@@ -88,6 +92,10 @@ class CascadeBuilderImplTest {
             // Unused in this test:
             override fun select(vararg fields: String): IQueryBuilder =
                 throw UnsupportedOperationException()
+
+            override fun search(queryText: String, minScore: Float?): IQueryBuilder {
+                TODO("Not yet implemented")
+            }
 
             // Use default cascade() from the interface (not overridden).
 
