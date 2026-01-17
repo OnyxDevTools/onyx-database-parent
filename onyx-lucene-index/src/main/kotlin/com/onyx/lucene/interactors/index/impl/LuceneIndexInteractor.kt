@@ -29,7 +29,6 @@ import java.nio.file.Files
 import java.util.LinkedHashMap
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicLong
 import kotlin.io.path.Path
 
 /**
@@ -46,6 +45,7 @@ import kotlin.io.path.Path
 data class LuceneState(
     val indexWriter: IndexWriter,
     val searcherManager: SearcherManager,
+    val directory: Directory,
     val reopenThread: ControlledRealTimeReopenThread<IndexSearcher>,
     val indexWriterConfig: IndexWriterConfig,
     val queryParser: QueryParser
@@ -99,15 +99,12 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
      */
     private lateinit var reopenThread: ControlledRealTimeReopenThread<IndexSearcher>
 
-    /**
-     * A counter to track updates since the last explicit commit.
-     * This counter is *shared* across all interactor instances pointing to the
-     * same physical index to ensure commits happen periodically.
-     */
-    private lateinit var updateCountSinceCommit: AtomicLong
+    // Store the key locally so we can quickly queue it up for commits
+    private val indexKey: String
 
     init {
-        // Hydrate the stateful Lucene components from the shared companion map
+        // Generate the key once during init
+        indexKey = generateKey(entityDescriptor, indexDescriptor, context)
         hydrateStates()
     }
 
@@ -117,14 +114,14 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
      * exists per physical index, allowing multiple interactors to safely share resources.
      */
     private fun hydrateStates() {
-        val key = generateKey(entityDescriptor, indexDescriptor, context)
-        val luceneState = luceneStates.computeIfAbsent(key) {
-            directory = createDirectory(key)
-            // Configuration optimized for write throughput
+        val luceneState = luceneStates.computeIfAbsent(indexKey) {
+            directory = createDirectory(indexKey)
+
+            // Reduced RAM buffer to 48MB (safer than 256MB) to encourage more frequent flushing to disk segments
             val writerConfig = IndexWriterConfig(analyzer).apply {
                 openMode = IndexWriterConfig.OpenMode.CREATE_OR_APPEND
-                ramBufferSizeMB = 256.0                          // Large in-memory buffer for documents
-                useCompoundFile = false                          // Write multiple files (faster merges)
+                ramBufferSizeMB = 48.0
+                useCompoundFile = false
                 mergePolicy = (mergePolicy as TieredMergePolicy).apply {
                     segmentsPerTier = 10.0
                     maxMergeAtOnce = 10
@@ -140,11 +137,11 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
             val thread = ControlledRealTimeReopenThread(
                 writer,
                 manager,
-                /* targetMaxStaleSec = */ 5.0,   // At most ~5s stale
-                /* targetMinStaleSec = */ 0.1    // But try to reopen quickly if write pressure is high
+                5.0,
+                0.1
             ).apply {
                 isDaemon = true
-                name = "lucene-nrt-reopen-$key"
+                name = "lucene-nrt-reopen-$indexKey"
                 start()
             }
 
@@ -153,7 +150,7 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
                 allowLeadingWildcard = true
             }
 
-            LuceneState(writer, manager, thread, writerConfig, parser)
+            LuceneState(writer, manager, directory, thread, writerConfig, parser)
         }
 
         // Assign the shared components to this instance
@@ -161,8 +158,6 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         this.searcherManager = luceneState.searcherManager
         this.reopenThread = luceneState.reopenThread
         this.queryParser = luceneState.queryParser
-        // Retrieve the shared counter for periodic commits
-        this.updateCountSinceCommit = sharedUpdateCounters.getOrPut(key) { AtomicLong(0L) }
     }
 
     /**
@@ -190,6 +185,8 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
     override fun delete(reference: Long) {
         super.delete(reference)
         indexWriter.deleteDocuments(Term(ID_FIELD, reference.toString()))
+        // Mark as dirty so the deletion gets committed
+        IndexCommitScheduler.markDirty(indexKey)
     }
 
     /**
@@ -210,6 +207,7 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
     override fun clear() {
         super.clear()
         indexWriter.deleteAll()
+        IndexCommitScheduler.markDirty(indexKey)
     }
 
     /**
@@ -277,7 +275,7 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         }
         if (documentBatch.isNotEmpty()) indexWriter.addDocuments(documentBatch)
 
-        // Single commit at end of rebuild
+        // Force explicit commit on rebuild
         indexWriter.commit()
         // Make results visible
         searcherManager.maybeRefreshBlocking()
@@ -307,11 +305,10 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
                 indexWriter.updateDocument(Term(ID_FIELD, recordId.toString()), createDocument(recordId, text))
             }
         }
-        // Periodically commit to disk. NRT refresh is handled by the background thread,
-        // but committing flushes segments to disk and controls RAM usage.
-        if (updateCountSinceCommit.incrementAndGet().rem(5000L) == 0L) {
-            indexWriter.commit()
-        }
+
+        // Put onto the queue to be committed.
+        // Thread-safe and very efficient (O(1)).
+        IndexCommitScheduler.markDirty(indexKey)
     }
 
     /**
@@ -371,21 +368,9 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
      * committing final changes, and closing the index writer and directory.
      */
     override fun shutdown() {
-        // Gracefully shut down the NRT thread
-        runCatching {
-            reopenThread.interrupt()
-            reopenThread.join(2000)
-        }
-        // Close all other components, swallowing exceptions
-        runCatching { searcherManager.close() }
-        runCatching { indexWriter.commit() } // Final fsync
-        runCatching { indexWriter.close() }
-        runCatching { directory.close() }
-
-        val key = generateKey(entityDescriptor, indexDescriptor, context)
-
-        luceneStates.remove(key)
-        luceneDirectories.remove(key)
+        // Individual shutdown (called manually).
+        // Note: The global shutdown hook will catch anything missed here.
+        shutdownInstance(indexKey)
     }
 
     companion object {
@@ -409,18 +394,48 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
          */
         val luceneStates = ConcurrentHashMap<String, LuceneState>()
 
-        /**
-         * A map to store and share [AtomicLong] counters for periodic commits.
-         * This ensures that the commit logic works correctly even with multiple
-         * interactor instances pointing to the same shared [IndexWriter].
-         */
-        private val sharedUpdateCounters = ConcurrentHashMap<String, AtomicLong>()
+        init {
+            // Start the background commit scheduler
+            IndexCommitScheduler.start()
+
+            // Register Shutdown Hook
+            // This ensures that even if the app process is killed or stops without manual shutdown,
+            // we attempt to close all indexes gracefully to prevent corruption.
+            Runtime.getRuntime().addShutdownHook(Thread {
+                // Shut down the scheduler first to stop new commits
+                IndexCommitScheduler.stop()
+
+                // Force close all open Lucene states
+                luceneStates.keys.forEach { key ->
+                    shutdownInstance(key)
+                }
+            })
+        }
 
         /**
-         * Generates a unique, file-system-safe key for a given entity and index.
-         *
-         * @return A string key, e.g., "MyDataFile_MyEntity__MyIndexName"
+         * Centralized logic to safely close a Lucene instance.
+         * Closing the writer automatically triggers a final commit.
          */
+        private fun shutdownInstance(key: String) {
+            val state = luceneStates.remove(key) ?: return
+
+            runCatching {
+                state.reopenThread.close() // closes and joins
+            }
+
+            try {
+                // Close implicitly commits.
+                // We do not use runCatching here because we want to see errors in logs if persistence fails.
+                state.searcherManager.close()
+                state.indexWriter.close()
+                state.directory.close()
+                luceneDirectories.remove(key)
+            } catch (e: Exception) {
+                System.err.println("CRITICAL: Error closing Lucene index '$key': ${e.message}")
+                e.printStackTrace()
+            }
+        }
+
         private fun generateKey(entityDescriptor: EntityDescriptor, indexDescriptor: IndexDescriptor, context: SchemaContext): String {
             return buildString {
                 append(context.location)
@@ -447,6 +462,75 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
             val path = Path(key)
             Files.createDirectories(path)
             return@computeIfAbsent FSDirectory.open(path)
+        }
+
+        /**
+         * Manages asynchronous commits for all Lucene indexes.
+         * Uses a Set to ensure keys are unique (no duplicates in the queue).
+         */
+        private object IndexCommitScheduler {
+            // A thread-safe Set acts as our "Unique Queue"
+            private val dirtyIndexKeys = ConcurrentHashMap.newKeySet<String>()
+            @Volatile private var running = true
+
+            private val worker = Thread {
+                while (running) {
+                    try {
+                        // Wait 5 seconds between commit cycles
+                        Thread.sleep(5000)
+
+                        if (dirtyIndexKeys.isEmpty()) continue
+
+                        // Iterate safely.
+                        // We use an iterator to process and remove items.
+                        val iterator = dirtyIndexKeys.iterator()
+                        while (iterator.hasNext()) {
+                            val key = iterator.next()
+
+                            // Remove from queue *before* commit.
+                            // If a write happens during commit, it will be added back to the set,
+                            // ensuring we don't miss the update.
+                            iterator.remove()
+
+                            val state = luceneStates[key]
+                            if (state != null && state.indexWriter.isOpen) {
+                                try {
+                                    state.indexWriter.commit()
+                                } catch (e: Exception) {
+                                    // If commit fails, add back to queue to retry later
+                                    dirtyIndexKeys.add(key)
+                                    System.err.println("Error committing index $key: ${e.message}")
+                                }
+                            }
+                        }
+                    } catch (_: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        break
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }.apply {
+                isDaemon = true
+                name = "OnyxLuceneCommitScheduler"
+            }
+
+            fun start() {
+                if (!worker.isAlive) worker.start()
+            }
+
+            fun stop() {
+                running = false
+                worker.interrupt()
+            }
+
+            /**
+             * Adds the index key to the commit queue.
+             * If the key is already in the queue, this is a no-op (efficient).
+             */
+            fun markDirty(key: String) {
+                dirtyIndexKeys.add(key)
+            }
         }
     }
 }

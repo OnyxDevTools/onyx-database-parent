@@ -36,7 +36,6 @@ import java.nio.file.Files
 import java.util.LinkedHashMap
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicLong
 import kotlin.io.path.Path
 
 /**
@@ -46,8 +45,8 @@ import kotlin.io.path.Path
  *
  * Index key: record referenceId (DiskMap recID)
  * Lucene doc fields:
- *  - record_id (stored, exact match)
- *  - content   (tokenized, indexed)
+ * - record_id (stored, exact match)
+ * - content   (tokenized, indexed)
  */
 open class LuceneRecordInteractor(
     entityDescriptor: EntityDescriptor,
@@ -67,9 +66,13 @@ open class LuceneRecordInteractor(
     private lateinit var searcherManager: SearcherManager
     private lateinit var reopenThread: ControlledRealTimeReopenThread<IndexSearcher>
     private lateinit var queryParser: QueryParser
-    private lateinit var updateCountSinceCommit: AtomicLong
+
+    // Store key locally for efficient queueing
+    private val indexKey: String
 
     init {
+        // Generate key once
+        indexKey = generateKey(entityDescriptor, context)
         hydrateStates()
     }
 
@@ -97,7 +100,8 @@ open class LuceneRecordInteractor(
 
         if (referenceId > 0L) {
             indexWriter.deleteDocuments(Term(ID_FIELD, referenceId.toString()))
-            maybeCommitPeriodically()
+            // Queue for commit
+            IndexCommitScheduler.markDirty(indexKey)
         }
     }
 
@@ -108,7 +112,8 @@ open class LuceneRecordInteractor(
 
         if (referenceId > 0L) {
             indexWriter.deleteDocuments(Term(ID_FIELD, referenceId.toString()))
-            maybeCommitPeriodically()
+            // Queue for commit
+            IndexCommitScheduler.markDirty(indexKey)
         }
 
         return removed
@@ -118,8 +123,8 @@ open class LuceneRecordInteractor(
     override fun clear() {
         super.clear()
         indexWriter.deleteAll()
-        runCatching { indexWriter.commit() }
-        runCatching { searcherManager.maybeRefreshBlocking() }
+        // Queue for commit
+        IndexCommitScheduler.markDirty(indexKey)
     }
 
     /**
@@ -155,22 +160,8 @@ open class LuceneRecordInteractor(
      * Call from your schema shutdown path.
      */
     override fun shutdown() {
-        synchronized(luceneDirectories) {
-            val key = generateKey(entityDescriptor, ctx)
-
-            runCatching {
-                reopenThread.interrupt()
-                reopenThread.join(2000)
-            }
-            runCatching { searcherManager.close() }
-            runCatching { indexWriter.commit() }
-            runCatching { indexWriter.close() }
-            runCatching { directory.close() }
-
-            luceneStates.remove(key)
-            luceneDirectories.remove(key)
-            sharedUpdateCounters.remove(key)
-        }
+        // Delegate to shared shutdown logic
+        shutdownInstance(indexKey)
     }
 
     /* ─────────────────────────── internals ─────────────────────────── */
@@ -179,18 +170,21 @@ open class LuceneRecordInteractor(
         val indexWriter: IndexWriter,
         val searcherManager: SearcherManager,
         val reopenThread: ControlledRealTimeReopenThread<IndexSearcher>,
+        val directory: Directory,
         val queryParser: QueryParser
     )
 
     private fun hydrateStates() {
-        val key = generateKey(entityDescriptor, ctx)
+        // Use the pre-calculated key
+        val key = indexKey
 
         val state = luceneStates.computeIfAbsent(key) {
             directory = createDirectory(key)
 
             val writerConfig = IndexWriterConfig(analyzer).apply {
                 openMode = IndexWriterConfig.OpenMode.CREATE_OR_APPEND
-                ramBufferSizeMB = 256.0
+                // Reduced from 256.0 to 48.0 to ensure data flushes to disk segments more frequently
+                ramBufferSizeMB = 48.0
                 useCompoundFile = false
                 mergePolicy = (mergePolicy as TieredMergePolicy).apply {
                     segmentsPerTier = 10.0
@@ -199,6 +193,7 @@ open class LuceneRecordInteractor(
                 }
             }
 
+            //
             val writer = IndexWriter(directory, writerConfig)
             val manager = SearcherManager(writer, null)
 
@@ -218,14 +213,13 @@ open class LuceneRecordInteractor(
                 allowLeadingWildcard = true
             }
 
-            LuceneRecordState(writer, manager, thread, parser)
+            LuceneRecordState(writer, manager, thread, directory, parser)
         }
 
         indexWriter = state.indexWriter
         searcherManager = state.searcherManager
         reopenThread = state.reopenThread
         queryParser = state.queryParser
-        updateCountSinceCommit = sharedUpdateCounters.getOrPut(key) { AtomicLong(0L) }
     }
 
     private fun updateDocument(referenceId: Long, entity: IManagedEntity) {
@@ -234,13 +228,8 @@ open class LuceneRecordInteractor(
             Term(ID_FIELD, referenceId.toString()),
             createDocument(referenceId, text, entity)
         )
-        maybeCommitPeriodically()
-    }
-
-    private fun maybeCommitPeriodically() {
-        if (updateCountSinceCommit.incrementAndGet().rem(COMMIT_EVERY) == 0L) {
-            indexWriter.commit()
-        }
+        // Queue for commit instead of blocking/checking counters
+        IndexCommitScheduler.markDirty(indexKey)
     }
 
     private fun createDocument(referenceId: Long, text: String, entity: IManagedEntity): Document {
@@ -351,13 +340,41 @@ open class LuceneRecordInteractor(
         private const val CONTENT_FIELD = "content"
         private const val ATTRIBUTE_LOWER_SUFFIX = "__lc"
 
-        private const val COMMIT_EVERY = 5_000L
-
         private val fieldCache = ConcurrentHashMap<Class<*>, List<ReflectField>>()
 
         private val luceneDirectories = ConcurrentHashMap<String, Directory>()
         private val luceneStates = ConcurrentHashMap<String, LuceneRecordState>()
-        private val sharedUpdateCounters = ConcurrentHashMap<String, AtomicLong>()
+
+        init {
+            // Start the background commit scheduler
+            IndexCommitScheduler.start()
+
+            // Register JVM Shutdown Hook to prevent corruption
+            Runtime.getRuntime().addShutdownHook(Thread {
+                IndexCommitScheduler.stop()
+                luceneStates.keys.forEach { key -> shutdownInstance(key) }
+            })
+        }
+
+        private fun shutdownInstance(key: String) {
+            val state = luceneStates.remove(key) ?: return
+
+            runCatching {
+                state.reopenThread.close()
+            }
+
+            try {
+                // Ensure persistence. Do not swallow errors here.
+                state.searcherManager.close()
+                state.indexWriter.commit() // Explicit commit
+                state.indexWriter.close()
+                state.directory.close()
+                luceneDirectories.remove(key)
+            } catch (e: Exception) {
+                System.err.println("CRITICAL: Error closing Lucene Record Index '$key': ${e.message}")
+                e.printStackTrace()
+            }
+        }
 
         private fun generateKey(entityDescriptor: EntityDescriptor, context: SchemaContext): String {
             return buildString {
@@ -375,6 +392,60 @@ open class LuceneRecordInteractor(
                 val path = Path(key)
                 Files.createDirectories(path)
                 return@computeIfAbsent FSDirectory.open(path)
+            }
+        }
+
+        /**
+         * Efficient, thread-safe background commit scheduler.
+         */
+        private object IndexCommitScheduler {
+            private val dirtyIndexKeys = ConcurrentHashMap.newKeySet<String>()
+            @Volatile private var running = true
+
+            private val worker = Thread {
+                while (running) {
+                    try {
+                        Thread.sleep(5000)
+                        if (dirtyIndexKeys.isEmpty()) continue
+
+                        val iterator = dirtyIndexKeys.iterator()
+                        while (iterator.hasNext()) {
+                            val key = iterator.next()
+                            iterator.remove() // Remove before commit to capture concurrent writes
+
+                            val state = luceneStates[key]
+                            if (state != null && state.indexWriter.isOpen) {
+                                try {
+                                    state.indexWriter.commit()
+                                } catch (e: Exception) {
+                                    dirtyIndexKeys.add(key) // Retry later
+                                    System.err.println("Error committing record index $key: ${e.message}")
+                                }
+                            }
+                        }
+                    } catch (e: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        break
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }.apply {
+                isDaemon = true
+                name = "OnyxLuceneRecordCommitScheduler"
+            }
+
+            fun start() {
+                if (!worker.isAlive) worker.start()
+            }
+
+            fun stop() {
+                running = false
+                worker.interrupt()
+            }
+
+            fun markDirty(key: String) {
+                dirtyIndexKeys.add(key)
             }
         }
     }
