@@ -821,8 +821,6 @@ open class DefaultSchemaContext : SchemaContext {
      */
     override fun flush() {
         dataFiles.values.forEach { it.flush() }
-        this.indexInteractors.clear()
-        this.recordInteractors.clear()
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
