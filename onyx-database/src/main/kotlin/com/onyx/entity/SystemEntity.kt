@@ -1,7 +1,6 @@
 package com.onyx.entity
 
 import com.onyx.descriptor.EntityDescriptor
-import com.onyx.extension.common.ClassMetadata
 import com.onyx.extension.common.metadata
 import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.annotations.*
@@ -24,9 +23,6 @@ data class SystemEntity @JvmOverloads constructor(
 
     @Attribute
     var fileName: String? = null,
-
-    @Attribute
-    var entityType: EntityType = EntityType.DEFAULT,
 
     @Attribute
     var attributes: MutableList<SystemAttribute> = ArrayList(),
@@ -61,8 +57,8 @@ data class SystemEntity @JvmOverloads constructor(
             relationships = ArrayList(),
             attributes = ArrayList(),
             partitionName = descriptor.partition?.name,
-            fileName = descriptor.fileName,
-            entityType = descriptor.entityType) {
+            fileName = descriptor.fileName
+    ) {
 
         this.identifier = SystemIdentifier(descriptor.identifier!!)
         this.attributes = descriptor.attributes.values.map { SystemAttribute(it) }.sortedBy { it.name }.toMutableList()
