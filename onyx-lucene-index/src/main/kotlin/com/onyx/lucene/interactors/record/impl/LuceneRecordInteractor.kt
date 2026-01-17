@@ -68,12 +68,46 @@ open class LuceneRecordInteractor(
     private lateinit var queryParser: QueryParser
 
     // Store key locally for efficient queueing
-    private val indexKey: String
+    // Generate key once
+    private val indexKey: String = generateKey(entityDescriptor, context)
 
     init {
-        // Generate key once
-        indexKey = generateKey(entityDescriptor, context)
+        val rebuild = checkAndRebuildIndexIfNeeded()
         hydrateStates()
+        if (rebuild) {
+            rebuildIndex()
+        }
+    }
+    
+    /**
+     * Check if Lucene index files exist and rebuild the index if they don't but records exist.
+     * This method is called during instantiation to ensure indexes are properly initialized.
+     */
+    private fun checkAndRebuildIndexIfNeeded(): Boolean {
+        // Check if the index directory exists and has any files
+        val indexPath = Path(indexKey)
+        val indexExists = Files.exists(indexPath) && Files.isDirectory(indexPath) && 
+                          (indexPath.toFile().listFiles()?.isNotEmpty() ?: false)
+        
+        // If index doesn't exist but we have records, rebuild the index
+        return (!indexExists && records.size > 0L)
+    }
+    
+    /**
+     * Rebuild the Lucene index by iterating through all existing records and indexing them.
+     */
+    private fun rebuildIndex() {
+        records.forEach { _, entity ->
+            val pk = entity.identifier(ctx)
+            if (pk != null) {
+                val referenceId = records.getRecID(pk)
+                if (referenceId > 0L) {
+                    updateDocument(referenceId, entity)
+                }
+            }
+        }
+        // Force a commit to ensure all documents are written
+        IndexCommitScheduler.markDirty(indexKey)
     }
 
     @Throws(OnyxException::class)
