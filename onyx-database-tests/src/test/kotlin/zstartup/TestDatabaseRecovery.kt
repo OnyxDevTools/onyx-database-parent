@@ -98,6 +98,9 @@ class TestDatabaseRecovery {
         newContext.transactionInteractor.applyTransactionLog(DATABASE_LOCATION_BASE + File.separator + "wal" + File.separator + "0.wal") { transaction ->
             transaction is SaveTransaction
         }
+        newContext.transactionInteractor.applyTransactionLog(DATABASE_LOCATION_BASE + File.separator + "wal" + File.separator + "1.wal") { transaction ->
+            transaction is SaveTransaction
+        }
 
         val existsQuery = Query()
         existsQuery.entityType = AllAttributeEntity::class.java
