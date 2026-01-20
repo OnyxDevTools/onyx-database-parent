@@ -65,7 +65,11 @@ class GroupFunctionQueryCollector(
                 } as QueryFunction
                 function.preProcess(query, comparator.getAttribute(attribute, entity, context)) // Process function
             } else {
-                val attributeValue = comparator.getAttribute(attribute, entity, context)
+                val attributeValue = if (attribute.function == null) {
+                    comparator.getAttribute(attribute, entity, context)
+                } else {
+                    attribute.function.execute(comparator.getAttribute(attribute, entity, context))
+                }
                 map.getOrPut(attribute.selection) {
                     attributeValue
                 }
