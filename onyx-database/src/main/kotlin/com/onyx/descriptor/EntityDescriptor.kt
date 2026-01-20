@@ -2,7 +2,6 @@
 package com.onyx.descriptor
 
 import com.onyx.exception.InitializationException
-import com.onyx.exception.InitializationException.Companion.INVALID_ENTITY_LOCATION
 import com.onyx.extension.common.ClassMetadata
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.annotations.*
@@ -253,10 +252,6 @@ constructor(
      */
     val fileName: String
         get() {
-            if (!entity!!.fileName.endsWith("/") && entity!!.type == EntityType.SEARCHABLE) {
-                throw InitializationException(INVALID_ENTITY_LOCATION + " for ${this.entityClass.simpleName} with file location ${entity!!.fileName}")
-            }
-
             return if (entity!!.fileName == "") {
                 DEFAULT_DATA_FILE
             } else entity!!.fileName
