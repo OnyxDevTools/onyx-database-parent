@@ -102,12 +102,20 @@ class OnyxClient(
     private val responseLoggingEnabled: Boolean = false,
     private val ttl: Long? = null,
     requestTimeoutMsOverride: Int? = null,
-    connectTimeoutMsOverride: Int? = null
+    connectTimeoutMsOverride: Int? = null,
+    aiBaseUrl: String = "https://ai.onyx.dev",
+    private val defaultModel: String = "onyx"
 ) : IOnyxDatabase<Any> {
 
     private val baseUrl: String = baseUrl.replace(Regex("/+$"), "")
+    private val aiBaseUrl: String = aiBaseUrl.replace(Regex("/+$"), "")
     private val lifecycleLock = Any()
     private val activeStreams = ConcurrentHashMap.newKeySet<StreamSubscription>()
+
+    /**
+     * AI client for chat completions and model management.
+     */
+    val ai: OnyxAI = OnyxAI(this)
 
     private val requestTimeoutMs: Int = requestTimeoutMsOverride?.also {
         require(it > 0) { "requestTimeoutMs must be greater than zero but was $it" }
@@ -565,6 +573,228 @@ class OnyxClient(
      */
     fun encode(value: KClass<*>): String = encode(value.java.simpleName)
 
+    // ---------------------------------------------------------------------
+    // Schema API
+    // ---------------------------------------------------------------------
+
+    /**
+     * Retrieves the database schema.
+     *
+     * @param tables Optional list of table names to retrieve (all if empty/null).
+     * @return The schema as a Map.
+     */
+    fun getSchema(tables: List<String>? = null): Map<String, Any?> {
+        val queryString = if (tables.isNullOrEmpty()) "" else "?tables=${encode(tables.joinToString(","))}"
+        val path = "/schemas/${encode(databaseId)}"
+        return makeRequest(HttpMethod.Get, path, queryString = queryString).fromJson<Map<String, Any?>>()
+            ?: emptyMap()
+    }
+
+    /**
+     * Retrieves the schema revision history.
+     *
+     * @return List of schema revisions.
+     */
+    fun getSchemaHistory(): List<Map<String, Any?>> {
+        val path = "/schemas/history/${encode(databaseId)}"
+        return makeRequest(HttpMethod.Get, path).fromJson<List<Map<String, Any?>>>()
+            ?: emptyList()
+    }
+
+    /**
+     * Validates a schema without publishing it.
+     *
+     * @param schema The schema to validate.
+     * @return Validation result (the validated schema on success).
+     */
+    fun validateSchema(schema: Map<String, Any?>): Map<String, Any?> {
+        val path = "/schemas/${encode(databaseId)}/validate"
+        // Server requires databaseId in the body
+        val schemaWithDbId = schema.toMutableMap().apply {
+            put("databaseId", databaseId)
+        }
+        return makeRequest(HttpMethod.Post, path, schemaWithDbId).fromJson<Map<String, Any?>>()
+            ?: emptyMap()
+    }
+
+    /**
+     * Updates (and optionally publishes) the database schema.
+     *
+     * @param schema The schema to update.
+     * @param publish Whether to publish the schema immediately.
+     * @return The updated schema.
+     */
+    fun updateSchema(schema: Map<String, Any?>, publish: Boolean = false): Map<String, Any?> {
+        val queryString = if (publish) "?publish=true" else ""
+        val path = "/schemas/${encode(databaseId)}"
+        // Server requires databaseId in the body
+        val schemaWithDbId = schema.toMutableMap().apply {
+            put("databaseId", databaseId)
+        }
+        return makeRequest(HttpMethod.Put, path, schemaWithDbId, queryString = queryString).fromJson<Map<String, Any?>>()
+            ?: emptyMap()
+    }
+
+    /**
+     * Compares a local schema against the current API schema.
+     * This is a client-side diff operation.
+     *
+     * @param localSchema The local schema to compare.
+     * @return The diff result showing changes.
+     */
+    fun diffSchema(localSchema: Map<String, Any?>): SchemaDiffResult {
+        val currentSchema = getSchema()
+        
+        @Suppress("UNCHECKED_CAST")
+        val currentEntities = (currentSchema["entities"] as? List<Map<String, Any?>>)
+            ?.mapNotNull { it["name"] as? String }
+            ?.toSet() ?: emptySet()
+        
+        @Suppress("UNCHECKED_CAST")
+        val localEntities = (localSchema["entities"] as? List<Map<String, Any?>>)
+            ?.mapNotNull { it["name"] as? String }
+            ?.toSet() ?: emptySet()
+        
+        val added = (localEntities - currentEntities).toList()
+        val removed = (currentEntities - localEntities).toList()
+        val common = currentEntities.intersect(localEntities)
+        
+        // Simple change detection based on entity presence (could be enhanced)
+        val changed = common.toList()
+        
+        return SchemaDiffResult(added, removed, changed)
+    }
+
+    // ---------------------------------------------------------------------
+    // Secrets API
+    // ---------------------------------------------------------------------
+
+    /**
+     * Lists all secrets for this database.
+     *
+     * @return List of secret metadata (without values).
+     */
+    fun listSecrets(): List<SecretMetadata> {
+        val path = "/database/${encode(databaseId)}/secret"
+        val response = makeRequest(HttpMethod.Get, path)
+        
+        // Server may return { "data": [...] } wrapper via toListResponse()
+        // Parse as generic JSON first to check structure
+        val jsonObject = try {
+            gson.fromJson(response, com.google.gson.JsonObject::class.java)
+        } catch (_: Exception) {
+            null
+        }
+        
+        // Check if response has "data" wrapper
+        if (jsonObject != null && jsonObject.has("data") && jsonObject.get("data").isJsonArray) {
+            val dataArray = jsonObject.getAsJsonArray("data")
+            return dataArray.mapNotNull { elem ->
+                try {
+                    gson.fromJson(elem, SecretMetadata::class.java)
+                } catch (_: Exception) {
+                    null
+                }
+            }
+        }
+        
+        // Fallback: try parsing as direct list
+        return response.fromJson<List<SecretMetadata>>() ?: emptyList()
+    }
+
+    /**
+     * Retrieves a secret by key.
+     *
+     * @param key The secret key.
+     * @return The secret with its value.
+     */
+    fun getSecret(key: String): Secret? {
+        val path = "/database/${encode(databaseId)}/secret/${encode(key)}"
+        return try {
+            makeRequest(HttpMethod.Get, path).fromJson<Secret>()
+        } catch (_: NotFoundException) {
+            null
+        }
+    }
+
+    /**
+     * Creates a new secret.
+     *
+     * @param key The secret key.
+     * @param value The secret value.
+     * @param purpose Optional description of what the secret is used for.
+     * @return The saved secret metadata.
+     */
+    fun createSecret(key: String, value: String, purpose: String = ""): SecretMetadata {
+        val path = "/database/${encode(databaseId)}/secret"
+        val body = SecretCreateRequest(key = key, value = value, purpose = purpose)
+        return makeRequest(HttpMethod.Post, path, body).fromJson<SecretMetadata>()
+            ?: throw IllegalStateException("Failed to parse secret response")
+    }
+
+    /**
+     * Updates an existing secret.
+     *
+     * @param key The secret key.
+     * @param secret The secret data to save.
+     * @return The saved secret metadata.
+     */
+    fun putSecret(key: String, secret: SecretInput): SecretMetadata {
+        val path = "/database/${encode(databaseId)}/secret/${encode(key)}"
+        return makeRequest(HttpMethod.Put, path, secret).fromJson<SecretMetadata>()
+            ?: throw IllegalStateException("Failed to parse secret response")
+    }
+
+    /**
+     * Deletes a secret.
+     *
+     * @param key The secret key.
+     * @return True if deleted, false otherwise.
+     */
+    fun deleteSecret(key: String): Boolean {
+        val path = "/database/${encode(databaseId)}/secret/${encode(key)}"
+        val response = makeRequest(HttpMethod.Delete, path)
+        // Server returns DeleteResponse object with secretId field
+        return response.isNotEmpty()
+    }
+
+    // ---------------------------------------------------------------------
+    // Shorthand Chat
+    // ---------------------------------------------------------------------
+
+    /**
+     * Shorthand chat completion that returns the first message content.
+     *
+     * @param prompt The user prompt.
+     * @param model The model to use (defaults to configured defaultModel).
+     * @param role The message role (defaults to "user").
+     * @param temperature Optional sampling temperature.
+     * @return The assistant's response content.
+     */
+    fun chat(
+        prompt: String,
+        model: String = defaultModel,
+        role: String = "user",
+        temperature: Double? = null
+    ): String {
+        val request = ChatRequest(
+            model = model,
+            messages = listOf(ChatMessage(role, prompt)),
+            temperature = temperature
+        )
+        val response = ai.chat(request)
+        return response.choices.firstOrNull()?.message?.content
+            ?: throw IllegalStateException("No response from chat")
+    }
+
+    /**
+     * Creates a chat client for full request customization.
+     * Returns the AI client to allow chaining like `db.chat().create(...)`.
+     *
+     * @return The AI client.
+     */
+    fun chat(): OnyxAI = ai
+
     /**
      * Cancels and waits for completion of all active stream subscriptions.
      *
@@ -806,7 +1036,7 @@ class OnyxClient(
 
                 if ((code == 301 || code == 303) && bodyBytes != null) {
                     val location = conn.getHeaderField("Location")
-                    val txt = conn.errorStream?.use { String(it.readBytes(), StandardCharsets.UTF_8) } ?: ""
+                    val txt = try { conn.errorStream?.use { String(it.readBytes(), StandardCharsets.UTF_8) } } catch (_: Exception) { null } ?: ""
                     if (responseLoggingEnabled) {
                         logResponse(code, conn.url.toString(), txt)
                     }
@@ -814,8 +1044,16 @@ class OnyxClient(
                     throw RuntimeException("Refusing to follow $code redirect for $methodToUse with body to $location. Response: $txt")
                 }
 
-                val stream = if (code >= 400) (conn.errorStream ?: conn.inputStream) else conn.inputStream
-                val text = stream?.use { String(it.readBytes(), StandardCharsets.UTF_8) } ?: ""
+                // For error responses, try errorStream first, fall back to inputStream
+                // Both can throw FileNotFoundException for 404s
+                val text = try {
+                    val stream = if (code >= 400) (conn.errorStream ?: conn.inputStream) else conn.inputStream
+                    stream?.use { String(it.readBytes(), StandardCharsets.UTF_8) } ?: ""
+                } catch (_: java.io.FileNotFoundException) {
+                    // FileNotFoundException is thrown for 404 responses when accessing inputStream
+                    ""
+                }
+                
                 if (responseLoggingEnabled) {
                     logResponse(code, conn.url.toString(), text)
                 }
@@ -829,6 +1067,11 @@ class OnyxClient(
                 }
 
                 return text
+            } catch (e: java.io.FileNotFoundException) {
+                // HttpURLConnection throws FileNotFoundException for 404 responses
+                // on some JVMs when accessing responseCode or inputStream
+                val msg = "HTTP 404 @ $currentUrl"
+                throw NotFoundException(msg, e)
             } finally {
                 conn.disconnect()
             }
@@ -1368,4 +1611,88 @@ class StreamSubscription internal constructor(
 internal data class StreamResponse(
     val action: String?,
     val entity: JsonObject?
+)
+
+// =====================================================================
+// Schema API models
+// =====================================================================
+
+/**
+ * Result of comparing a local schema against the API schema.
+ *
+ * @property addedTables Tables that exist in local but not in API.
+ * @property removedTables Tables that exist in API but not in local.
+ * @property changedTables Tables that differ between local and API.
+ */
+data class SchemaDiffResult(
+    val addedTables: List<String>,
+    val removedTables: List<String>,
+    val changedTables: List<String>
+)
+
+// =====================================================================
+// Secrets API models
+// =====================================================================
+
+/**
+ * Metadata about a secret (without the actual value).
+ *
+ * @property key The unique key of the secret.
+ * @property purpose Description of what the secret is used for.
+ * @property updatedAt When the secret was last updated.
+ */
+data class SecretMetadata(
+    val key: String,
+    val purpose: String? = null,
+    val updatedAt: Any? = null
+)
+
+/**
+ * A secret with its value (RevealedSecret from server).
+ *
+ * @property key The unique key of the secret.
+ * @property value The secret value.
+ * @property purpose Description of what the secret is used for.
+ * @property updatedAt When the secret was last updated.
+ */
+data class Secret(
+    val key: String,
+    val value: String,
+    val purpose: String? = null,
+    val updatedAt: Any? = null
+)
+
+/**
+ * Input for updating an existing secret (SecretUpdateRequest).
+ *
+ * @property value The secret value.
+ * @property purpose Description of what the secret is used for.
+ */
+data class SecretInput(
+    val value: String,
+    val purpose: String? = null
+)
+
+/**
+ * Request body for creating a new secret (SecretRequest).
+ *
+ * @property key The secret key/name.
+ * @property value The secret value.
+ * @property purpose Description of what the secret is used for.
+ */
+data class SecretCreateRequest(
+    val key: String,
+    val value: String,
+    val purpose: String? = null
+)
+
+/**
+ * Generic wrapper for list responses from the server.
+ * The server often wraps list results in { "data": [...] }.
+ *
+ * @param T The type of items in the list.
+ * @property data The list of items.
+ */
+data class ListResponseWrapper<T>(
+    val data: List<T>? = null
 )

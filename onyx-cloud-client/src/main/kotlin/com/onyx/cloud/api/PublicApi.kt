@@ -731,6 +731,8 @@ inline fun <reified T> ICascadeBuilder.delete(primaryKey: Any) =
  * @property ttl The time-to-live in milliseconds for caching resolved credentials.
  * @property requestTimeoutMs Optional override for the non-streaming read timeout in milliseconds.
  * @property connectTimeoutMs Optional override for the socket connect timeout in milliseconds.
+ * @property aiBaseUrl The base URL for AI/Chat API (defaults to https://ai.onyx.dev).
+ * @property defaultModel The default AI model to use for chat completions (defaults to "onyx").
  */
 data class OnyxConfig(
     val baseUrl: String? = null,
@@ -743,7 +745,9 @@ data class OnyxConfig(
     val responseLoggingEnabled: Boolean? = null,
     val ttl: Long? = null,
     val requestTimeoutMs: Int? = null,
-    val connectTimeoutMs: Int? = null
+    val connectTimeoutMs: Int? = null,
+    val aiBaseUrl: String? = null,
+    val defaultModel: String? = null
 )
 
 /**
