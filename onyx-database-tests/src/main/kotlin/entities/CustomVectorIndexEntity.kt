@@ -24,7 +24,7 @@ class CustomVectorIndexEntity : ManagedEntity() {
         hashTableCount = 8
     )
     @Attribute
-    var customVectorData: String? = null
+    var customVectorData: FloatArray? = null
 
     @Attribute
     var label: String? = null
