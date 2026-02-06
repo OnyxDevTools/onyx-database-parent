@@ -5,6 +5,7 @@ import com.onyx.descriptor.IndexDescriptor
 import com.onyx.diskmap.DiskMap
 import com.onyx.exception.OnyxException
 import com.onyx.interactors.index.IndexInteractor
+import com.onyx.persistence.annotations.values.VectorQuantization
 import com.onyx.persistence.context.SchemaContext
 import java.lang.ref.WeakReference
 import java.util.Random
@@ -23,24 +24,31 @@ import kotlin.math.sqrt
  *  - bounded degree per layer (M / 2M)
  *  - ALWAYS bidirectional linking
  *  - pruning neighbor lists back to degree cap using the same similarity as query scoring
- *  - matchAll uses maxCandidates as efSearch (not "limit * efConstruction * 10")
+ *  - matchAll uses maxCandidates as efSearch (not "limit * searchRadius * 10")
+ *
+ * Configuration is read from the IndexDescriptor which is populated from the @Index annotation:
+ *  - maxNeighbors: number of bi-directional links per node per layer (default: 16)
+ *  - searchRadius: search width during index construction (default: 128)
+ *  - quantization: vector quantization mode - NONE, INT8, or INT4 (default: NONE)
+ *  - minimumScore: minimum cosine similarity score for results (default: -1f = disabled)
+ *  - embeddingDimensions: expected vector dimensions (default: -1 = any)
  */
-class VectorIndexInteractor @JvmOverloads @Throws(OnyxException::class) constructor(
+class VectorIndexInteractor @Throws(OnyxException::class) constructor(
     private val entityDescriptor: EntityDescriptor,
     override val indexDescriptor: IndexDescriptor,
-    context: SchemaContext,
-    private val quantization: Quantization = Quantization.NONE
+    context: SchemaContext
 ) : IndexInteractor {
-
-    enum class Quantization { NONE, INT8, INT4 }
 
     private val lock = ReentrantReadWriteLock()
     private val contextRef = WeakReference(context)
     private val context: SchemaContext get() = contextRef.get() ?: throw IllegalStateException("Context GC'd")
 
-    // HNSW configuration
-    private val M = 16
-    private val efConstruction = 128
+    // HNSW configuration - read from descriptor (set via @Index annotation)
+    private val M: Int = indexDescriptor.maxNeighbors
+    private val searchRadius: Int = indexDescriptor.searchRadius
+    private val quantization: VectorQuantization = indexDescriptor.quantization
+    private val minimumScore: Float = indexDescriptor.minimumScore
+    private val embeddingDimensions: Int = indexDescriptor.embeddingDimensions
     private val mL = 1.0 / ln(M.toDouble())
     private val random = Random()
 
@@ -390,20 +398,20 @@ class VectorIndexInteractor @JvmOverloads @Throws(OnyxException::class) construc
     )
 
     private fun prepareQuery(q: FloatArray): PreparedQuery = when (quantization) {
-        Quantization.NONE -> PreparedQuery(q, null, null)
-        Quantization.INT8 -> PreparedQuery(q, quantizeInt8(q), null)
-        Quantization.INT4 -> PreparedQuery(q, null, quantizeInt4Packed(q))
+        VectorQuantization.NONE -> PreparedQuery(q, null, null)
+        VectorQuantization.INT8 -> PreparedQuery(q, quantizeInt8(q), null)
+        VectorQuantization.INT4 -> PreparedQuery(q, null, quantizeInt4Packed(q))
     }
 
     private fun score(prepared: PreparedQuery, nodeId: Long): Float? {
         return when (quantization) {
-            Quantization.NONE -> {
+            VectorQuantization.NONE -> {
                 val v = getVectorF_Cached(nodeId) ?: return null
                 if (v.size != prepared.f32.size) return null
                 dotProduct(prepared.f32, v)
             }
 
-            Quantization.INT8 -> {
+            VectorQuantization.INT8 -> {
                 var vq = getVectorQ8_Cached(nodeId)
                 if (vq == null) {
                     val vf = getVectorF_Cached(nodeId) ?: return null
@@ -416,7 +424,7 @@ class VectorIndexInteractor @JvmOverloads @Throws(OnyxException::class) construc
                 dotQ8Q8(prepared.q8, vq)
             }
 
-            Quantization.INT4 -> {
+            VectorQuantization.INT4 -> {
                 var vq = getVectorQ4_Cached(nodeId)
                 if (vq == null) {
                     val vf = getVectorF_Cached(nodeId) ?: return null
@@ -461,21 +469,21 @@ class VectorIndexInteractor @JvmOverloads @Throws(OnyxException::class) construc
 
     private fun scoreBetween(aId: Long, bId: Long, dim: Int): Float? {
         return when (quantization) {
-            Quantization.NONE -> {
+            VectorQuantization.NONE -> {
                 val a = getVectorF_Cached(aId) ?: return null
                 val b = getVectorF_Cached(bId) ?: return null
                 if (a.size != dim || b.size != dim) return null
                 dotProduct(a, b)
             }
 
-            Quantization.INT8 -> {
+            VectorQuantization.INT8 -> {
                 val a = getVectorQ8_OrBackfill(aId, dim) ?: return null
                 val b = getVectorQ8_OrBackfill(bId, dim) ?: return null
                 if (a.size != b.size) return null
                 dotQ8Q8(a, b)
             }
 
-            Quantization.INT4 -> {
+            VectorQuantization.INT4 -> {
                 val a = getVectorQ4_OrBackfill(aId, dim) ?: return null
                 val b = getVectorQ4_OrBackfill(bId, dim) ?: return null
                 if (a.size != b.size) return null
@@ -534,7 +542,9 @@ class VectorIndexInteractor @JvmOverloads @Throws(OnyxException::class) construc
             // Ensure mustKeep if requested and available
             if (mustKeep != null && mustKeepScore != null) {
                 var found = false
-                for (i in 0 until n) if (ids[i] == mustKeep) { found = true; break }
+                for (i in 0 until n) if (ids[i] == mustKeep) {
+                    found = true; break
+                }
                 if (!found) {
                     // append if room, else replace last
                     return if (n < maxDegree) ids.copyOf(n + 1).also { it[n] = mustKeep }
@@ -580,7 +590,9 @@ class VectorIndexInteractor @JvmOverloads @Throws(OnyxException::class) construc
         val mk = mustKeep
         if (mk != null && mustKeepScore != null) {
             var found = false
-            for (i in 0 until outN) if (outIds[i] == mk) { found = true; break }
+            for (i in 0 until outN) if (outIds[i] == mk) {
+                found = true; break
+            }
             if (!found && outN > 0) outIds[outN - 1] = mk
         }
 
@@ -637,17 +649,19 @@ class VectorIndexInteractor @JvmOverloads @Throws(OnyxException::class) construc
 
         // Persist vector
         when (quantization) {
-            Quantization.NONE -> {
+            VectorQuantization.NONE -> {
                 vectorStoreF[newReferenceId] = vector
                 vectorStoreQ8.remove(newReferenceId)
                 vectorStoreQ4.remove(newReferenceId)
             }
-            Quantization.INT8 -> {
+
+            VectorQuantization.INT8 -> {
                 vectorStoreQ8[newReferenceId] = quantizeInt8(vector)
                 vectorStoreQ4.remove(newReferenceId)
                 vectorStoreF.remove(newReferenceId)
             }
-            Quantization.INT4 -> {
+
+            VectorQuantization.INT4 -> {
                 vectorStoreQ4[newReferenceId] = quantizeInt4Packed(vector)
                 vectorStoreQ8.remove(newReferenceId)
                 vectorStoreF.remove(newReferenceId)
@@ -689,7 +703,7 @@ class VectorIndexInteractor @JvmOverloads @Throws(OnyxException::class) construc
         for (l in minOf(targetLayer, maxLayer) downTo 0) {
             val layerMap = getGraphLayer(l)
 
-            val neighbors = searchLayerPacked(prepared, currEntryPoint, efConstruction, l)
+            val neighbors = searchLayerPacked(prepared, currEntryPoint, searchRadius, l)
 
             val deg = maxDegreeForLayer(l)
             val picked = neighbors.take(deg).map { it.first }.toLongArray()
@@ -727,10 +741,17 @@ class VectorIndexInteractor @JvmOverloads @Throws(OnyxException::class) construc
             if (best.isNotEmpty()) currEntryPoint = best[0].first
         }
 
-        val efSearch = minOf(limit * 128, maxCandidates)
+        val efSearch = minOf(limit * searchRadius, maxCandidates)
         val results = searchLayerPacked(prepared, currEntryPoint, efSearch, 0)
 
-        return@read results.take(limit).associate { it.first to it.second }
+        // Filter by minimumScore if specified (> 0)
+        val filtered = if (minimumScore > 0f) {
+            results.filter { it.second >= minimumScore }
+        } else {
+            results
+        }
+
+        return@read filtered.take(limit).associate { it.first to it.second }
     }
 
 
@@ -806,11 +827,18 @@ class VectorIndexInteractor @JvmOverloads @Throws(OnyxException::class) construc
         }
     }
 
-    private fun valueToVector(value: Any?): FloatArray? = when (value) {
-        is FloatArray -> value.copyOf()
-        is List<*> -> FloatArray(value.size) { (value[it] as Number).toFloat() }
-        is Array<*> -> FloatArray(value.size) { (value[it] as Number).toFloat() }
-        else -> null
+    private fun valueToVector(value: Any?): FloatArray? {
+        val vector = when (value) {
+            is FloatArray -> value.copyOf()
+            is List<*> -> FloatArray(value.size) { (value[it] as Number).toFloat() }
+            is Array<*> -> FloatArray(value.size) { (value[it] as Number).toFloat() }
+            else -> return null
+        }
+        // Validate embeddingDimensions if specified
+        if (embeddingDimensions > 0 && vector.size != embeddingDimensions) {
+            return null // Vector dimension mismatch
+        }
+        return vector
     }
 
     // ---------------------------
@@ -882,7 +910,7 @@ class VectorIndexInteractor @JvmOverloads @Throws(OnyxException::class) construc
 
         fun persistInActiveFormat(id: Long, vNorm: FloatArray) {
             when (quantization) {
-                Quantization.NONE -> {
+                VectorQuantization.NONE -> {
                     vectorStoreF[id] = vNorm
                     vectorStoreQ8.remove(id)
                     vectorStoreQ4.remove(id)
@@ -890,7 +918,8 @@ class VectorIndexInteractor @JvmOverloads @Throws(OnyxException::class) construc
                     vectorCacheQ8.remove(id)
                     vectorCacheQ4.remove(id)
                 }
-                Quantization.INT8 -> {
+
+                VectorQuantization.INT8 -> {
                     val q8 = quantizeInt8(vNorm)
                     vectorStoreQ8[id] = q8
                     vectorStoreF.remove(id)
@@ -899,7 +928,8 @@ class VectorIndexInteractor @JvmOverloads @Throws(OnyxException::class) construc
                     vectorCacheF.remove(id)
                     vectorCacheQ4.remove(id)
                 }
-                Quantization.INT4 -> {
+
+                VectorQuantization.INT4 -> {
                     val q4 = quantizeInt4Packed(vNorm)
                     vectorStoreQ4[id] = q4
                     vectorStoreF.remove(id)
@@ -965,7 +995,7 @@ class VectorIndexInteractor @JvmOverloads @Throws(OnyxException::class) construc
 
             for (l in minOf(targetLayer, maxLayer) downTo 0) {
                 val layerMap = getGraphLayer(l)
-                val neighbors = searchLayerPacked(prepared, currEntryPoint, efConstruction, l)
+                val neighbors = searchLayerPacked(prepared, currEntryPoint, searchRadius, l)
 
                 val deg = maxDegreeForLayer(l)
                 val picked = neighbors.take(deg).map { it.first }.toLongArray()
@@ -1057,17 +1087,17 @@ class VectorIndexInteractor @JvmOverloads @Throws(OnyxException::class) construc
     }
 
     private fun pickAnyExistingNodeId(): Long? = when (quantization) {
-        Quantization.INT8 ->
+        VectorQuantization.INT8 ->
             vectorStoreQ8.keys.firstOrNull()
                 ?: vectorStoreQ4.keys.firstOrNull()
                 ?: vectorStoreF.keys.firstOrNull()
 
-        Quantization.INT4 ->
+        VectorQuantization.INT4 ->
             vectorStoreQ4.keys.firstOrNull()
                 ?: vectorStoreQ8.keys.firstOrNull()
                 ?: vectorStoreF.keys.firstOrNull()
 
-        Quantization.NONE ->
+        VectorQuantization.NONE ->
             vectorStoreF.keys.firstOrNull()
                 ?: vectorStoreQ8.keys.firstOrNull()
                 ?: vectorStoreQ4.keys.firstOrNull()

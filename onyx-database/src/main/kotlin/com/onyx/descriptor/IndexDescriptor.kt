@@ -2,6 +2,7 @@ package com.onyx.descriptor
 
 import com.onyx.extension.common.ClassMetadata
 import com.onyx.persistence.annotations.values.IndexType
+import com.onyx.persistence.annotations.values.VectorQuantization
 import kotlin.jvm.internal.Intrinsics
 
 /**
@@ -15,7 +16,9 @@ open class IndexDescriptor(
     open var indexType: IndexType = IndexType.DEFAULT,
     open var embeddingDimensions: Int = -1,
     open var minimumScore: Float = -1f,
-    open var hashTableCount: Int = -1
+    open var maxNeighbors: Int = 16,
+    open var searchRadius: Int = 128,
+    open var quantization: VectorQuantization = VectorQuantization.NONE
 ) : AbstractBaseDescriptor(), BaseDescriptor {
 
     open lateinit var entityDescriptor: EntityDescriptor

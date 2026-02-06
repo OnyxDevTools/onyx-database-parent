@@ -82,15 +82,14 @@ class CustomVectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBase
 
         // Verify that the custom properties are correctly set
         assertNotNull(indexDescriptor, "Index descriptor should not be null")
-        assertEquals(256, indexDescriptor.embeddingDimensions, "Embedding dimensions should be 256")
-        assertEquals(0.25f, indexDescriptor.minimumScore, "Minimum score should be 0.25")
-        assertEquals(8, indexDescriptor.hashTableCount, "Hash table count should be 8")
+        assertEquals(768, indexDescriptor.embeddingDimensions, "Embedding dimensions should be 768")
+        assertTrue(indexDescriptor.minimumScore == 0.0f, "Minimum score should be 0.0")
     }
 
     @Test
     fun testVectorSimilaritySearch() {
         // Create a base vector
-        val baseVector = randomVector(256, seed = 42)
+        val baseVector = randomVector(768, seed = 42)
 
         // Save entity with the base vector
         val entity1 = CustomVectorIndexEntity()
@@ -107,7 +106,7 @@ class CustomVectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBase
         // Save entity with a different vector (may not match due to minimumScore)
         val entity3 = CustomVectorIndexEntity()
         entity3.label = "different_vector"
-        entity3.customVectorData = differentVector(256, seed = 999)
+        entity3.customVectorData = differentVector(768, seed = 999)
         manager.saveEntity<IManagedEntity>(entity3)
 
         // Use the index interactor to perform similarity search
@@ -129,7 +128,7 @@ class CustomVectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBase
     @Test
     fun testExactVectorMatch() {
         // Create and save an entity with a specific vector
-        val testVector = FloatArray(256) { i -> i.toFloat() / 256f }
+        val testVector = FloatArray(768) { i -> i.toFloat() / 256f }
 
         val entity = CustomVectorIndexEntity()
         entity.label = "exact_match_test"
@@ -190,7 +189,7 @@ class CustomVectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBase
         for (i in 0 until 5) {
             val entity = CustomVectorIndexEntity()
             entity.label = "rebuild_test_$i"
-            entity.customVectorData = randomVector(256, seed = i)
+            entity.customVectorData = randomVector(768, seed = i)
             manager.saveEntity<IManagedEntity>(entity)
         }
 
@@ -203,7 +202,7 @@ class CustomVectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBase
         indexInteractor.rebuild()
 
         // Verify the index still works after rebuild
-        val queryVector = randomVector(256, seed = 0) // Same as first entity
+        val queryVector = randomVector(768, seed = 0) // Same as first entity
         val results = indexInteractor.matchAll(queryVector, limit = 5, maxCandidates = 100)
 
         assertTrue(results.isNotEmpty(), "Index should return results after rebuild")

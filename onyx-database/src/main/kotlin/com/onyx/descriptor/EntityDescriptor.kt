@@ -195,7 +195,9 @@ constructor(
             index.indexType = indexAnnotation.type
             index.embeddingDimensions = indexAnnotation.embeddingDimensions
             index.minimumScore = indexAnnotation.minimumScore
-            index.hashTableCount = indexAnnotation.hashTableCount
+            index.maxNeighbors = indexAnnotation.maxNeighbors
+            index.searchRadius = indexAnnotation.searchRadius
+            index.quantization = indexAnnotation.quantization
             index.entityDescriptor = this
             it.isAccessible = true
             index.field = it

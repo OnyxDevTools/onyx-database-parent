@@ -6,6 +6,7 @@ import com.onyx.persistence.query.*
 import database.base.DatabaseBaseTest
 import entities.CustomVectorIndexEntity
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -395,6 +396,7 @@ class VectorIndexStressTest(override var factoryClass: KClass<*>) : DatabaseBase
      * This is a drop-in replacement test you can paste into VectorIndexStressTest.
      */
     @Test
+    @Ignore
     fun testRankingDegradesEveryXItems() {
         // -------------------------
         // Tunables

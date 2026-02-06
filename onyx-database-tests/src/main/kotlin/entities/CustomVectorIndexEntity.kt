@@ -20,8 +20,7 @@ class CustomVectorIndexEntity : ManagedEntity() {
     @Index(
         type = IndexType.VECTOR,
         embeddingDimensions = 768,
-        minimumScore = 0.0f,
-        hashTableCount = 4
+        minimumScore = 0.0f
     )
     @Attribute
     var customVectorData: FloatArray? = null
