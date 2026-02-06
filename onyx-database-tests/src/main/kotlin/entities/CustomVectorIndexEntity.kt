@@ -19,9 +19,9 @@ class CustomVectorIndexEntity : ManagedEntity() {
 
     @Index(
         type = IndexType.VECTOR,
-        embeddingDimensions = 256,
-        minimumScore = 0.25f,
-        hashTableCount = 8
+        embeddingDimensions = 768,
+        minimumScore = 0.0f,
+        hashTableCount = 4
     )
     @Attribute
     var customVectorData: FloatArray? = null

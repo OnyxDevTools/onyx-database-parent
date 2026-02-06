@@ -33,7 +33,7 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(priv
     private val references: DiskMap<Any, Header>// Stores the references for an index key
         get() = dataFile.getHashMap(indexDescriptor.type, descriptor.entityClass.name + indexDescriptor.name)
 
-    private val indexValues: DiskMap<Long, Any>
+    protected open val indexValues: DiskMap<Long, Any>
         get() = dataFile.getHashMap(Long::class.java, descriptor.entityClass.name + indexDescriptor.name + "indexValues")
 
     init {
