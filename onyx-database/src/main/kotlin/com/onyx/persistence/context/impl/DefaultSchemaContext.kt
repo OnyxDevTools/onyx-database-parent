@@ -658,7 +658,20 @@ open class DefaultSchemaContext : SchemaContext {
     }
 
     private fun createVectorInteractor(indexDescriptor: IndexDescriptor): IndexInteractor {
-        return VectorIndexInteractor(indexDescriptor.entityDescriptor, indexDescriptor, this)
+        // First try to use FAISS if available (onyx-faiss-index module)
+        val faissClassName = "com.onyx.faiss.interactors.index.impl.FaissVectorIndexInteractor"
+        return try {
+            val clazz = Class.forName(faissClassName)
+            val constructor = clazz.getConstructor(EntityDescriptor::class.java, IndexDescriptor::class.java, SchemaContext::class.java)
+            constructor.newInstance(indexDescriptor.entityDescriptor, indexDescriptor, this) as IndexInteractor
+        } catch (e: ClassNotFoundException) {
+            // FAISS not available, fall back to built-in HNSW implementation
+            VectorIndexInteractor(indexDescriptor.entityDescriptor, indexDescriptor, this)
+        } catch (e: Exception) {
+            // FAISS failed to initialize (e.g., native library not available on this platform)
+            // Fall back to built-in HNSW implementation
+            VectorIndexInteractor(indexDescriptor.entityDescriptor, indexDescriptor, this)
+        }
     }
 
 
