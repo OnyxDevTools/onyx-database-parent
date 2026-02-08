@@ -11,4 +11,24 @@ data class PartitionDescriptor(
     var partitionValue:String = "",
     var name: String = "",
     var type: Class<*> = ClassMetadata.ANY_CLASS
-) : AbstractBaseDescriptor()
+) : AbstractBaseDescriptor() {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is PartitionDescriptor) return false
+
+        // Use identity comparison for Class since they're singletons per classloader
+        if (partitionValue != other.partitionValue) return false
+        if (name != other.name) return false
+        if (type !== other.type) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = partitionValue.hashCode()
+        result = 31 * result + name.hashCode()
+        // Use identityHashCode for Class to avoid expensive Class.hashCode()
+        result = 31 * result + System.identityHashCode(type)
+        return result
+    }
+}

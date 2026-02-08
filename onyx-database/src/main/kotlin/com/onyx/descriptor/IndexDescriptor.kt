@@ -3,7 +3,6 @@ package com.onyx.descriptor
 import com.onyx.extension.common.ClassMetadata
 import com.onyx.persistence.annotations.values.IndexType
 import com.onyx.persistence.annotations.values.VectorQuantization
-import kotlin.jvm.internal.Intrinsics
 
 /**
  * Created by timothy.osborn on 12/11/14.
@@ -23,20 +22,18 @@ open class IndexDescriptor(
 
     open lateinit var entityDescriptor: EntityDescriptor
 
-    override fun hashCode(): Int = (((this.entityDescriptor.entityClass.hashCode()) * 31) * 31 + this.name.hashCode()) * 31 + this.type.hashCode()
+    override fun hashCode(): Int = (((System.identityHashCode(this.entityDescriptor.entityClass)) * 31) * 31 + this.name.hashCode()) * 31 + System.identityHashCode(this.type)
 
     override fun equals(other: Any?): Boolean {
-        return if (this !== other) {
-            if (other is IndexDescriptor) {
-                val var2 = other as IndexDescriptor?
-                if (Intrinsics.areEqual(this.entityDescriptor.partition, var2!!.entityDescriptor.partition) && Intrinsics.areEqual(this.name, var2.name) && Intrinsics.areEqual(this.type, var2.type)) {
-                    return true
-                }
-            }
+        if (this === other) return true
+        if (other !is IndexDescriptor) return false
 
-            false
-        } else {
-            true
-        }
+        // Compare partition using equals (which now uses identity for Class)
+        if (this.entityDescriptor.partition != other.entityDescriptor.partition) return false
+        if (this.name != other.name) return false
+        // Use identity comparison for Class since they're singletons per classloader
+        if (this.type !== other.type) return false
+
+        return true
     }
 }
