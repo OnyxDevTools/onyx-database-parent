@@ -44,15 +44,17 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
             return collector
         }
 
-        val luceneQuery = buildLuceneCriteriaQuery(query.criteria!!, descriptor)
         val context = Contexts.get(contextId)!!
-        if (luceneQuery != null && context.getRecordInteractor(descriptor) is FullTextRecordInteractor) {
-            val references = executeLuceneCriteriaQuery(query, luceneQuery, context)
-            val collector = QueryCollectorFactory.create<T>(context, descriptor, query)
-            collector.setReferenceSet(references)
-            collector.finalizeResults()
-            query.resultsCount = collector.getNumberOfResults()
-            return collector
+        if ( context.getRecordInteractor(descriptor) is FullTextRecordInteractor) {
+            val luceneQuery = buildLuceneCriteriaQuery(query.criteria!!, descriptor)
+            if (luceneQuery != null) {
+                val references = executeLuceneCriteriaQuery(query, luceneQuery, context)
+                val collector = QueryCollectorFactory.create<T>(context, descriptor, query)
+                collector.setReferenceSet(references)
+                collector.finalizeResults()
+                query.resultsCount = collector.getNumberOfResults()
+                return collector
+            }
         }
 
         val pair = getReferencesForCriteria<T>(query, query.criteria!!, null, query.criteria!!.isNot)
