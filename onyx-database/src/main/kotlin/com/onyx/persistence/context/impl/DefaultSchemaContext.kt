@@ -258,7 +258,7 @@ open class DefaultSchemaContext : SchemaContext {
             this.systemEntityByIDMap[i] = systemEntity
             systemEntities.add(systemEntity)
 
-            systemEntity.attributes.sortBy { it.name }
+            systemEntity.attributes = systemEntity.attributes.sortedBy { it.name }.toMutableList()
             systemEntity.relationships.sortBy { it.name }
             systemEntity.indexes.sortBy { it.name }
 
@@ -286,7 +286,7 @@ open class DefaultSchemaContext : SchemaContext {
     @Suppress("MemberVisibilityCanPrivate")
     protected open fun checkForEntityChanges(descriptor: EntityDescriptor, systemEntityToCheck: SystemEntity): SystemEntity {
         var systemEntity = systemEntityToCheck
-        systemEntity.attributes.sortBy { it.name }
+        systemEntity.attributes = systemEntity.attributes.sortedBy { it.name }.toMutableList()
         systemEntity.relationships.sortBy { it.name }
         systemEntity.indexes.sortBy { it.name }
 
@@ -447,7 +447,7 @@ open class DefaultSchemaContext : SchemaContext {
                 synchronized(systemEntityByIDMap) {
                     systemEntityByIDMap.put(result.primaryKey, result)
                 }
-                result.attributes.sortBy { it.name }
+                result.attributes = result.attributes.sortedBy { it.name }.toMutableList()
                 result.relationships.sortBy { it.name }
                 result.indexes.sortBy { it.name }
             }

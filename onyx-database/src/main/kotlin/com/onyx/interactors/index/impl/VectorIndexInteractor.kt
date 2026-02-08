@@ -20,18 +20,11 @@ import kotlin.math.sqrt
 /**
  * HNSW Vector Index Interactor (drop-in replacement).
  *
- * Fixes graph quality by:
- *  - bounded degree per layer (M / 2M)
- *  - ALWAYS bidirectional linking
- *  - pruning neighbor lists back to degree cap using the same similarity as query scoring
- *  - matchAll uses maxCandidates as efSearch (not "limit * searchRadius * 10")
- *
- * Configuration is read from the IndexDescriptor which is populated from the @Index annotation:
- *  - maxNeighbors: number of bi-directional links per node per layer (default: 16)
- *  - searchRadius: search width during index construction (default: 128)
- *  - quantization: vector quantization mode - NONE, INT8, or INT4 (default: NONE)
- *  - minimumScore: minimum cosine similarity score for results (default: -1f = disabled)
- *  - embeddingDimensions: expected vector dimensions (default: -1 = any)
+ * Includes PERSISTED STATE FIX:
+ *  - Persists entryNodeId + maxLayer into DiskMap meta.
+ *  - Restores on startup.
+ *  - If meta missing/corrupt, recovers from existing graph layers without rebuild when possible.
+ *  - If vectors exist but graph/meta missing, rebuilds once to restore structure.
  */
 class VectorIndexInteractor @Throws(OnyxException::class) constructor(
     private val entityDescriptor: EntityDescriptor,
@@ -54,6 +47,84 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
 
     private var entryNodeId: Long = -1L
     private var maxLayer: Int = -1
+
+    // ---------------------------
+    // Persisted state (NEW)
+    // ---------------------------
+
+    private val metaStore: DiskMap<String, Long>
+        get() = context.getDataFile(entityDescriptor).getHashMap(
+            String::class.java,
+            "${entityDescriptor.entityClass.name}${indexDescriptor.name}_hnsw_meta"
+        )
+
+    private fun hasVector(id: Long): Boolean {
+        if (id <= 0L) return false
+        return (vectorStoreF[id] != null) || (vectorStoreQ8[id] != null) || (vectorStoreQ4[id] != null)
+    }
+
+    private fun persistState() {
+        // Keep it simple: two longs in DiskMap
+        metaStore[META_ENTRY] = entryNodeId
+        metaStore[META_MAX_LAYER] = maxLayer.toLong()
+    }
+
+    private fun loadStateOrRecover() {
+        // 1) Try meta
+        val e = metaStore[META_ENTRY]
+        val ml = metaStore[META_MAX_LAYER]
+        if (e != null && ml != null && e > 0L && ml >= 0L && hasVector(e)) {
+            entryNodeId = e
+            maxLayer = ml.toInt()
+            return
+        }
+
+        // 2) Recover from existing graph layers (cheap, avoids rebuild)
+        var recoveredMax = -1
+        var recoveredEntry: Long? = null
+
+        // Scan upward: HNSW max layer is typically small; stop after enough empties past last non-empty.
+        var lastNonEmpty = -1
+        var emptyStreak = 0
+        for (l in 0..STATE_LAYER_SCAN_LIMIT) {
+            val any = getGraphLayer(l).keys.firstOrNull()
+            if (any != null) {
+                lastNonEmpty = l
+                emptyStreak = 0
+            } else {
+                emptyStreak++
+                if (lastNonEmpty >= 0 && emptyStreak >= STATE_EMPTY_STREAK_STOP) break
+            }
+        }
+
+        if (lastNonEmpty >= 0) {
+            recoveredMax = lastNonEmpty
+            // Prefer a node that actually lives in the top layer
+            recoveredEntry =
+                getGraphLayer(recoveredMax).keys.firstOrNull()
+                    ?: getGraphLayer(0).keys.firstOrNull()
+        }
+
+        if (recoveredEntry != null && hasVector(recoveredEntry)) {
+            entryNodeId = recoveredEntry
+            maxLayer = recoveredMax
+            persistState()
+            return
+        }
+
+        // 3) If we have vectors but no usable graph/meta, rebuild once.
+        val anyVec = pickAnyExistingNodeId()
+        if (anyVec != null) {
+            rebuild()
+            persistState()
+            return
+        }
+
+        // 4) Truly empty
+        entryNodeId = -1L
+        maxLayer = -1
+        persistState()
+    }
 
     /** Float store (legacy / NONE mode) */
     private val vectorStoreF: DiskMap<Long, FloatArray>
@@ -87,6 +158,13 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
     private val vectorCacheQ8 = WeakHashMap<Long, ByteArray>()
     private val vectorCacheQ4 = WeakHashMap<Long, ByteArray>()
     private val neighborCache = WeakHashMap<Long, LongArray>()
+
+    init {
+        lock.write {
+            loadStateOrRecover()
+            neighborCache.clear()
+        }
+    }
 
     private fun neighborCacheKey(layer: Int, nodeId: Long): Long =
         (nodeId shl 8) xor (layer.toLong() and 0xffL)
@@ -440,7 +518,7 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
     }
 
     // ---------------------------
-    // Graph quality helpers (NEW)
+    // Graph quality helpers
     // ---------------------------
 
     private fun maxDegreeForLayer(layer: Int): Int = if (layer == 0) M * 2 else M
@@ -509,7 +587,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         if (candidates.isEmpty()) return longArrayOf()
         if (candidates.size <= maxDegree && mustKeep == null) return candidates
 
-        // candidates are small (<= overflow cap), so use O(k^2) dedupe to avoid HashSet allocations.
         val tmp = LongArray(candidates.size + if (mustKeep != null) 1 else 0)
         var tmpN = 0
 
@@ -522,7 +599,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         for (id in candidates) addUnique(id)
         if (mustKeep != null) addUnique(mustKeep)
 
-        // Score them
         val ids = LongArray(tmpN)
         val scores = FloatArray(tmpN)
         var n = 0
@@ -539,14 +615,10 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
 
         if (n == 0) return longArrayOf()
         if (n <= maxDegree) {
-            // Ensure mustKeep if requested and available
             if (mustKeep != null && mustKeepScore != null) {
                 var found = false
-                for (i in 0 until n) if (ids[i] == mustKeep) {
-                    found = true; break
-                }
+                for (i in 0 until n) if (ids[i] == mustKeep) { found = true; break }
                 if (!found) {
-                    // append if room, else replace last
                     return if (n < maxDegree) ids.copyOf(n + 1).also { it[n] = mustKeep }
                     else ids.also { it[n - 1] = mustKeep }
                 }
@@ -554,7 +626,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
             return ids.copyOf(n)
         }
 
-        // Keep top maxDegree by score using insertion into a small sorted buffer (no full sort).
         val outIds = LongArray(maxDegree)
         val outScores = FloatArray(maxDegree)
         var outN = 0
@@ -571,7 +642,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
                 outScores[j] = s
                 outIds[j] = id
             } else {
-                // full: only insert if better than worst
                 if (s <= outScores[maxDegree - 1]) return
                 var j = maxDegree - 1
                 while (j > 0 && outScores[j - 1] < s) {
@@ -586,13 +656,10 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
 
         for (i in 0 until n) insertSorted(ids[i], scores[i])
 
-        // Force mustKeep if requested and it had a score
         val mk = mustKeep
         if (mk != null && mustKeepScore != null) {
             var found = false
-            for (i in 0 until outN) if (outIds[i] == mk) {
-                found = true; break
-            }
+            for (i in 0 until outN) if (outIds[i] == mk) { found = true; break }
             if (!found && outN > 0) outIds[outN - 1] = mk
         }
 
@@ -609,30 +676,20 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         val deg = maxDegreeForLayer(layer)
         val overflowCap = overflowCapForLayer(layer)
 
-        // a -> b
         run {
             val existing = layerMap[a] ?: longArrayOf()
             for (x in existing) if (x == b) return@run
             val appended = appendNeighbor(existing, b)
-
-            layerMap[a] = if (appended.size <= overflowCap) {
-                appended
-            } else {
-                pruneBySimilarity(a, appended, deg, dim, mustKeep = b)
-            }
+            layerMap[a] = if (appended.size <= overflowCap) appended
+            else pruneBySimilarity(a, appended, deg, dim, mustKeep = b)
         }
 
-        // b -> a
         run {
             val existing = layerMap[b] ?: longArrayOf()
             for (x in existing) if (x == a) return@run
             val appended = appendNeighbor(existing, a)
-
-            layerMap[b] = if (appended.size <= overflowCap) {
-                appended
-            } else {
-                pruneBySimilarity(b, appended, deg, dim, mustKeep = a)
-            }
+            layerMap[b] = if (appended.size <= overflowCap) appended
+            else pruneBySimilarity(b, appended, deg, dim, mustKeep = a)
         }
     }
 
@@ -647,7 +704,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         val vector = valueToVector(indexValue) ?: return@write
         normalize(vector)
 
-        // Persist vector
         when (quantization) {
             VectorQuantization.NONE -> {
                 vectorStoreF[newReferenceId] = vector
@@ -679,6 +735,7 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
             maxLayer = targetLayer
             for (l in 0..targetLayer) getGraphLayer(l)[newReferenceId] = longArrayOf()
             neighborCache.clear()
+            persistState() // NEW
             return@write
         }
 
@@ -708,10 +765,8 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
             val deg = maxDegreeForLayer(l)
             val picked = neighbors.take(deg).map { it.first }.toLongArray()
 
-            // set adjacency for new node (bounded)
             layerMap[newReferenceId] = picked
 
-            // always add reciprocal links + prune both sides
             for (nb in picked) {
                 addBidirectionalLink(layerMap, newReferenceId, nb, l, dim)
             }
@@ -720,11 +775,12 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
             currEntryPoint = picked.firstOrNull() ?: currEntryPoint
         }
 
-        // Update entry if highest level
         if (targetLayer > maxLayer) {
             maxLayer = targetLayer
             entryNodeId = newReferenceId
         }
+
+        persistState() // NEW
     }
 
     override fun matchAll(indexValue: Any?, limit: Int, maxCandidates: Int): Map<Long, Any?> = lock.read {
@@ -744,16 +800,12 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         val efSearch = minOf(limit * searchRadius, maxCandidates)
         val results = searchLayerPacked(prepared, currEntryPoint, efSearch, 0)
 
-        // Filter by minimumScore if specified (> 0)
         val filtered = if (minimumScore > 0f) {
             results.filter { it.second >= minimumScore }
-        } else {
-            results
-        }
+        } else results
 
         return@read filtered.take(limit).associate { it.first to it.second }
     }
-
 
     private fun searchLayerPacked(prepared: PreparedQuery, entry: Long, ef: Int, layer: Int): List<Pair<Long, Float>> {
         val layerMap = getGraphLayer(layer)
@@ -834,10 +886,7 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
             is Array<*> -> FloatArray(value.size) { (value[it] as Number).toFloat() }
             else -> return null
         }
-        // Validate embeddingDimensions if specified
-        if (embeddingDimensions > 0 && vector.size != embeddingDimensions) {
-            return null // Vector dimension mismatch
-        }
+        if (embeddingDimensions > 0 && vector.size != embeddingDimensions) return null
         return vector
     }
 
@@ -860,6 +909,8 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
 
         invalidateVector(reference)
         invalidateNeighborsAllLayers(reference)
+
+        persistState() // NEW
         Unit
     }
 
@@ -941,17 +992,14 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
             }
         }
 
-        // collect ids
         val ids = HashSet<Long>(1024)
         ids.addAll(vectorStoreF.keys)
         ids.addAll(vectorStoreQ8.keys)
         ids.addAll(vectorStoreQ4.keys)
 
-        // wipe graph
         val upperToClear = maxOf(maxLayer, layerScanFallback)
         for (l in 0..upperToClear) getGraphLayer(l).clear()
 
-        // reset
         entryNodeId = -1L
         maxLayer = -1
         neighborCache.clear()
@@ -959,7 +1007,10 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         vectorCacheQ8.clear()
         vectorCacheQ4.clear()
 
-        if (ids.isEmpty()) return@write
+        if (ids.isEmpty()) {
+            persistState() // NEW
+            return@write
+        }
 
         val sortedIds = ids.toLongArray().also { it.sort() }
 
@@ -979,7 +1030,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
                 continue
             }
 
-            // create empty adjacency in new upper layers if needed
             if (targetLayer > maxLayer) {
                 for (l in (maxLayer + 1)..targetLayer) {
                     getGraphLayer(l)[id] = longArrayOf()
@@ -1012,6 +1062,8 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
                 entryNodeId = id
             }
         }
+
+        persistState() // NEW
     }
 
     override fun clear() = lock.write {
@@ -1029,9 +1081,18 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         vectorCacheQ8.clear()
         vectorCacheQ4.clear()
         neighborCache.clear()
+
+        metaStore.clear()    // NEW (optional but recommended)
+        persistState()       // NEW
     }
 
-    override fun shutdown() {}
+    override fun shutdown() {
+        // If your server calls shutdown on stop, this makes the state update explicit.
+        // Safe no-op if it can't.
+        try {
+            lock.write { persistState() }
+        } catch (_: Throwable) { }
+    }
 
     override fun findAll(indexValue: Any?) = matchAll(indexValue, 50, 50)
     override fun findAllValues(): Set<Long> = lock.read {
@@ -1048,6 +1109,14 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
 
     private companion object {
         private const val LAYER_SCAN_FALLBACK = 64
+
+        // Persisted state keys (NEW)
+        private const val META_ENTRY = "entryNodeId"
+        private const val META_MAX_LAYER = "maxLayer"
+
+        // Recovery scan tuning (NEW)
+        private const val STATE_LAYER_SCAN_LIMIT = 128
+        private const val STATE_EMPTY_STREAK_STOP = 12
     }
 
     private fun removeFromArray(arr: LongArray, target: Long): LongArray? {
@@ -1064,7 +1133,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         if (idx < arr.lastIndex) System.arraycopy(arr, idx + 1, out, idx, arr.size - idx - 1)
         return out
     }
-
 
     private fun detachFromGraph(id: Long) {
         val upper = maxOf(maxLayer, LAYER_SCAN_FALLBACK)
