@@ -19,7 +19,6 @@ data class PartitionDescriptor(
         // Use identity comparison for Class since they're singletons per classloader
         if (partitionValue != other.partitionValue) return false
         if (name != other.name) return false
-        if (type !== other.type) return false
 
         return true
     }
@@ -27,8 +26,6 @@ data class PartitionDescriptor(
     override fun hashCode(): Int {
         var result = partitionValue.hashCode()
         result = 31 * result + name.hashCode()
-        // Use identityHashCode for Class to avoid expensive Class.hashCode()
-        result = 31 * result + System.identityHashCode(type)
         return result
     }
 }

@@ -39,6 +39,7 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.annotations.EntityType
 import com.onyx.persistence.annotations.values.IdentifierGenerator
+import com.onyx.persistence.annotations.values.IndexType
 import com.onyx.persistence.annotations.values.RelationshipType
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
@@ -55,7 +56,7 @@ import kotlin.reflect.KClass
  * not have multiple process accessed at the same time.
  *
  * @author Tim Osborn
- * @see com.onyx.persistence.context.SchemaContext
+ * @see SchemaContext
  *
  * @since 1.0.0
  *
@@ -477,11 +478,7 @@ open class DefaultSchemaContext : SchemaContext {
     // region Entity Descriptor
     private val maxCapacity = 5000
 
-    protected open val descriptors = object : LinkedHashMap<String, EntityDescriptor>(16, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, EntityDescriptor>?): Boolean {
-            return size > maxCapacity
-        }
-    }
+    protected open val descriptors = hashMapOf<String, EntityDescriptor>()
 
     /**
      * Get Descriptor For Entity. Initializes EntityDescriptor or returns one if it already exists
@@ -624,7 +621,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Index Controller
 
-    protected open val indexInteractors = OptimisticLockingMap<IndexDescriptor, IndexInteractor>(WeakHashMap())
+    protected open val indexInteractors: MutableMap<IndexDescriptor, IndexInteractor> = Collections.synchronizedMap(WeakHashMap())
 
     /**
      * Get Index Controller with Index descriptor.
@@ -637,8 +634,8 @@ open class DefaultSchemaContext : SchemaContext {
     override fun getIndexInteractor(indexDescriptor: IndexDescriptor): IndexInteractor =
         indexInteractors.getOrPut(indexDescriptor) {
             return@getOrPut when (indexDescriptor.indexType) {
-                com.onyx.persistence.annotations.values.IndexType.VECTOR -> createVectorInteractor(indexDescriptor)
-                com.onyx.persistence.annotations.values.IndexType.LUCENE -> createLuceneInteractor(indexDescriptor)
+                IndexType.VECTOR -> createVectorInteractor(indexDescriptor)
+                IndexType.LUCENE -> createLuceneInteractor(indexDescriptor)
                 else -> DefaultIndexInteractor(indexDescriptor.entityDescriptor, indexDescriptor, this)
             }
         }

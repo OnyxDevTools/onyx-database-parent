@@ -22,7 +22,11 @@ open class IndexDescriptor(
 
     open lateinit var entityDescriptor: EntityDescriptor
 
-    override fun hashCode(): Int = (((System.identityHashCode(this.entityDescriptor.entityClass)) * 31) * 31 + this.name.hashCode()) * 31 + System.identityHashCode(this.type)
+    override fun hashCode(): Int {
+        var result = (((System.identityHashCode(this.entityDescriptor.entityClass)) * 31) * 31 + this.name.hashCode()) * 31
+        result = 31 * result + entityDescriptor.partition.hashCode()
+        return result
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -31,8 +35,6 @@ open class IndexDescriptor(
         // Compare partition using equals (which now uses identity for Class)
         if (this.entityDescriptor.partition != other.entityDescriptor.partition) return false
         if (this.name != other.name) return false
-        // Use identity comparison for Class since they're singletons per classloader
-        if (this.type !== other.type) return false
 
         return true
     }

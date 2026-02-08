@@ -12,7 +12,6 @@ object Config {
 
     // Search
     const val LUCENE_VERSION = "10.3.1"
-    const val FAISS_VERSION = "1.7.0-1"
 
     // 3rd Party Dependencies ( HTTP Client )
     const val KTOR_VERSION = "3.2.3"
