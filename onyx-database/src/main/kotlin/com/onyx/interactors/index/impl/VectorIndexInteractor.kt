@@ -9,7 +9,6 @@ import com.onyx.persistence.annotations.values.VectorQuantization
 import com.onyx.persistence.context.SchemaContext
 import java.lang.ref.WeakReference
 import java.util.Random
-import java.util.WeakHashMap
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
@@ -150,62 +149,31 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
             Long::class.java, "${entityDescriptor.entityClass.name}${indexDescriptor.name}_hnsw_layer_$layer"
         )
 
-    // ---------------------------
-    // Caches
-    // ---------------------------
-
-    private val vectorCacheF = WeakHashMap<Long, FloatArray>()
-    private val vectorCacheQ8 = WeakHashMap<Long, ByteArray>()
-    private val vectorCacheQ4 = WeakHashMap<Long, ByteArray>()
-    private val neighborCache = WeakHashMap<Long, LongArray>()
-
     init {
         lock.write {
             loadStateOrRecover()
-            neighborCache.clear()
         }
     }
 
-    private fun neighborCacheKey(layer: Int, nodeId: Long): Long =
-        (nodeId shl 8) xor (layer.toLong() and 0xffL)
 
     private fun getVectorF_Cached(id: Long): FloatArray? {
-        vectorCacheF[id]?.let { return it }
         val v = vectorStoreF[id] ?: return null
-        vectorCacheF[id] = v
         return v
     }
 
     private fun getVectorQ8_Cached(id: Long): ByteArray? {
-        vectorCacheQ8[id]?.let { return it }
         val v = vectorStoreQ8[id] ?: return null
-        vectorCacheQ8[id] = v
         return v
     }
 
     private fun getVectorQ4_Cached(id: Long): ByteArray? {
-        vectorCacheQ4[id]?.let { return it }
         val v = vectorStoreQ4[id] ?: return null
-        vectorCacheQ4[id] = v
         return v
     }
 
     private fun getNeighborsCached(layer: Int, layerMap: DiskMap<Long, LongArray>, id: Long): LongArray? {
-        val key = neighborCacheKey(layer, id)
-        neighborCache[key]?.let { return it }
         val n = layerMap[id] ?: return null
-        neighborCache[key] = n
         return n
-    }
-
-    private fun invalidateVector(id: Long) {
-        vectorCacheF.remove(id)
-        vectorCacheQ8.remove(id)
-        vectorCacheQ4.remove(id)
-    }
-
-    private fun invalidateNeighborsAllLayers(@Suppress("UNUSED_PARAMETER") id: Long) {
-        neighborCache.clear()
     }
 
     // -----------------------------------------
@@ -496,7 +464,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
                     if (vf.size != prepared.f32.size) return null
                     vq = quantizeInt8(vf)
                     vectorStoreQ8[nodeId] = vq
-                    vectorCacheQ8[nodeId] = vq
                 }
                 if (vq.size != prepared.q8!!.size) return null
                 dotQ8Q8(prepared.q8, vq)
@@ -509,7 +476,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
                     if (vf.size != prepared.f32.size) return null
                     vq = quantizeInt4Packed(vf)
                     vectorStoreQ4[nodeId] = vq
-                    vectorCacheQ4[nodeId] = vq
                 }
                 if (vq.size != prepared.q4!!.size) return null
                 dotQ4Q4Packed(prepared.q4, vq)
@@ -531,7 +497,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         if (vf.size != dim) return null
         val q = quantizeInt8(vf)
         vectorStoreQ8[id] = q
-        vectorCacheQ8[id] = q
         return q
     }
 
@@ -541,7 +506,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         if (vf.size != dim) return null
         val q = quantizeInt4Packed(vf)
         vectorStoreQ4[id] = q
-        vectorCacheQ4[id] = q
         return q
     }
 
@@ -724,9 +688,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
             }
         }
 
-        invalidateVector(newReferenceId)
-        invalidateNeighborsAllLayers(newReferenceId)
-
         val targetLayer = ((-ln(random.nextDouble()) * mL)).toInt()
 
         // First node
@@ -734,7 +695,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
             entryNodeId = newReferenceId
             maxLayer = targetLayer
             for (l in 0..targetLayer) getGraphLayer(l)[newReferenceId] = longArrayOf()
-            neighborCache.clear()
             persistState() // NEW
             return@write
         }
@@ -771,7 +731,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
                 addBidirectionalLink(layerMap, newReferenceId, nb, l, dim)
             }
 
-            neighborCache.clear()
             currEntryPoint = picked.firstOrNull() ?: currEntryPoint
         }
 
@@ -907,9 +866,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
             if (entryNodeId == -1L) maxLayer = -1
         }
 
-        invalidateVector(reference)
-        invalidateNeighborsAllLayers(reference)
-
         persistState() // NEW
         Unit
     }
@@ -965,9 +921,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
                     vectorStoreF[id] = vNorm
                     vectorStoreQ8.remove(id)
                     vectorStoreQ4.remove(id)
-                    vectorCacheF[id] = vNorm
-                    vectorCacheQ8.remove(id)
-                    vectorCacheQ4.remove(id)
                 }
 
                 VectorQuantization.INT8 -> {
@@ -975,9 +928,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
                     vectorStoreQ8[id] = q8
                     vectorStoreF.remove(id)
                     vectorStoreQ4.remove(id)
-                    vectorCacheQ8[id] = q8
-                    vectorCacheF.remove(id)
-                    vectorCacheQ4.remove(id)
                 }
 
                 VectorQuantization.INT4 -> {
@@ -985,9 +935,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
                     vectorStoreQ4[id] = q4
                     vectorStoreF.remove(id)
                     vectorStoreQ8.remove(id)
-                    vectorCacheQ4[id] = q4
-                    vectorCacheF.remove(id)
-                    vectorCacheQ8.remove(id)
                 }
             }
         }
@@ -1002,10 +949,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
 
         entryNodeId = -1L
         maxLayer = -1
-        neighborCache.clear()
-        vectorCacheF.clear()
-        vectorCacheQ8.clear()
-        vectorCacheQ4.clear()
 
         if (ids.isEmpty()) {
             persistState() // NEW
@@ -1053,7 +996,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
                 layerMap[id] = picked
                 for (nb in picked) addBidirectionalLink(layerMap, id, nb, l, dim)
 
-                neighborCache.clear()
                 currEntryPoint = picked.firstOrNull() ?: currEntryPoint
             }
 
@@ -1076,11 +1018,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
 
         entryNodeId = -1L
         maxLayer = -1
-
-        vectorCacheF.clear()
-        vectorCacheQ8.clear()
-        vectorCacheQ4.clear()
-        neighborCache.clear()
 
         metaStore.clear()    // NEW (optional but recommended)
         persistState()       // NEW
@@ -1151,7 +1088,6 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
                 layerMap[nb] = filtered
             }
         }
-        neighborCache.clear()
     }
 
     private fun pickAnyExistingNodeId(): Long? = when (quantization) {
