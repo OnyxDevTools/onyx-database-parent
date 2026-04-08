@@ -1031,6 +1031,19 @@ class VectorIndexInteractor @Throws(OnyxException::class) constructor(
         } catch (_: Throwable) { }
     }
 
+    /**
+     * Delete all resources associated with this index.
+     * Vector index data is stored within the main data file, so no external
+     * resources need to be deleted. The data will be cleaned up when the
+     * data file is deleted.
+     *
+     * @since 3.4.0
+     */
+    override fun deleteResources() {
+        // Vector index stores all data in the main data file via DiskMapFactory
+        // No external files to delete
+    }
+
     override fun findAll(indexValue: Any?) = matchAll(indexValue, 50, 50)
     override fun findAllValues(): Set<Long> = lock.read {
         val out = HashSet<Long>()

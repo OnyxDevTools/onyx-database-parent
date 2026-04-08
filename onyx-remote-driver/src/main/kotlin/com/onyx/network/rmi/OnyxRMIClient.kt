@@ -44,7 +44,7 @@ class OnyxRMIClient : PushRegistrar {
     private val registeredObjects = HashMap<String, Any>()
     private val serializer: ServerSerializer = DefaultServerSerializer()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var timeout = 120 // 60 second timeout
+    private var timeout = 240
     private var connectTimeout = 5
     var keepAlive = false
 

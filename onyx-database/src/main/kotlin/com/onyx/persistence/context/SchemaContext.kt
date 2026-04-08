@@ -316,4 +316,23 @@ interface SchemaContext {
      * @since 2.2.2
      */
     fun flush(): Unit = Unit
+
+    /**
+     * Delete all data files associated with an entity descriptor.
+     * This will delete the underlying data files for records, indexes, and relationships.
+     *
+     * @param descriptor Entity descriptor to delete data files for
+     * @since 3.9.10
+     */
+    fun deleteEntityDataFiles(descriptor: EntityDescriptor)
+
+    /**
+     * Delete all data files associated with a specific partition of an entity.
+     * This will delete the underlying data files for records, indexes, and relationships for the partition.
+     *
+     * @param descriptor Entity descriptor to delete partition data files for
+     * @param partitionId Partition ID
+     * @since 3.9.10
+     */
+    fun deletePartitionDataFiles(descriptor: EntityDescriptor, partitionId: Long)
 }

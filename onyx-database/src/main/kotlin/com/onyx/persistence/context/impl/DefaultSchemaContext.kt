@@ -2,6 +2,7 @@
 
 package com.onyx.persistence.context.impl
 
+import com.onyx.descriptor.DEFAULT_DATA_FILE
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.IndexDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
@@ -816,6 +817,203 @@ open class DefaultSchemaContext : SchemaContext {
         if(Runtime.getRuntime().freeMemory().toDouble() / Runtime.getRuntime().totalMemory().toDouble() <= .50)
             this.flush()
     }
+
+    // region Data File Deletion
+
+    /**
+     * Delete all data files associated with an entity descriptor.
+     * This will delete the underlying data files for records, indexes, and relationships.
+     * Adheres to concurrency standards using synchronized blocks.
+     * Note: This will NOT delete system entity data files.
+     *
+     * @param descriptor Entity descriptor to delete data files for
+     * @since 3.9.10
+     */
+    @Synchronized
+    override fun deleteEntityDataFiles(descriptor: EntityDescriptor) {
+        // Do not delete system entity data files
+        if (isDescriptorSystemEntity(descriptor) == true) {
+            return
+        }
+
+        // Delete index resources for all indexes of this entity
+        descriptor.indexes.values.forEach { indexDescriptor ->
+            val indexInteractor = getIndexInteractor(indexDescriptor)
+            indexInteractor.deleteResources()
+        }
+
+        // Delete the main data file for this entity
+        deleteDataFile(descriptor, descriptor.entityClass)
+
+        // Delete all partition data files and SystemPartitionEntry records if this entity is partitioned
+        if (descriptor.hasPartition) {
+            // Get all partition entries for this entity class
+            val partitionEntries = getAllPartitions(descriptor.entityClass)
+            
+            // Delete each partition's data files
+            partitionEntries.forEach { partitionEntry ->
+                val partitionDescriptor = getDescriptorForEntity(descriptor.entityClass, partitionEntry.value)
+                
+                // Delete index resources for partition-specific indexes
+                partitionDescriptor.indexes.values.forEach { indexDescriptor ->
+                    val indexInteractor = getIndexInteractor(indexDescriptor)
+                    indexInteractor.deleteResources()
+                }
+                
+                deleteDataFile(partitionDescriptor, descriptor.entityClass)
+
+                val entityKey = Base64.concat(partitionDescriptor.entityClass.name, partitionDescriptor.partition?.partitionValue ?: "")
+                synchronized(descriptors) {
+                    descriptors.remove(entityKey)
+                }
+            }
+            
+            // Delete all SystemPartitionEntry records for this entity class
+            partitionEntries.forEach { entry ->
+                serializedPersistenceManager.deleteEntity(entry)
+            }
+            
+            // Clear partition caches
+            partitionEntries.forEach { entry ->
+                partitionsByValue.remove(PartitionInfo(descriptor.entityClass, entry.value))
+                partitionsById.remove(entry.index)
+            }
+            partitionsByClass.remove(descriptor.entityClass)
+        }
+
+        // Remove interactors from cache to prevent reuse of deleted files
+        synchronized(recordInteractors) {
+            recordInteractors.keys.removeIf { it.entityClass == descriptor.entityClass }
+        }
+        synchronized(indexInteractors) {
+            indexInteractors.keys.removeIf { it.entityDescriptor.entityClass == descriptor.entityClass }
+        }
+        synchronized(relationshipInteractors) {
+            relationshipInteractors.keys.removeIf { it.entityDescriptor.entityClass == descriptor.entityClass }
+        }
+
+        val entityKey = Base64.concat(descriptor.entityClass.name, descriptor.partition?.partitionValue ?: "")
+        synchronized(descriptors) {
+            descriptors.remove(entityKey)
+        }
+    }
+
+    /**
+     * Delete all data files associated with a specific partition of an entity.
+     * This will delete the underlying data files for records, indexes, and relationships for the partition.
+     * Adheres to concurrency standards using synchronized blocks.
+     * Note: This will NOT delete system entity data files.
+     *
+     * @param descriptor Entity descriptor to delete partition data files for
+     * @param partitionId Partition ID
+     * @since 3.4.0
+     */
+    @Synchronized
+    override fun deletePartitionDataFiles(descriptor: EntityDescriptor, partitionId: Long) {
+        // Do not delete system entity data files
+        if (isDescriptorSystemEntity(descriptor) == true) {
+            return
+        }
+
+        val partition = getPartitionWithId(partitionId) ?: return
+
+        // Get the partition-specific descriptor
+        val partitionDescriptor = getDescriptorForEntity(descriptor.entityClass, partition.value)
+
+        // Delete index resources for all indexes of this partition
+        partitionDescriptor.indexes.values.forEach { indexDescriptor ->
+            val indexInteractor = getIndexInteractor(indexDescriptor)
+            indexInteractor.deleteResources()
+        }
+
+        // Delete the data file for this partition
+        deleteDataFile(partitionDescriptor, descriptor.entityClass)
+
+        // Delete the SystemPartitionEntry for this partition
+        serializedPersistenceManager.deleteEntity(partition)
+
+        // Remove interactors from cache for this partition descriptor
+        synchronized(recordInteractors) {
+            recordInteractors.remove(partitionDescriptor)
+        }
+        synchronized(indexInteractors) {
+            indexInteractors.entries.removeIf { it.key.entityDescriptor == partitionDescriptor }
+        }
+        synchronized(relationshipInteractors) {
+            relationshipInteractors.entries.removeIf { it.key.entityDescriptor == partitionDescriptor }
+        }
+
+        // Remove the partition entry from cache
+        partitionsByClass.remove(descriptor.entityClass)
+        partitionsByValue.remove(PartitionInfo(descriptor.entityClass, partition.value))
+        partitionsById.remove(partitionId)
+
+        val entityKey = Base64.concat(descriptor.entityClass.name, descriptor.partition?.partitionValue ?: "")
+        synchronized(descriptors) {
+            descriptors.remove(entityKey)
+        }
+    }
+
+    /**
+     * Helper method to check if a descriptor represents a system entity.
+     *
+     * @param descriptor Entity descriptor to check
+     * @return true if the descriptor represents a system entity
+     */
+    private fun isDescriptorSystemEntity(descriptor: EntityDescriptor): Boolean {
+        val className = descriptor.entityClass.name
+        // Using substring comparison to avoid conflicts with extension functions
+        return className.length >= 16 && className.substring(0, 16) == "com.onyx.entity."
+    }
+
+    /**
+     * Helper method to delete a data file for a specific descriptor.
+     * This closes the data file if open, removes it from the cache, and deletes the underlying files.
+     * Only deletes the file if no other entities are using it (for shared default data files).
+     *
+     * @param descriptor Entity descriptor to delete data file for
+     * @param entityClassToDelete The entity class being deleted (to exclude from sharing check)
+     */
+    private fun deleteDataFile(descriptor: EntityDescriptor, entityClassToDelete: Class<*>) {
+        val key = if (descriptor.partition == null) descriptor.fileName else descriptor.fileName + descriptor.partition!!.partitionValue
+
+        // Check if this is a default data file that might be shared with other entities
+        if (descriptor.fileName == DEFAULT_DATA_FILE) {
+            // Check if any other entities (not the one being deleted) are using this file
+            val otherEntitiesUsingFile = descriptors.values.any { 
+                it.entityClass != entityClassToDelete && 
+                it.fileName == DEFAULT_DATA_FILE && 
+                it.partition?.partitionValue == descriptor.partition?.partitionValue
+            }
+            
+            // If other entities are using the same file, don't delete it
+            if (otherEntitiesUsingFile) {
+                return
+            }
+        }
+
+        // Get the data file from cache
+        val dataFile = dataFiles[key]
+
+        if (dataFile != null) {
+            // Close and delete the data file
+            dataFile.close()
+            dataFile.delete()
+
+            // Remove from cache
+            dataFiles.remove(key)
+        } else {
+            // Data file might not be in cache, try to find and delete it directly
+            var finalLocation = descriptor.primaryLocation
+            finalLocation = if(finalLocation != null) "$finalLocation/$key" else "$location/$key"
+
+            val factory = DefaultDiskMapFactory(finalLocation, storeType, this@DefaultSchemaContext)
+            factory.close()
+            factory.delete()
+        }
+    }
+
+    // endregion
 
     companion object {
         private const val DEFAULT_DOCUMENT_RECORD_INTERACTOR = "com.onyx.lucene.interactors.record.impl.LuceneRecordInteractor"

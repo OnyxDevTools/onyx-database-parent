@@ -373,6 +373,27 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         shutdownInstance(indexKey)
     }
 
+    /**
+     * Delete all resources associated with this Lucene index.
+     * This shuts down the index and deletes the Lucene index directory
+     * from the file system.
+     *
+     * @since 3.9.10
+     */
+    override fun deleteResources() {
+        // First shutdown the index to release resources
+        shutdownInstance(indexKey)
+        
+        // Delete the index directory
+        val indexDir = File(indexKey)
+        if (indexDir.exists()) {
+            indexDir.deleteRecursively()
+        }
+        
+        // Also clean up any cached references
+        luceneDirectories.remove(indexKey)
+    }
+
     companion object {
         /** The document field name for the entity's record ID. */
         private const val ID_FIELD = "record_id"

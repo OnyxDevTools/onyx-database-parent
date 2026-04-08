@@ -108,6 +108,15 @@ interface IndexInteractor {
     fun shutdown()
 
     /**
+     * Delete all resources associated with this index.
+     * This should delete any external files or resources that the index manages
+     * outside of the main data file (e.g., Lucene index directories).
+     *
+     * @since 3.9.10
+     */
+    fun deleteResources()
+
+    /**
      * Match all items that have similar vectors as the search value
      *
      * @param indexValue search text

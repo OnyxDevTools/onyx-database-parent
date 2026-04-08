@@ -235,4 +235,15 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(priv
     override fun shutdown() {
         // Default implementation does nothing
     }
+
+    /**
+     * Delete all resources associated with this index.
+     * Default implementation does nothing as the default index uses
+     * the main data file which is already managed by the data file deletion.
+     *
+     * @since 3.9.10
+     */
+    override fun deleteResources() {
+        // Default implementation does nothing - uses main data file
+    }
 }
