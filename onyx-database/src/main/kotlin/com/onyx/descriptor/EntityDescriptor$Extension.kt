@@ -19,32 +19,28 @@ fun EntityDescriptor.truncateData(includeAllPartitions: Boolean) {
     // Check if this is a system entity
     val isSystemEntity = this.entityClass.name.startsWith("com.onyx.entity.")
 
-    // Clear all records, indexes, and relationships
-    this.recordInteractor().clear()
-    this.indexes.values.forEach {
-        context.getIndexInteractor(it).clear()
-    }
-    this.relationships.values.forEach {
-        context.getRelationshipInteractor(it).clear()
+    if (!hasPartition) {
+        // Clear all records, indexes, and relationships
+        this.recordInteractor().clear()
+        this.indexes.values.forEach {
+            context.getIndexInteractor(it).clear()
+        }
+        this.relationships.values.forEach {
+            context.getRelationshipInteractor(it).clear()
+        }
     }
 
     // Delete All Partitions data and indexes
     if (this.hasPartition && includeAllPartitions) {
         context.getAllPartitions(this.entityClass).forEach {
             context.getDescriptorForEntity(this.entityClass, it.value).apply {
-                this.recordInteractor().clear()
-                this.indexes.values.forEach {
-                    context.getIndexInteractor(it).clear()
-                }
-                this.relationships.values.forEach {
-                    context.getRelationshipInteractor(it).clear()
-                }
+                this.truncatePartitionData()
             }
         }
     }
 
     // Delete data files for non-system entities
-    if (!isSystemEntity) {
+    if (!isSystemEntity && !this.hasPartition) {
         context.deleteEntityDataFiles(this)
     }
 }
@@ -55,7 +51,8 @@ fun EntityDescriptor.truncateData(includeAllPartitions: Boolean) {
  *
  * @param partitionId The partition ID to truncate
  */
-fun EntityDescriptor.truncatePartitionData(partitionId: Long) {
+fun EntityDescriptor.truncatePartitionData(partitionId: Long? = context.getPartitionWithValue(this.entityClass, this.partition?.partitionValue ?: "")?.primaryKey?.toLong()) {
+    partitionId ?: return
     // Check if this is a system entity
     val isSystemEntity = this.entityClass.name.startsWith("com.onyx.entity.")
 
@@ -74,5 +71,9 @@ fun EntityDescriptor.truncatePartitionData(partitionId: Long) {
     // Delete the partition data files for non-system entities
     if (!isSystemEntity) {
         context.deletePartitionDataFiles(partitionDescriptor, partitionId)
+        partition.let {
+            context.systemPersistenceManager?.delete(it)
+            context.clearPartitionCache(partition)
+        }
     }
 }

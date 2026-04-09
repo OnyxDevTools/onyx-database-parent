@@ -171,43 +171,16 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
             val count = countForQuery(query)
 
             val sampleEntity: ManagedEntity = query.entityType!!.createNewEntity(context.contextId)
-            val descriptor = context.getDescriptorForEntity(sampleEntity)
-            descriptor.truncateData(includeAllPartitions = (query.partition as? String)?.isBlank() ?: true)
-
             val baseDescriptor = context.getDescriptorForEntity(sampleEntity)
 
-            // If this is a partition-specific delete, use the new truncatePartitionData method
             val partitionId = query.partition
-            if (partitionId.toString().isNotBlank() && baseDescriptor.hasPartition) {
-                // Get the partition ID from the partition entry
+            if (partitionId.toString().isNotBlank() && baseDescriptor.hasPartition && partitionId.toString() != QueryPartitionMode.ALL.toString()) {
                 val partitionEntry = context.getPartitionWithValue(baseDescriptor.entityClass, partitionId)
                 if (partitionEntry != null) {
                     baseDescriptor.truncatePartitionData(partitionEntry.primaryKey.toLong())
-                } else {
-                    // If no partition entry found, just clear data for this partition value
-                    baseDescriptor.truncateData(includeAllPartitions = false)
                 }
             } else {
-            // Delete all records and underlying data files
-            // If this is a partitioned entity, delete all partitions
-            if (baseDescriptor.hasPartition) {
-                // Get all partitions and delete each one
-                val partitions = context.getAllPartitions(baseDescriptor.entityClass)
-                partitions.forEach { partitionEntry ->
-                    baseDescriptor.truncatePartitionData(partitionEntry.primaryKey.toLong())
-                }
-                // Also clear the base descriptor data (for any records without partition)
-                context.getRecordInteractor(baseDescriptor).clear()
-                baseDescriptor.indexes.values.forEach {
-                    context.getIndexInteractor(it).clear()
-                }
-                baseDescriptor.relationships.values.forEach {
-                    context.getRelationshipInteractor(it).clear()
-                }
-            } else {
-                // Non-partitioned entity - just delete the base data
-                baseDescriptor.truncateData(includeAllPartitions = true)
-            }
+                baseDescriptor.truncateData(true)
             }
 
             return count.toInt()
@@ -603,14 +576,15 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                     return@forEachIndexed
             }
         } else {
-            val descriptors = if (query.partition.toString().isNotEmpty() && query.partition != QueryPartitionMode.ALL) {
-                listOf(context.getDescriptorForEntity(query.entityType!!, query.partition))
-            } else {
-                val partitions = query.entityType!!.let { context.getAllPartitions(it) }
-                partitions.map {
-                    context.getDescriptorForEntity(query.entityType!!, it.value)
-                } + listOf(context.getDescriptorForEntity(query.entityType!!, ""))
-            }
+            val descriptors =
+                if (query.partition.toString().isNotEmpty() && query.partition != QueryPartitionMode.ALL) {
+                    listOf(context.getDescriptorForEntity(query.entityType!!, query.partition))
+                } else {
+                    val partitions = query.entityType!!.let { context.getAllPartitions(it) }
+                    partitions.map {
+                        context.getDescriptorForEntity(query.entityType!!, it.value)
+                    } + listOf(context.getDescriptorForEntity(query.entityType!!, ""))
+                }
 
             var done = false
 

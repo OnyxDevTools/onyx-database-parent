@@ -26,7 +26,7 @@ fun PersistenceManagerFactory.cloneTo(destinationFactory: PersistenceManagerFact
 
     val systemEntities = schemaContext.serializedPersistenceManager
         .from(SystemEntity::class)
-        .where(("isLatestVersion" eq true) and ("name" notStartsWith "com.onyx.entity.System"))
+        .where(("isLatestVersion" eq true))
         .list<SystemEntity>()
 
     systemEntities.forEach { systemEntity ->
@@ -75,6 +75,52 @@ private fun streamAndSave(
     }
 }
 
+
+private fun streamIntegrity(
+    sourceManager: PersistenceManager,
+    entityType: KClass<*>,
+    partition: Any? = null,
+) {
+    val queryBuilder = sourceManager.from(entityType)
+    if (partition != null) {
+        queryBuilder.inPartition(partition)
+    }
+
+    val query = queryBuilder.query
+    sourceManager.stream(query, object : QueryStream<IManagedEntity> {
+        override fun accept(entity: IManagedEntity, persistenceManager: PersistenceManager): Boolean {
+            return true
+        }
+    })
+}
+
 private fun SchemaContext.getAllPartitionsSafely(entityClass: Class<*>): List<SystemPartitionEntry> = runCatching {
     getAllPartitions(entityClass)
 }.getOrElse { emptyList() }
+
+fun PersistenceManagerFactory.verifyIntegrity() {
+    val sourceManager = this.persistenceManager
+    val schemaContext = this.schemaContext
+
+    val systemEntities = schemaContext.serializedPersistenceManager
+        .from(SystemEntity::class)
+        .where(("isLatestVersion" eq true))
+        .list<SystemEntity>()
+
+    systemEntities.forEach { systemEntity ->
+        val entityClass = runCatching { systemEntity.type(schemaContext.contextId) }
+            .getOrNull()
+            ?.takeIf { IManagedEntity::class.java.isAssignableFrom(it) }
+            ?: return@forEach
+
+        val partitions = schemaContext.getAllPartitionsSafely(entityClass)
+
+        if (partitions.isEmpty()) {
+            streamIntegrity(sourceManager, entityClass.kotlin)
+        } else {
+            partitions.forEach { partition ->
+                streamIntegrity(sourceManager, entityClass.kotlin, partition.value)
+            }
+        }
+    }
+}

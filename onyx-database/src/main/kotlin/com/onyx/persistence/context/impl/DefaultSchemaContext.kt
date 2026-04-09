@@ -846,7 +846,7 @@ open class DefaultSchemaContext : SchemaContext {
         deleteDataFile(descriptor, descriptor.entityClass)
 
         // Delete all partition data files and SystemPartitionEntry records if this entity is partitioned
-        if (descriptor.hasPartition) {
+        if (!descriptor.hasPartition) {
             // Get all partition entries for this entity class
             val partitionEntries = getAllPartitions(descriptor.entityClass)
             
@@ -952,6 +952,14 @@ open class DefaultSchemaContext : SchemaContext {
         synchronized(descriptors) {
             descriptors.remove(entityKey)
         }
+    }
+
+    override fun clearPartitionCache(entry: SystemPartitionEntry?) {
+        entry ?: return
+        partitionsByClass.remove(entry.entityClass.javaClass)
+        partitionsById.remove(entry.index)
+        partitionCache.remove(entry.index)
+        partitionsByValue.remove(PartitionInfo(entry.entityClass.javaClass, entry.value))
     }
 
     /**

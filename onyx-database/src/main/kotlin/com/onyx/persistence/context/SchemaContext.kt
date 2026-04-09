@@ -335,4 +335,11 @@ interface SchemaContext {
      * @since 3.9.10
      */
     fun deletePartitionDataFiles(descriptor: EntityDescriptor, partitionId: Long)
+
+    /**
+     * Clear Partition Cache
+     *
+     * @param entry: System Partition Entry to clear
+     */
+    fun clearPartitionCache(entry: SystemPartitionEntry? = null)
 }
