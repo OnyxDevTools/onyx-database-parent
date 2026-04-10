@@ -81,17 +81,26 @@ private fun streamIntegrity(
     entityType: KClass<*>,
     partition: Any? = null,
 ) {
-    val queryBuilder = sourceManager.from(entityType)
-    if (partition != null) {
-        queryBuilder.inPartition(partition)
+    var hasError = false
+    var message = ""
+    try {
+        val queryBuilder = sourceManager.from(entityType)
+        if (partition != null) {
+            queryBuilder.inPartition(partition)
+        }
+
+        val query = queryBuilder.query
+            sourceManager.stream(query, object : QueryStream<IManagedEntity> {
+                override fun accept(entity: IManagedEntity, persistenceManager: PersistenceManager): Boolean {
+                    return true
+                }
+            })
+    } catch (e: Exception) {
+        message += "Integrity failure with ${entityType.simpleName}"
+        hasError = true
     }
 
-    val query = queryBuilder.query
-    sourceManager.stream(query, object : QueryStream<IManagedEntity> {
-        override fun accept(entity: IManagedEntity, persistenceManager: PersistenceManager): Boolean {
-            return true
-        }
-    })
+    if (hasError) throw Exception(message)
 }
 
 private fun SchemaContext.getAllPartitionsSafely(entityClass: Class<*>): List<SystemPartitionEntry> = runCatching {
