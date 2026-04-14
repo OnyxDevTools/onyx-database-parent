@@ -34,7 +34,7 @@ open class BasicSelectionQueryCollector(
         if(entity == null)
             return
 
-        val selectionResult = getSelectionRecord(entity)
+        val selectionResult = getSelectionRecord(entity, reference)
 
         resultLock.perform {
             if(results.add(selectionResult))

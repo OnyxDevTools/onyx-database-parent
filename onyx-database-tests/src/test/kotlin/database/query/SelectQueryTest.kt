@@ -110,4 +110,19 @@ class SelectQueryTest(override var factoryClass: KClass<*>) : PrePopulatedDataba
         assertEquals("FIRST ONE", results[0]["id"], "Invalid query order")
         assertEquals("FIRST ONE4", results[1]["id"], "Invalid query order")
     }
+
+    @Test
+    fun testWildcardSelectReturnsAllEntityAttributes() {
+        val results = manager.from(AllAttributeForFetch::class)
+            .where("id" eq "FIRST ONE")
+            .select(Query.WILDCARD_SELECTION)
+            .list<Map<String, Any?>>()
+
+        assertEquals(1, results.size)
+        val result = results.first()
+        assertTrue(result.containsKey("id"))
+        assertTrue(result.containsKey("stringValue"))
+        assertTrue(result.containsKey("longValue"))
+        assertTrue(result.containsKey("intPrimitive"))
+    }
 }

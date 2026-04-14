@@ -8,6 +8,7 @@ import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.QueryPartitionMode
 import com.onyx.persistence.query.eq
 import com.onyx.persistence.query.from
+import com.onyx.persistence.query.like
 import com.onyx.persistence.query.search
 import com.onyx.persistence.query.searchAllTables
 import database.base.DatabaseBaseTest
@@ -19,6 +20,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
+import kotlin.test.assertContains
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -152,5 +154,49 @@ class FullTextSearchTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
             .list<LuceneSearchEntity>()
 
         assertTrue(filtered.isEmpty())
+    }
+
+    @Test
+    fun testSelectScoreWithSearch() {
+        val searchEntity = LuceneSearchEntity().apply {
+            title = "Vector Database Guide"
+            body = "quick fox search score"
+            category = "docs"
+        }
+        manager.saveEntity<IManagedEntity>(searchEntity)
+
+        val results = manager.from<LuceneSearchEntity>()
+            .search("fox")
+            .select(Query.SCORE_SELECTION, Query.WILDCARD_SELECTION)
+            .list<Map<String, Any?>>()
+
+        assertTrue(results.isNotEmpty())
+        val first = results.first()
+        assertContains(first.keys, Query.SCORE_SELECTION)
+        assertNotNull(first[Query.SCORE_SELECTION] as Float?)
+        assertContains(first.keys, "id")
+        assertContains(first.keys, "title")
+        assertContains(first.keys, "body")
+        assertContains(first.keys, "category")
+    }
+
+    @Test
+    fun testSelectScoreWithLuceneLikeCriteria() {
+        val matchingEntity = LuceneSearchEntity().apply {
+            title = "alpha"
+            body = "body content"
+            category = "news"
+        }
+        manager.saveEntity<IManagedEntity>(matchingEntity)
+
+        val results = manager.from<LuceneSearchEntity>()
+            .select(Query.SCORE_SELECTION, "title")
+            .where("title" like "alpha")
+            .list<Map<String, Any?>>()
+
+        assertEquals(1, results.size)
+        val first = results.first()
+        assertContains(first.keys, Query.SCORE_SELECTION)
+        assertNotNull(first[Query.SCORE_SELECTION] as Float?)
     }
 }

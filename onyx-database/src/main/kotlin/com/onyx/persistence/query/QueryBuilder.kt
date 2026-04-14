@@ -229,6 +229,11 @@ class QueryBuilder(
         return this
     }
 
+    fun select(vararg properties: String): QueryBuilder {
+        this.query.selections = properties.toList()
+        return this
+    }
+
     fun and(criteria: QueryCriteria): QueryBuilder {
         this.query.criteria?.and(criteria)
         return this
