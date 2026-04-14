@@ -10,7 +10,7 @@ data class LuceneCriteriaQuery(
 
 internal fun buildLuceneCriteriaQuery(criteria: QueryCriteria, descriptor: EntityDescriptor): LuceneCriteriaQuery? {
     val result = buildCriteriaQuery(criteria, descriptor)
-    if (!result.supported || !result.hasFullText) return null
+    if (!result.supported) return null
     val queryText = result.queryText?.trim().orEmpty()
     if (queryText.isEmpty()) return null
     return LuceneCriteriaQuery(queryText, result.minScore)

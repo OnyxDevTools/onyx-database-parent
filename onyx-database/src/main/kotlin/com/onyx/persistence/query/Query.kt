@@ -2,6 +2,7 @@ package com.onyx.persistence.query
 
 import com.onyx.buffer.BufferStreamable
 import com.onyx.extension.getFunctionWithinSelection
+import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.function.QueryFunction
 import com.onyx.persistence.manager.PersistenceManager
 import kotlin.collections.ArrayList
@@ -40,6 +41,8 @@ import kotlin.collections.LinkedHashSet
 class Query : BufferStreamable {
     companion object {
         const val FULL_TEXT_ATTRIBUTE = "__full_text__"
+        const val SCORE_SELECTION = "__score__"
+        const val WILDCARD_SELECTION = "*"
     }
 
     /**
@@ -157,6 +160,12 @@ class Query : BufferStreamable {
 
     @Transient
     private var functions: List<QueryFunction>? = null
+
+    /**
+     * Full-text search scores keyed by record reference.
+     */
+    @Transient
+    var fullTextScores: Map<Reference, Float>? = null
 
     /**
      * Get the functions associated to the query selection

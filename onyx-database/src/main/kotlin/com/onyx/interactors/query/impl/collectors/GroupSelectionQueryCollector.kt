@@ -27,7 +27,7 @@ class GroupSelectionQueryCollector(
             return
 
         val selections = getGroupResults(entity)
-        val selectionResult = getSelectionRecord(entity)
+        val selectionResult = getSelectionRecord(entity, reference)
 
         resultLock.perform {
             if (!groupedResults.contains(selections)) {
