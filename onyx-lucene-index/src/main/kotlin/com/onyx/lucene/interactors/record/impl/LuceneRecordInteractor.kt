@@ -466,19 +466,48 @@ open class LuceneRecordInteractor(
         private fun shutdownInstance(key: String) {
             val state = luceneStates.remove(key) ?: return
 
+            // Prevent the background commit worker from trying to commit while this key is shutting down.
+            IndexCommitScheduler.clearDirtyKey(key)
+
             runCatching {
                 state.reopenThread.close()
             }
 
-            try {
+            var closeError: Exception? = null
+
+            runCatching {
                 state.searcherManager.close()
-                state.indexWriter.commit()
-                state.indexWriter.close()
+            }.onFailure {
+                closeError = closeError ?: (it as? Exception ?: Exception(it))
+            }
+
+            runCatching {
+                if (state.indexWriter.isOpen) {
+                    state.indexWriter.commit()
+                }
+            }.onFailure {
+                closeError = closeError ?: (it as? Exception ?: Exception(it))
+            }
+
+            runCatching {
+                if (state.indexWriter.isOpen) {
+                    state.indexWriter.close()
+                }
+            }.onFailure {
+                closeError = closeError ?: (it as? Exception ?: Exception(it))
+            }
+
+            runCatching {
                 state.directory.close()
-                luceneDirectories.remove(key)
-            } catch (e: Exception) {
-                System.err.println("CRITICAL: Error closing Lucene Record Index '$key': ${e.message}")
-                e.printStackTrace()
+            }.onFailure {
+                closeError = closeError ?: (it as? Exception ?: Exception(it))
+            }
+
+            luceneDirectories.remove(key)
+
+            if (closeError != null) {
+                System.err.println("CRITICAL: Error closing Lucene Record Index '$key': ${closeError!!.message}")
+                closeError!!.printStackTrace()
             }
         }
 
@@ -552,6 +581,10 @@ open class LuceneRecordInteractor(
 
             fun markDirty(key: String) {
                 dirtyIndexKeys.add(key)
+            }
+
+            fun clearDirtyKey(key: String) {
+                dirtyIndexKeys.remove(key)
             }
         }
     }
