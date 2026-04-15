@@ -46,7 +46,8 @@ open class VectorIndexScanner @Throws(OnyxException::class) constructor(
         
         // Filter results based on the operator
         val filteredResults = filterResults(results, criteria)
-        
+        collectScores(filteredResults, partitionId)
+
         filteredResults.forEach { (id, score) ->
             val reference = Reference(partitionId, id)
             collector?.collect(reference, reference.toManagedEntity(context, descriptor))
@@ -129,4 +130,27 @@ open class VectorIndexScanner @Throws(OnyxException::class) constructor(
             else -> results
         }
     }
+
+    protected fun collectScores(matches: Map<Long, Any?>, partition: Long) {
+        if (matches.isEmpty()) return
+
+        val numericScores = matches.entries.mapNotNull { (recordId, rawScore) ->
+            val score = (rawScore as? Number)?.toFloat() ?: return@mapNotNull null
+            Reference(partition, recordId) to score
+        }
+
+        if (numericScores.isEmpty()) return
+
+        synchronized(query) {
+            val scores = query.fullTextScores?.toMutableMap() ?: hashMapOf()
+            numericScores.forEach { (reference, score) ->
+                val previous = scores[reference]
+                if (previous == null || score > previous) {
+                    scores[reference] = score
+                }
+            }
+            query.fullTextScores = scores
+        }
+    }
+
 }
