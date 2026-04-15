@@ -3,6 +3,7 @@ package database.index
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.query.*
+import com.onyx.persistence.query.Query
 import database.base.DatabaseBaseTest
 import entities.VectorIndexEntity
 import org.junit.Before
@@ -92,6 +93,33 @@ class VectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(f
         assertTrue(resultsAfterDelete.size != resultsBeforeDelete.size)
     }
     
+
+    @Test
+    fun testSelectScoreWithLuceneLikeOnIndexedAttribute() {
+        val entity1 = VectorIndexEntity().apply {
+            label = "score_test_1"
+            vectorData = "alpha delta"
+            vectorData2 = "unused"
+        }
+        val entity2 = VectorIndexEntity().apply {
+            label = "score_test_2"
+            vectorData = "beta gamma"
+            vectorData2 = "unused"
+        }
+
+        manager.saveEntity<IManagedEntity>(entity1)
+        manager.saveEntity<IManagedEntity>(entity2)
+
+        val results = manager.from(VectorIndexEntity::class)
+            .select(Query.SCORE_SELECTION, "id", "vectorData")
+            .where("vectorData" like "alpha")
+            .list<Map<String, Any?>>()
+
+        assertEquals(1, results.size)
+        val first = results.first()
+        assertNotNull(first[Query.SCORE_SELECTION] as Float?)
+    }
+
     @Test
     fun testVectorIndexPartialMatch() {
         // Save entities with similar but not identical vector data

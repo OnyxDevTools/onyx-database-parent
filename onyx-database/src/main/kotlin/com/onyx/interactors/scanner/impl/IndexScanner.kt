@@ -123,6 +123,13 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
                         emptySet()
                     }
                 }
+                criteria.operator === QueryCriteriaOperator.LIKE || criteria.operator === QueryCriteriaOperator.MATCHES -> {
+                    val maxCandidates = context.maxCardinality - 1
+                    val limit = if (query.maxResults > 0) query.maxResults else maxCandidates
+                    val matched = interactor.matchAll(indexValue, limit, maxCandidates)
+                    collectScores(matched, partition)
+                    matched.keys
+                }
                 else -> {
                     val matched = interactor.findAll(indexValue)
                     collectScores(matched, partition)
