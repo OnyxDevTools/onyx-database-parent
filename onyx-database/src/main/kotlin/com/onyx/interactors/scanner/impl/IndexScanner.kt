@@ -100,31 +100,61 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
      *
      * @since 2.0.0
      */
-    protected fun find(indexValue:Any?, interactor: IndexInteractor = indexInteractor, partition: Long = partitionId):List<Reference> = if(isBetween) {
-        interactor.findAllBetween(rangeFrom, fromOperator === QueryCriteriaOperator.GREATER_THAN_EQUAL, rangeTo, toOperator === QueryCriteriaOperator.LESS_THAN_EQUAL)
-    } else {
-        when {
-            criteria.operator === QueryCriteriaOperator.GREATER_THAN -> interactor.findAllAbove(indexValue, false)
-            criteria.operator === QueryCriteriaOperator.GREATER_THAN_EQUAL -> interactor.findAllAbove(indexValue, true)
-            criteria.operator === QueryCriteriaOperator.LESS_THAN -> interactor.findAllBelow(indexValue, false)
-            criteria.operator === QueryCriteriaOperator.LESS_THAN_EQUAL -> interactor.findAllBelow(indexValue, true)
-            criteria.operator === QueryCriteriaOperator.BETWEEN ->
-                interactor.findAllBetween((indexValue as? Pair<*,*>)?.first,
-                    true,
-                    (indexValue as? Pair<*,*>)?.second,
-                    true)
-            criteria.operator === QueryCriteriaOperator.NOT_BETWEEN -> {
-                val pair = indexValue as? Pair<*,*>
-                if (pair != null) {
-                    interactor.findAllBelow(pair.first, false)
-                        .union(interactor.findAllAbove(pair.second, false))
-                } else {
-                    emptySet()
+    protected fun find(indexValue:Any?, interactor: IndexInteractor = indexInteractor, partition: Long = partitionId):List<Reference> {
+        val references = if(isBetween) {
+            interactor.findAllBetween(rangeFrom, fromOperator === QueryCriteriaOperator.GREATER_THAN_EQUAL, rangeTo, toOperator === QueryCriteriaOperator.LESS_THAN_EQUAL)
+        } else {
+            when {
+                criteria.operator === QueryCriteriaOperator.GREATER_THAN -> interactor.findAllAbove(indexValue, false)
+                criteria.operator === QueryCriteriaOperator.GREATER_THAN_EQUAL -> interactor.findAllAbove(indexValue, true)
+                criteria.operator === QueryCriteriaOperator.LESS_THAN -> interactor.findAllBelow(indexValue, false)
+                criteria.operator === QueryCriteriaOperator.LESS_THAN_EQUAL -> interactor.findAllBelow(indexValue, true)
+                criteria.operator === QueryCriteriaOperator.BETWEEN ->
+                    interactor.findAllBetween((indexValue as? Pair<*,*>)?.first,
+                        true,
+                        (indexValue as? Pair<*,*>)?.second,
+                        true)
+                criteria.operator === QueryCriteriaOperator.NOT_BETWEEN -> {
+                    val pair = indexValue as? Pair<*,*>
+                    if (pair != null) {
+                        interactor.findAllBelow(pair.first, false)
+                            .union(interactor.findAllAbove(pair.second, false))
+                    } else {
+                        emptySet()
+                    }
+                }
+                else -> {
+                    val matched = interactor.findAll(indexValue)
+                    collectScores(matched, partition)
+                    matched.keys
                 }
             }
-            else -> interactor.findAll(indexValue).keys
         }
-    }.map {
-        Reference(partition, it)
+
+        return references.map {
+            Reference(partition, it)
+        }
+    }
+
+    private fun collectScores(matches: Map<Long, *>, partition: Long) {
+        if (matches.isEmpty()) return
+
+        val numericScores = matches.entries.mapNotNull { (recordId, rawScore) ->
+            val score = (rawScore as? Number)?.toFloat() ?: return@mapNotNull null
+            Reference(partition, recordId) to score
+        }
+
+        if (numericScores.isEmpty()) return
+
+        synchronized(query) {
+            val scores = (query.fullTextScores?.toMutableMap() ?: hashMapOf())
+            numericScores.forEach { (reference, score) ->
+                val previous = scores[reference]
+                if (previous == null || score > previous) {
+                    scores[reference] = score
+                }
+            }
+            query.fullTextScores = scores
+        }
     }
 }
