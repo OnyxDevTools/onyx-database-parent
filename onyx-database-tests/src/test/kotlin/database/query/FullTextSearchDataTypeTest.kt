@@ -37,6 +37,35 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
         fun persistenceManagersToTest(): Collection<KClass<*>> = listOf(EmbeddedPersistenceManagerFactory::class)
     }
 
+
+    @Test
+    fun testLuceneSearchDataSurvivesFactoryCloseAndReopenInSameProcess() {
+        val saved = manager.saveEntity<IManagedEntity>(LuceneSearchEntity().apply {
+            title = "reopen safety"
+            body = "lucene record interactor should not corrupt persisted data"
+            category = "regression"
+        }) as LuceneSearchEntity
+
+        // Close and re-open in the same JVM process.
+        factory.close()
+        initialize()
+
+        val byId = manager.from<LuceneSearchEntity>()
+            .where("id" eq saved.id)
+            .firstOrNull<LuceneSearchEntity>()
+
+        assertTrue(byId != null, "Entity should still be readable after reopen")
+        assertEquals("reopen safety", byId!!.title)
+        assertEquals("lucene record interactor should not corrupt persisted data", byId.body)
+        assertEquals("regression", byId.category)
+
+        val searchResults = manager.from<LuceneSearchEntity>()
+            .search("persisted data")
+            .list<LuceneSearchEntity>()
+
+        assertTrue(searchResults.any { it.id == saved.id }, "Re-opened factory should return the saved record in Lucene search")
+    }
+
     @Test
     fun testFullTextSearchWithDifferentDataTypes() {
         // Create entities with different data types
