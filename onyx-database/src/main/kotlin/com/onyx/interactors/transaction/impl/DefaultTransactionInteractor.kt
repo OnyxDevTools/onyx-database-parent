@@ -4,6 +4,8 @@ package com.onyx.interactors.transaction.impl
 
 import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
+import com.onyx.entity.SystemEntity
+import com.onyx.entity.SystemPartitionEntry
 import com.onyx.exception.TransactionException
 import com.onyx.extension.common.metadata
 import com.onyx.extension.withBuffer
@@ -162,6 +164,8 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
                                 SAVE -> {
                                     val value = BufferStream.fromBuffer(transactionBuffer, persistenceManager.context) as Map<String, Any?>
                                     val className = value["type"] as? String ?: continue
+                                    if (className.endsWith("SystemEntity")) continue
+                                    if (className.endsWith("SystemPartitionEntry")) continue
                                     val instance = metadata(persistenceManager.context.contextId).classForName(className).createNewEntity<ManagedEntity>(this.persistenceManager.context.contextId)
                                     instance.fromMap(value["value"] as Map<String, Any?>, persistenceManager.context)
                                     transaction = SaveTransaction(instance)

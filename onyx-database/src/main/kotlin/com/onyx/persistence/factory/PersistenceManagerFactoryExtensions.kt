@@ -19,7 +19,9 @@ import kotlin.reflect.KClass
  *
  * @param destinationFactory persistence manager factory pointing at the new database directory
  */
-fun PersistenceManagerFactory.cloneTo(destinationFactory: PersistenceManagerFactory) {
+fun PersistenceManagerFactory.cloneTo(destinationFactory: PersistenceManagerFactory, entityFilter: (SystemEntity) -> Boolean = {
+    true
+}) {
     val sourceManager = this.persistenceManager
     val destinationManager = destinationFactory.persistenceManager
     val schemaContext = this.schemaContext
@@ -28,6 +30,7 @@ fun PersistenceManagerFactory.cloneTo(destinationFactory: PersistenceManagerFact
         .from(SystemEntity::class)
         .where(("isLatestVersion" eq true))
         .list<SystemEntity>()
+        .filter(entityFilter)
 
     systemEntities.forEach { systemEntity ->
         val entityClass = runCatching { systemEntity.type(schemaContext.contextId) }
