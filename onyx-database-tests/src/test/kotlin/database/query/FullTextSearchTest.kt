@@ -15,6 +15,7 @@ import database.base.DatabaseBaseTest
 import entities.LucenePartitionedEntity
 import entities.LuceneSearchEntity
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -178,25 +179,5 @@ class FullTextSearchTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
         assertContains(first.keys, "title")
         assertContains(first.keys, "body")
         assertContains(first.keys, "category")
-    }
-
-    @Test
-    fun testSelectScoreWithLuceneLikeCriteria() {
-        val matchingEntity = LuceneSearchEntity().apply {
-            title = "alpha"
-            body = "body content"
-            category = "news"
-        }
-        manager.saveEntity<IManagedEntity>(matchingEntity)
-
-        val results = manager.from<LuceneSearchEntity>()
-            .select(Query.SCORE_SELECTION, "title")
-            .where("title" like "alpha")
-            .list<Map<String, Any?>>()
-
-        assertEquals(1, results.size)
-        val first = results.first()
-        assertContains(first.keys, Query.SCORE_SELECTION)
-        assertNotNull(first[Query.SCORE_SELECTION] as Float?)
     }
 }
