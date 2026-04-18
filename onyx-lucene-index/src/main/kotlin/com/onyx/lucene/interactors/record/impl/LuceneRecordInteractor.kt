@@ -69,7 +69,6 @@ open class LuceneRecordInteractor(
     private lateinit var indexWriter: IndexWriter
     private lateinit var searcherManager: SearcherManager
     private lateinit var reopenThread: ControlledRealTimeReopenThread<IndexSearcher>
-    private lateinit var queryParser: QueryParser
 
     private val indexKey: String = generateKey(entityDescriptor, context)
 
@@ -105,7 +104,7 @@ open class LuceneRecordInteractor(
         if (!indexExists) {
             return true
         }
-
+    
         val versionFile = indexPath.resolve(INDEX_VERSION_FILE)
         val versionMatches = runCatching {
             Files.exists(versionFile) &&
@@ -225,8 +224,7 @@ open class LuceneRecordInteractor(
         val indexWriter: IndexWriter,
         val searcherManager: SearcherManager,
         val reopenThread: ControlledRealTimeReopenThread<IndexSearcher>,
-        val directory: Directory,
-        val queryParser: QueryParser
+        val directory: Directory
     )
 
     private fun hydrateStates() {
@@ -260,18 +258,12 @@ open class LuceneRecordInteractor(
                 start()
             }
 
-            val parser = QueryParser(CONTENT_FIELD, analyzer).apply {
-                defaultOperator = QueryParser.Operator.OR
-                allowLeadingWildcard = true
-            }
-
-            LuceneRecordState(writer, manager, thread, directory, parser)
+            LuceneRecordState(writer, manager, thread, directory)
         }
 
         indexWriter = state.indexWriter
         searcherManager = state.searcherManager
         reopenThread = state.reopenThread
-        queryParser = state.queryParser
     }
 
     private fun updateDocument(primaryKey: Any, entity: IManagedEntity) {
@@ -307,10 +299,20 @@ open class LuceneRecordInteractor(
         return doc
     }
 
-    private fun parseQuery(queryText: String) = try {
-        queryParser.parse(queryText)
-    } catch (_: ParseException) {
-        queryParser.parse(QueryParser.escape(queryText))
+    /**
+     * Creates a new [QueryParser] for each invocation to ensure thread safety.
+     * [QueryParser] is not thread-safe and must not be shared across threads.
+     */
+    private fun parseQuery(queryText: String): org.apache.lucene.search.Query {
+        val parser = QueryParser(CONTENT_FIELD, analyzer).apply {
+            defaultOperator = QueryParser.Operator.OR
+            allowLeadingWildcard = true
+        }
+        return try {
+            parser.parse(queryText)
+        } catch (_: ParseException) {
+            parser.parse(QueryParser.escape(queryText))
+        }
     }
 
     /**
