@@ -46,7 +46,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
         }
 
         val context = Contexts.get(contextId)!!
-        if ( context.getRecordInteractor(descriptor) is FullTextRecordInteractor) {
+        if ( context.getRecordInteractor(descriptor) is FullTextRecordInteractor && query.getAllCriteria().firstOrNull { it.attribute == Query.FULL_TEXT_ATTRIBUTE } != null) {
             val luceneQuery = buildLuceneCriteriaQuery(query.criteria!!, descriptor)
             if (luceneQuery != null) {
                 val references = executeLuceneCriteriaQuery(query, luceneQuery, context)
