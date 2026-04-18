@@ -163,6 +163,7 @@ class PartitionVectorIndexScanner @Throws(OnyxException::class) constructor(
         
         // Filter results based on the operator
         val filteredResults = filterResults(results, criteria)
+        collectScores(filteredResults, partitionId)
 
         filteredResults.forEach { (recordId, _) ->
             if (matchingReferences.size > maxCardinality) {
