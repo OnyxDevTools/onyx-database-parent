@@ -164,11 +164,11 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
                                 SAVE -> {
                                     val value = BufferStream.fromBuffer(transactionBuffer, persistenceManager.context) as Map<String, Any?>
                                     val className = value["type"] as? String ?: continue
-                                    if (className.endsWith("SystemEntity")) continue
-                                    if (className.endsWith("SystemPartitionEntry")) continue
                                     val instance = metadata(persistenceManager.context.contextId).classForName(className).createNewEntity<ManagedEntity>(this.persistenceManager.context.contextId)
                                     instance.fromMap(value["value"] as Map<String, Any?>, persistenceManager.context)
                                     transaction = SaveTransaction(instance)
+                                    if (className.endsWith("SystemPartitionEntry")) continue
+
                                     if (executeTransaction.invoke(transaction!!)) {
                                         instance.ignoreListeners = true
                                         this.persistenceManager.saveEntity<IManagedEntity>(instance)
