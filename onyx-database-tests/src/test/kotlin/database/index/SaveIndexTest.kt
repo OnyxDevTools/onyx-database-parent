@@ -1,6 +1,7 @@
 package database.index
 
 import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.query.AttributeUpdate
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
@@ -44,6 +45,33 @@ class SaveIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(fac
         results = manager.executeQuery(findQuery2)
 
         assertEquals(1,results.size, "New Indexed entity was not found")
+    }
+
+    @Test
+    fun rebuildStringIndexUsesIndexedAttributeValue() {
+        if (factoryClass != EmbeddedPersistenceManagerFactory::class) {
+            return
+        }
+
+        val entity = StringIdentifierEntityIndex()
+        entity.identifier = "A"
+        entity.indexValue = "INDEX VALUE"
+        manager.saveEntity<IManagedEntity>(entity)
+
+        val findQuery = Query(StringIdentifierEntityIndex::class.java, QueryCriteria("indexValue", QueryCriteriaOperator.EQUAL, "INDEX VALUE"))
+        assertEquals(1, manager.executeQuery<StringIdentifierEntityIndex>(findQuery).size, "Indexed entity was not found before rebuild")
+
+        val descriptor = factory.schemaContext.getDescriptorForEntity(StringIdentifierEntityIndex::class.java, "")
+        val indexInteractor = factory.schemaContext.getIndexInteractor(descriptor.indexes["indexValue"]!!)
+        indexInteractor.clear()
+
+        assertTrue(manager.executeQuery<StringIdentifierEntityIndex>(findQuery).isEmpty(), "Index was not cleared")
+
+        indexInteractor.rebuild()
+
+        val results = manager.executeQuery<StringIdentifierEntityIndex>(findQuery)
+        assertEquals(1, results.size, "Indexed entity was not found after rebuild")
+        assertEquals("A", results.first().identifier, "Rebuilt index returned the wrong entity")
     }
 
     @Test

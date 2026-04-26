@@ -300,6 +300,7 @@ open class DefaultSchemaContext : SchemaContext {
             attribute.isPartition = newSystemEntity.partitionName == attribute.name
         }
 
+        val previousSystemEntity = systemEntity
         val entitiesMatch = newSystemEntity == systemEntity
         if (!entitiesMatch) {
 
@@ -314,7 +315,7 @@ open class DefaultSchemaContext : SchemaContext {
         systemEntityByIDMap[systemEntity.primaryKey] = systemEntity
 
         if (!entitiesMatch) {
-            checkForIndexChanges(systemEntity, newSystemEntity)
+            checkForIndexChanges(previousSystemEntity, newSystemEntity)
         }
 
         return systemEntity
@@ -354,7 +355,10 @@ open class DefaultSchemaContext : SchemaContext {
         // Rebuild indexes that are new or have changed.  Indexes that were removed
         // should not trigger a rebuild, otherwise the rebuild process may attempt to
         // access descriptors that no longer exist which can lead to file corruption.
-        (newIndexes - oldIndexes).values.forEach { rebuildIndex(systemEntity, it.name) }
+        newIndexes
+            .filter { (name, index) -> oldIndexes[name] != index }
+            .values
+            .forEach { rebuildIndex(newRevision, it.name) }
     }
 
     /**

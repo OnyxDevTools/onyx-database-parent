@@ -9,7 +9,7 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.factory.DiskMapFactory
-import com.onyx.extension.identifier
+import com.onyx.extension.get
 import java.lang.ref.WeakReference
 
 import java.util.*
@@ -210,7 +210,7 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(priv
         records.entries.forEach {
             val recId = records.getRecID(it.key)
             if (recId > 0) {
-                val indexValue = it.value.identifier(context, descriptor)
+                val indexValue = it.value.get<Any?>(context, descriptor, indexDescriptor.name)
                 if (indexValue != null)
                     save(indexValue, recId, recId)
             }
@@ -225,6 +225,7 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(priv
     @Synchronized
     override fun clear() {
         references.clear()
+        indexValues.clear()
     }
 
     /**
