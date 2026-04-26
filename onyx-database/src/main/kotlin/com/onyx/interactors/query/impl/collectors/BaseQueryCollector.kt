@@ -18,6 +18,7 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
 import java.util.Comparator
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.collections.LinkedHashSet
 
 /**
  * This class bores the responsibility of collecting results from a query.  It contains the base shared functionality
@@ -54,7 +55,31 @@ abstract class BaseQueryCollector<T>(
                 if(query.queryOrders?.isNotEmpty() == true) SortedList(EntityComparator(comparator)) as MutableCollection<T> else ArrayList()
 
     // Selection Query Attributes
-    protected val selections:List<QueryAttributeResource> by lazy { if(query.selections == null) emptyList() else QueryAttributeResource.create(query.selections!!.map { it }.toTypedArray(), descriptor, query, context) }
+    private val expandedSelections: List<String> by lazy {
+        val configuredSelections = query.selections ?: return@lazy emptyList()
+        val expanded = ArrayList<String>()
+        configuredSelections.forEach { selection ->
+            if (selection == Query.WILDCARD_SELECTION) {
+                expanded.addAll(descriptor.attributes.keys)
+            } else {
+                expanded.add(selection)
+            }
+        }
+        LinkedHashSet(expanded).toList()
+    }
+
+    private val concreteSelections: List<String> by lazy {
+        expandedSelections.filterNot { it == Query.SCORE_SELECTION }
+    }
+
+    // Selection Query Attributes
+    protected val selections:List<QueryAttributeResource> by lazy {
+        if (concreteSelections.isEmpty()) {
+            emptyList()
+        } else {
+            QueryAttributeResource.create(concreteSelections.toTypedArray(), descriptor, query, context)
+        }
+    }
 
     // Order by query attributes
     protected val orders:List<QueryAttributeResource> by lazy { if(query.queryOrders == null) emptyList() else QueryAttributeResource.create(query.queryOrders!!.map { it.attribute }.toTypedArray(), descriptor, query, context) }
@@ -72,7 +97,7 @@ abstract class BaseQueryCollector<T>(
     protected val allQueryAttributes:List<QueryAttributeResource> by lazy {
         val groupStrings = query.groupBy ?: emptyList()
         val orderByStrings = query.queryOrders?.map { it.attribute }?.toList() ?: ArrayList()
-        val selectionStrings = query.selections ?: emptyList()
+        val selectionStrings = concreteSelections
         val allStrings = groupStrings + orderByStrings + selectionStrings
         QueryAttributeResource.create(allStrings.toHashSet().toTypedArray(), descriptor, query, context)
     }
@@ -196,9 +221,9 @@ abstract class BaseQueryCollector<T>(
             }
             // Selection results.  Here we remove unselected fields that may have been part of the query orders or groups
             else if(query.selections?.size ?: 0 > 0
-                && query.selections!!.size != allQueryAttributes.size) {
+                && expandedSelections.size != allQueryAttributes.size) {
 
-                val itemsToRemove = allQueryAttributes.map { it.selection } - query.selections!!
+                val itemsToRemove = allQueryAttributes.map { it.selection } - expandedSelections
                 if(itemsToRemove.isNotEmpty()) {
                     results.forEach { record ->
                         itemsToRemove.forEach {
@@ -246,13 +271,18 @@ abstract class BaseQueryCollector<T>(
      * Get all selection data items and put them into a hash map.  This includes query orders, groups and selections.
      * It contains all data elements that can be used to aggregate a select query
      */
-    protected fun getSelectionRecord(entity: IManagedEntity) : HashMap<String, Any?> {
+    protected fun getSelectionRecord(entity: IManagedEntity, reference: Reference? = null) : HashMap<String, Any?> {
         val selectionResult = HashMap<String, Any?>()
         allQueryAttributes.forEach { selection ->
             if(selection.function == null)
                 selectionResult[selection.selection] = comparator.getAttribute(selection, entity, context)
             else
                 selectionResult[selection.selection] = selection.function.execute(comparator.getAttribute(selection, entity, context))
+        }
+
+        if (expandedSelections.contains(Query.SCORE_SELECTION)) {
+            val score = if (reference == null) null else query.fullTextScores?.get(reference)
+            selectionResult[Query.SCORE_SELECTION] = score
         }
 
         return selectionResult

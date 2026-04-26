@@ -20,6 +20,7 @@ import org.apache.lucene.document.TextField
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
+import org.apache.lucene.index.TieredMergePolicy
 import org.apache.lucene.queryparser.classic.ParseException
 import org.apache.lucene.queryparser.classic.QueryParser
 import org.apache.lucene.search.ControlledRealTimeReopenThread
@@ -27,7 +28,6 @@ import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.SearcherManager
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.FSDirectory
-import org.apache.lucene.index.TieredMergePolicy
 import java.io.File
 import java.lang.ref.WeakReference
 import java.lang.reflect.Field as ReflectField
@@ -40,13 +40,16 @@ import kotlin.io.path.Path
 
 /**
  * Base Lucene "whole record" implementation that extends DefaultRecordInteractor.
- * Provides common Lucene indexing and search functionality that can be shared
- * by both sequence-based and UUID-based record interactors.
  *
- * Index key: record referenceId (DiskMap recID)
- * Lucene doc fields:
- * - record_id (stored, exact match)
- * - content   (tokenized, indexed)
+ * IMPORTANT:
+ * Lucene document identity is the ENTITY PRIMARY KEY, not the DiskMap recID.
+ *
+ * Why:
+ * - recID is a physical/storage reference and can change across updates/rebuilds
+ * - primary key is the logical/stable record identity
+ *
+ * We still return recID from searchAll() because the query engine expects it,
+ * but we resolve the CURRENT recID from the primary key at search time.
  */
 open class LuceneRecordInteractor(
     entityDescriptor: EntityDescriptor,
@@ -61,14 +64,12 @@ open class LuceneRecordInteractor(
         KeywordAnalyzer(),
         mapOf(CONTENT_FIELD to StandardAnalyzer())
     )
+
     private lateinit var directory: Directory
     private lateinit var indexWriter: IndexWriter
     private lateinit var searcherManager: SearcherManager
     private lateinit var reopenThread: ControlledRealTimeReopenThread<IndexSearcher>
-    private lateinit var queryParser: QueryParser
 
-    // Store key locally for efficient queueing
-    // Generate key once
     private val indexKey: String = generateKey(entityDescriptor, context)
 
     init {
@@ -76,38 +77,59 @@ open class LuceneRecordInteractor(
         hydrateStates()
         if (rebuild) {
             rebuildIndex()
+        } else {
+            ensureIndexVersionMarker()
         }
     }
-    
+
     /**
-     * Check if Lucene index files exist and rebuild the index if they don't but records exist.
-     * This method is called during instantiation to ensure indexes are properly initialized.
+     * Rebuild if:
+     * 1. index directory is missing/empty while records exist
+     * 2. the on-disk index format marker is missing or old
+     *
+     * This forces a one-time rebuild when switching from recID-keyed Lucene docs
+     * to primary-key-keyed Lucene docs.
      */
     private fun checkAndRebuildIndexIfNeeded(): Boolean {
-        // Check if the index directory exists and has any files
         val indexPath = Path(indexKey)
-        val indexExists = Files.exists(indexPath) && Files.isDirectory(indexPath) && 
-                          (indexPath.toFile().listFiles()?.isNotEmpty() ?: false)
-        
-        // If index doesn't exist but we have records, rebuild the index
-        return (!indexExists && records.size > 0L)
-    }
+        val indexExists =
+            Files.exists(indexPath) &&
+                    Files.isDirectory(indexPath) &&
+                    (indexPath.toFile().listFiles()?.isNotEmpty() ?: false)
+
+        if (records.size <= 0L) {
+            return false
+        }
+
+        if (!indexExists) {
+            return true
+        }
     
+        val versionFile = indexPath.resolve(INDEX_VERSION_FILE)
+        val versionMatches = runCatching {
+            Files.exists(versionFile) &&
+                    Files.readString(versionFile).trim() == INDEX_FORMAT_VERSION
+        }.getOrDefault(false)
+
+        return !versionMatches
+    }
+
     /**
-     * Rebuild the Lucene index by iterating through all existing records and indexing them.
+     * Rebuild the Lucene index from the current record store.
+     * Since the document identity changed to primary key, we clear the old index first.
      */
     private fun rebuildIndex() {
+        indexWriter.deleteAll()
+
         records.forEach { _, entity ->
             val pk = entity.identifier(ctx)
             if (pk != null) {
-                val referenceId = records.getRecID(pk)
-                if (referenceId > 0L) {
-                    updateDocument(referenceId, entity)
-                }
+                updateDocument(pk, entity)
             }
         }
-        // Force a commit to ensure all documents are written
-        IndexCommitScheduler.markDirty(indexKey)
+
+        indexWriter.commit()
+        ensureIndexVersionMarker()
     }
 
     @Throws(OnyxException::class)
@@ -116,39 +138,29 @@ open class LuceneRecordInteractor(
         val result = super.save(entity)
 
         val pk = entity.identifier(ctx) ?: return result
-        val referenceId = records.getRecID(pk)
-        if (referenceId > 0L) {
-            updateDocument(referenceId, entity)
-        }
+        updateDocument(pk, entity)
 
         return result
     }
 
+    /**
+     * Do not manually delete from Lucene here.
+     * DefaultRecordInteractor.delete(entity) already calls this.deleteWithId(...)
+     * and dynamic dispatch lands in our Lucene-aware deleteWithId override.
+     */
     @Throws(OnyxException::class)
     @Synchronized
     override fun delete(entity: IManagedEntity) {
-        val pk = entity.identifier(ctx)
-        val referenceId = if (pk != null) records.getRecID(pk) else -1L
-
         super.delete(entity)
-
-        if (referenceId > 0L) {
-            indexWriter.deleteDocuments(Term(ID_FIELD, referenceId.toString()))
-            // Queue for commit
-            IndexCommitScheduler.markDirty(indexKey)
-        }
     }
 
     @Synchronized
     override fun deleteWithId(primaryKey: Any): IManagedEntity? {
-        val referenceId = records.getRecID(primaryKey)
+        val pkText = primaryKeyToText(primaryKey)
         val removed = super.deleteWithId(primaryKey)
 
-        if (referenceId > 0L) {
-            indexWriter.deleteDocuments(Term(ID_FIELD, referenceId.toString()))
-            // Queue for commit
-            IndexCommitScheduler.markDirty(indexKey)
-        }
+        indexWriter.deleteDocuments(Term(PRIMARY_KEY_FIELD, pkText))
+        IndexCommitScheduler.markDirty(indexKey)
 
         return removed
     }
@@ -157,13 +169,15 @@ open class LuceneRecordInteractor(
     override fun clear() {
         super.clear()
         indexWriter.deleteAll()
-        // Queue for commit
         IndexCommitScheduler.markDirty(indexKey)
     }
 
     /**
      * "Search anywhere" entry point for query engine routing.
-     * Returns referenceId (recID) -> score.
+     * Returns CURRENT referenceId (recID) -> score.
+     *
+     * Lucene stores the primary key. We resolve recID fresh from DiskMap here,
+     * so search results cannot drift because of old/stale recIDs in the Lucene doc.
      */
     override fun searchAll(queryText: String, limit: Int): Map<Long, Float> {
         val q = queryText.trim()
@@ -177,12 +191,19 @@ open class LuceneRecordInteractor(
         try {
             val topDocs = searcher.search(parsed, limit)
             val results = LinkedHashMap<Long, Float>(topDocs.scoreDocs.size)
+
             for (sd in topDocs.scoreDocs) {
-                val doc = searcher.storedFields().document(sd.doc, setOf(ID_FIELD))
-                val referenceId = doc.get(ID_FIELD)?.toLongOrNull() ?: continue
-                results[referenceId] = sd.score
-                if (results.size == limit) break
+                val doc = searcher.storedFields().document(sd.doc, setOf(PRIMARY_KEY_FIELD))
+                val primaryKeyText = doc.get(PRIMARY_KEY_FIELD) ?: continue
+                val primaryKey = primaryKeyFromText(primaryKeyText) ?: continue
+                val referenceId = records.getRecID(primaryKey)
+
+                if (referenceId > 0L) {
+                    results[referenceId] = sd.score
+                    if (results.size == limit) break
+                }
             }
+
             return results
         } finally {
             searcherManager.release(searcher)
@@ -194,7 +215,6 @@ open class LuceneRecordInteractor(
      * Call from your schema shutdown path.
      */
     override fun shutdown() {
-        // Delegate to shared shutdown logic
         shutdownInstance(indexKey)
     }
 
@@ -204,12 +224,10 @@ open class LuceneRecordInteractor(
         val indexWriter: IndexWriter,
         val searcherManager: SearcherManager,
         val reopenThread: ControlledRealTimeReopenThread<IndexSearcher>,
-        val directory: Directory,
-        val queryParser: QueryParser
+        val directory: Directory
     )
 
     private fun hydrateStates() {
-        // Use the pre-calculated key
         val key = indexKey
 
         val state = luceneStates.computeIfAbsent(key) {
@@ -217,7 +235,6 @@ open class LuceneRecordInteractor(
 
             val writerConfig = IndexWriterConfig(analyzer).apply {
                 openMode = IndexWriterConfig.OpenMode.CREATE_OR_APPEND
-                // Reduced from 256.0 to 48.0 to ensure data flushes to disk segments more frequently
                 ramBufferSizeMB = 48.0
                 useCompoundFile = false
                 mergePolicy = (mergePolicy as TieredMergePolicy).apply {
@@ -227,7 +244,6 @@ open class LuceneRecordInteractor(
                 }
             }
 
-            //
             val writer = IndexWriter(directory, writerConfig)
             val manager = SearcherManager(writer, null)
 
@@ -242,44 +258,61 @@ open class LuceneRecordInteractor(
                 start()
             }
 
-            val parser = QueryParser(CONTENT_FIELD, analyzer).apply {
-                defaultOperator = QueryParser.Operator.OR
-                allowLeadingWildcard = true
-            }
-
-            LuceneRecordState(writer, manager, thread, directory, parser)
+            LuceneRecordState(writer, manager, thread, directory)
         }
 
         indexWriter = state.indexWriter
         searcherManager = state.searcherManager
         reopenThread = state.reopenThread
-        queryParser = state.queryParser
     }
 
-    private fun updateDocument(referenceId: Long, entity: IManagedEntity) {
+    private fun updateDocument(primaryKey: Any, entity: IManagedEntity) {
+        val pkText = primaryKeyToText(primaryKey)
         val text = entityToText(entity)
+
         indexWriter.updateDocument(
-            Term(ID_FIELD, referenceId.toString()),
-            createDocument(referenceId, text, entity)
+            Term(PRIMARY_KEY_FIELD, pkText),
+            createDocument(primaryKey, text, entity)
         )
-        // Queue for commit instead of blocking/checking counters
+
         IndexCommitScheduler.markDirty(indexKey)
     }
 
-    private fun createDocument(referenceId: Long, text: String, entity: IManagedEntity): Document {
+    private fun createDocument(primaryKey: Any, text: String, entity: IManagedEntity): Document {
         val doc = Document()
-        doc.add(StringField(ID_FIELD, referenceId.toString(), Field.Store.YES))
+        val pkText = primaryKeyToText(primaryKey)
+
+        doc.add(StringField(PRIMARY_KEY_FIELD, pkText, Field.Store.YES))
+
+        // Optional/debug/backward visibility only.
+        // Do NOT use this field as the authoritative identity.
+        val currentReferenceId = records.getRecID(primaryKey)
+        if (currentReferenceId > 0L) {
+            doc.add(StringField(REFERENCE_FIELD, currentReferenceId.toString(), Field.Store.YES))
+        }
+
         if (text.isNotBlank()) {
             doc.add(TextField(CONTENT_FIELD, text, Field.Store.NO))
         }
+
         addAttributeFields(doc, entity)
         return doc
     }
 
-    private fun parseQuery(queryText: String) = try {
-        queryParser.parse(queryText)
-    } catch (_: ParseException) {
-        queryParser.parse(QueryParser.escape(queryText))
+    /**
+     * Creates a new [QueryParser] for each invocation to ensure thread safety.
+     * [QueryParser] is not thread-safe and must not be shared across threads.
+     */
+    private fun parseQuery(queryText: String): org.apache.lucene.search.Query {
+        val parser = QueryParser(CONTENT_FIELD, analyzer).apply {
+            defaultOperator = QueryParser.Operator.OR
+            allowLeadingWildcard = true
+        }
+        return try {
+            parser.parse(queryText)
+        } catch (_: ParseException) {
+            parser.parse(QueryParser.escape(queryText))
+        }
     }
 
     /**
@@ -369,10 +402,54 @@ open class LuceneRecordInteractor(
         doc.add(StringField(fieldName + ATTRIBUTE_LOWER_SUFFIX, rawValue.lowercase(Locale.US), Field.Store.YES))
     }
 
+    private fun primaryKeyToText(primaryKey: Any): String {
+        return runCatching {
+            primaryKey.castTo(String::class.java) as String
+        }.getOrElse {
+            primaryKey.toString()
+        }
+    }
+
+    private fun primaryKeyFromText(primaryKeyText: String): Any? {
+        val identifierType = entityDescriptor.identifier?.type ?: return primaryKeyText
+
+        return runCatching {
+            primaryKeyText.castTo(identifierType)
+        }.getOrElse {
+            when (identifierType) {
+                String::class.java -> primaryKeyText
+                java.lang.Integer::class.java, Int::class.java -> primaryKeyText.toInt()
+                java.lang.Long::class.java, Long::class.java -> primaryKeyText.toLong()
+                java.lang.Short::class.java, Short::class.java -> primaryKeyText.toShort()
+                java.lang.Byte::class.java, Byte::class.java -> primaryKeyText.toByte()
+                java.lang.Boolean::class.java, Boolean::class.java -> primaryKeyText.toBoolean()
+                java.lang.Float::class.java, Float::class.java -> primaryKeyText.toFloat()
+                java.lang.Double::class.java, Double::class.java -> primaryKeyText.toDouble()
+                else -> primaryKeyText
+            }
+        }
+    }
+
+    private fun ensureIndexVersionMarker() {
+        runCatching {
+            val indexPath = Path(indexKey)
+            Files.createDirectories(indexPath)
+            Files.writeString(indexPath.resolve(INDEX_VERSION_FILE), INDEX_FORMAT_VERSION)
+        }
+    }
+
     companion object {
-        private const val ID_FIELD = "record_id"
+        private const val PRIMARY_KEY_FIELD = "entity_primary_key"
+        private const val REFERENCE_FIELD = "record_id"
         private const val CONTENT_FIELD = "content"
         private const val ATTRIBUTE_LOWER_SUFFIX = "__lc"
+
+        /**
+         * Bump this whenever the Lucene document identity/schema changes.
+         * Missing/mismatched version forces a rebuild.
+         */
+        private const val INDEX_VERSION_FILE = ".onyx-lucene-record-index.version"
+        private const val INDEX_FORMAT_VERSION = "entity-primary-key-v1"
 
         private val fieldCache = ConcurrentHashMap<Class<*>, List<ReflectField>>()
 
@@ -380,10 +457,8 @@ open class LuceneRecordInteractor(
         private val luceneStates = ConcurrentHashMap<String, LuceneRecordState>()
 
         init {
-            // Start the background commit scheduler
             IndexCommitScheduler.start()
 
-            // Register JVM Shutdown Hook to prevent corruption
             Runtime.getRuntime().addShutdownHook(Thread {
                 IndexCommitScheduler.stop()
                 luceneStates.keys.forEach { key -> shutdownInstance(key) }
@@ -393,20 +468,48 @@ open class LuceneRecordInteractor(
         private fun shutdownInstance(key: String) {
             val state = luceneStates.remove(key) ?: return
 
+            // Prevent the background commit worker from trying to commit while this key is shutting down.
+            IndexCommitScheduler.clearDirtyKey(key)
+
             runCatching {
                 state.reopenThread.close()
             }
 
-            try {
-                // Ensure persistence. Do not swallow errors here.
+            var closeError: Exception? = null
+
+            runCatching {
                 state.searcherManager.close()
-                state.indexWriter.commit() // Explicit commit
-                state.indexWriter.close()
+            }.onFailure {
+                closeError = closeError ?: (it as? Exception ?: Exception(it))
+            }
+
+            runCatching {
+                if (state.indexWriter.isOpen) {
+                    state.indexWriter.commit()
+                }
+            }.onFailure {
+                closeError = closeError ?: (it as? Exception ?: Exception(it))
+            }
+
+            runCatching {
+                if (state.indexWriter.isOpen) {
+                    state.indexWriter.close()
+                }
+            }.onFailure {
+                closeError = closeError ?: (it as? Exception ?: Exception(it))
+            }
+
+            runCatching {
                 state.directory.close()
-                luceneDirectories.remove(key)
-            } catch (e: Exception) {
-                System.err.println("CRITICAL: Error closing Lucene Record Index '$key': ${e.message}")
-                e.printStackTrace()
+            }.onFailure {
+                closeError = closeError ?: (it as? Exception ?: Exception(it))
+            }
+
+            luceneDirectories.remove(key)
+
+            if (closeError != null) {
+                System.err.println("CRITICAL: Error closing Lucene Record Index '$key': ${closeError!!.message}")
+                closeError!!.printStackTrace()
             }
         }
 
@@ -422,10 +525,10 @@ open class LuceneRecordInteractor(
         }
 
         private fun createDirectory(key: String): Directory = synchronized(luceneDirectories) {
-            return luceneDirectories.computeIfAbsent(key) {
+            luceneDirectories.computeIfAbsent(key) {
                 val path = Path(key)
                 Files.createDirectories(path)
-                return@computeIfAbsent FSDirectory.open(path)
+                FSDirectory.open(path)
             }
         }
 
@@ -445,14 +548,14 @@ open class LuceneRecordInteractor(
                         val iterator = dirtyIndexKeys.iterator()
                         while (iterator.hasNext()) {
                             val key = iterator.next()
-                            iterator.remove() // Remove before commit to capture concurrent writes
+                            iterator.remove()
 
                             val state = luceneStates[key]
                             if (state != null && state.indexWriter.isOpen) {
                                 try {
                                     state.indexWriter.commit()
                                 } catch (e: Exception) {
-                                    dirtyIndexKeys.add(key) // Retry later
+                                    dirtyIndexKeys.add(key)
                                     System.err.println("Error committing record index $key: ${e.message}")
                                 }
                             }
@@ -480,6 +583,10 @@ open class LuceneRecordInteractor(
 
             fun markDirty(key: String) {
                 dirtyIndexKeys.add(key)
+            }
+
+            fun clearDirtyKey(key: String) {
+                dirtyIndexKeys.remove(key)
             }
         }
     }

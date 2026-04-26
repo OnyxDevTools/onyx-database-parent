@@ -225,6 +225,19 @@ open class DefaultSchemaContext : SchemaContext {
      */
     @Suppress("MemberVisibilityCanPrivate")
     protected open fun initializeEntityDescriptors() {
+        // Pre-cache ALL SystemEntity versions (including old ones) by their primary key.
+        // This prevents cache misses in getSystemEntityById during entity deserialization,
+        // which would trigger re-entrant store reads and corrupt the shared thread-local
+        // buffer in FileChannelStore.getObject.
+        serializedPersistenceManager.from(SystemEntity::class).list<SystemEntity>().forEach { entity ->
+            entity.attributes = entity.attributes.sortedBy { it.name }.toMutableList()
+            entity.relationships.sortBy { it.name }
+            entity.indexes.sortBy { it.name }
+            synchronized(systemEntityByIDMap) {
+                systemEntityByIDMap.putIfAbsent(entity.primaryKey, entity)
+            }
+        }
+
         // Added criteria for greater than 7 so that we do not disturb the system entities
         val results = serializedPersistenceManager.select("name").from(SystemEntity::class)
                 .where(("isLatestVersion" eq true) and ("name" notStartsWith "com.onyx.entity.System"))

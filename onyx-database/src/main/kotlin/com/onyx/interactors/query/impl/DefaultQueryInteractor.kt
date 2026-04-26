@@ -38,6 +38,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
      * been moved to CompareUtil
      */
     override fun <T> getReferencesForQuery(query: Query):QueryCollector<T> {
+        query.fullTextScores = null
         if (query.isTerminated) {
             val collector = QueryCollectorFactory.create<T>(Contexts.get(contextId)!!, descriptor, query)
             collector.finalizeResults()
@@ -45,7 +46,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
         }
 
         val context = Contexts.get(contextId)!!
-        if ( context.getRecordInteractor(descriptor) is FullTextRecordInteractor) {
+        if ( context.getRecordInteractor(descriptor) is FullTextRecordInteractor && query.getAllCriteria().firstOrNull { it.attribute == Query.FULL_TEXT_ATTRIBUTE } != null) {
             val luceneQuery = buildLuceneCriteriaQuery(query.criteria!!, descriptor)
             if (luceneQuery != null) {
                 val references = executeLuceneCriteriaQuery(query, luceneQuery, context)
@@ -77,6 +78,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
         val maxCardinality = context.maxCardinality
         val limit = if (query.maxResults > 0) query.maxResults else maxCardinality - 1
         val matchingReferences = HashSet<Reference>()
+        val scores = HashMap<Reference, Float>()
         val minScore = criteriaQuery.minScore
 
         fun collectResults(partitionId: Long, interactor: FullTextRecordInteractor) {
@@ -86,7 +88,12 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
                 if (matchingReferences.size > maxCardinality) {
                     throw MaxCardinalityExceededException(context.maxCardinality)
                 }
-                matchingReferences.add(Reference(partitionId, recordId))
+                val reference = Reference(partitionId, recordId)
+                matchingReferences.add(reference)
+                val previousScore = scores[reference]
+                if (previousScore == null || score > previousScore) {
+                    scores[reference] = score
+                }
             }
         }
 
@@ -99,6 +106,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
                     collectResults(entry.index, interactor)
                 }
             }
+            query.fullTextScores = scores
             return matchingReferences
         }
 
@@ -121,6 +129,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
             collectResults(partitionId, interactor)
         }
 
+        query.fullTextScores = scores
         return matchingReferences
     }
 

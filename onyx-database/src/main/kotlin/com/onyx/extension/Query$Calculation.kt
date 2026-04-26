@@ -33,18 +33,11 @@ import com.onyx.interactors.record.FullTextRecordInteractor
 fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, context: SchemaContext, descriptor: EntityDescriptor): Boolean = synchronized(this) {
 
     var subCriteria: Boolean
-    val fullTextMatches = mutableMapOf<QueryCriteria, Set<Long>>()
 
     // Iterate through
     for(it in this.getAllCriteria()) {
         if(it.flip)
             continue
-        else if (it.attribute == Query.FULL_TEXT_ATTRIBUTE) {
-            val matches = fullTextMatches.getOrPut(it) {
-                resolveFullTextMatches(it, context, descriptor)
-            }
-            subCriteria = matches.contains(entityReference.reference)
-        }
         else if (it.isRelationship!!) {
             subCriteria = if(descriptor.relationships.contains(it.relationship)) {
                 relationshipMeetsCriteria(entity, entityReference, it, context)

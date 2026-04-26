@@ -40,15 +40,13 @@ import kotlin.io.path.Path
  * @property searcherManager Manages [IndexSearcher] instances, handling reopening for NRT search.
  * @property reopenThread A background thread that periodically reopens the [searcherManager] to make recent changes visible.
  * @property indexWriterConfig The configuration used to create the [indexWriter].
- * @property queryParser The parser used to convert user-facing query strings into Lucene Queries.
  */
 data class LuceneState(
     val indexWriter: IndexWriter,
     val searcherManager: SearcherManager,
     val directory: Directory,
     val reopenThread: ControlledRealTimeReopenThread<IndexSearcher>,
-    val indexWriterConfig: IndexWriterConfig,
-    val queryParser: QueryParser
+    val indexWriterConfig: IndexWriterConfig
 )
 
 /**
@@ -90,7 +88,6 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
     private lateinit var directory: Directory
     private lateinit var indexWriter: IndexWriter
     private lateinit var searcherManager: SearcherManager
-    private lateinit var queryParser: QueryParser
 
     /**
      * Near-Real-Time (NRT) background thread.
@@ -145,19 +142,13 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
                 start()
             }
 
-            val parser = QueryParser(CONTENT_FIELD, analyzer).apply {
-                defaultOperator = QueryParser.Operator.OR
-                allowLeadingWildcard = true
-            }
-
-            LuceneState(writer, manager, directory, thread, writerConfig, parser)
+            LuceneState(writer, manager, directory, thread, writerConfig)
         }
 
         // Assign the shared components to this instance
         this.indexWriter = luceneState.indexWriter
         this.searcherManager = luceneState.searcherManager
         this.reopenThread = luceneState.reopenThread
-        this.queryParser = luceneState.queryParser
     }
 
     /**
@@ -328,18 +319,23 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
     }
 
     /**
-     * Parses a query string, with a fallback mechanism.
-     * If the initial parse fails (e.g., due to syntax errors),
-     * it escapes the query text and tries again.
+     * Creates a new [QueryParser] for each invocation to ensure thread safety.
+     * [QueryParser] is not thread-safe and must not be shared across threads.
      *
      * @param queryText The raw user-provided query string.
      * @return A Lucene [Query] object.
      */
-    private fun parseQuery(queryText: String) = try {
-        queryParser.parse(queryText)
-    } catch (_: ParseException) {
-        // Fallback: escape special characters and parse again
-        queryParser.parse(QueryParser.escape(queryText))
+    private fun parseQuery(queryText: String): org.apache.lucene.search.Query {
+        val parser = QueryParser(CONTENT_FIELD, analyzer).apply {
+            defaultOperator = QueryParser.Operator.OR
+            allowLeadingWildcard = true
+        }
+        return try {
+            parser.parse(queryText)
+        } catch (_: ParseException) {
+            // Fallback: escape special characters and parse again
+            parser.parse(QueryParser.escape(queryText))
+        }
     }
 
     /**
