@@ -131,6 +131,7 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(priv
      */
     @Throws(OnyxException::class)
     override fun findAllAbove(indexValue: Any?, includeValue: Boolean): Set<Long> {
+        indexValue ?: return hashSetOf()
         val allReferences = HashSet<Long>()
         val diskReferences = references.above(indexValue!!, includeValue)
 
@@ -160,8 +161,9 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(priv
      */
     @Throws(OnyxException::class)
     override fun findAllBelow(indexValue: Any?, includeValue: Boolean): Set<Long> {
+        indexValue ?: return hashSetOf()
         val allReferences = HashSet<Long>()
-        val diskReferences = references.below(indexValue!!, includeValue)
+        val diskReferences = references.below(indexValue, includeValue)
         val dataFile = context.getDataFile(descriptor)
         diskReferences
                 .map { references.getWithRecID(it) }
