@@ -44,16 +44,38 @@ object BufferPool {
      */
     fun recycle(buffer: ByteBuffer) {
         val capacity = buffer.capacity()
-        if (buffer.isDirect) {
-            buffer.clear()
-            when (capacity) {
-                LARGE_BUFFER_SIZE -> LARGE_BUFFER_POOL.add(buffer)
-                MEDIUM_BUFFER_SIZE -> MEDIUM_BUFFER_POOL.add(buffer)
-                SMALL_BUFFER_SIZE -> SMALL_BUFFER_POOL.add(buffer)
-                else -> {}
-            }
+        val pool = poolForCapacity(capacity) ?: return
+        if (pool.size >= maxPoolSizeForCapacity(capacity)) {
+            return
         }
+        buffer.clear()
+        buffer.order(ByteOrder.BIG_ENDIAN)
+        pool.add(buffer)
     }
+
+    private fun poolForCapacity(capacity: Int): ConcurrentLinkedQueue<ByteBuffer>? =
+        when (capacity) {
+            LARGE_BUFFER_SIZE -> LARGE_BUFFER_POOL
+            MEDIUM_BUFFER_SIZE -> MEDIUM_BUFFER_POOL
+            SMALL_BUFFER_SIZE -> SMALL_BUFFER_POOL
+            else -> null
+        }
+
+    private fun maxPoolSizeForCapacity(capacity: Int): Int =
+        when (capacity) {
+            LARGE_BUFFER_SIZE -> NUMBER_LARGE_BUFFERS
+            MEDIUM_BUFFER_SIZE -> NUMBER_MEDIUM_BUFFERS
+            SMALL_BUFFER_SIZE -> NUMBER_SMALL_BUFFERS
+            else -> 0
+        }
+
+    private fun pooledCapacityFor(count: Int): Int =
+        when {
+            count <= SMALL_BUFFER_SIZE -> SMALL_BUFFER_SIZE
+            count <= MEDIUM_BUFFER_SIZE -> MEDIUM_BUFFER_SIZE
+            count <= LARGE_BUFFER_SIZE -> LARGE_BUFFER_SIZE
+            else -> count
+        }
 
     /**
      * Allocation that will encapsulate the endian as well as the allocation method
@@ -61,16 +83,15 @@ object BufferPool {
      * @param count Size to allocate
      * @return An Allocated ByteBuffer
      */
-    fun allocate(count: Int): ByteBuffer = try {
-        when {
-            count <= SMALL_BUFFER_SIZE -> SMALL_BUFFER_POOL.poll()
-            count <= MEDIUM_BUFFER_SIZE -> MEDIUM_BUFFER_POOL.poll()
-            count <= LARGE_BUFFER_SIZE -> LARGE_BUFFER_POOL.poll()
-            else -> allocateExactHeap(count)
-        }
-    } catch (e: Exception) {
-        allocateExactHeap(count)
-    } ?: allocateExactHeap(count)
+    fun allocate(count: Int): ByteBuffer {
+        require(count >= 0) { "Buffer size must not be negative: $count" }
+
+        val capacity = pooledCapacityFor(count)
+        val buffer = poolForCapacity(capacity)?.poll() ?: return allocateExactHeap(capacity)
+        buffer.clear()
+        buffer.order(ByteOrder.BIG_ENDIAN)
+        return buffer
+    }
 
     /**
      * Allocation that will encapsulate the endian as well as the allocation method
