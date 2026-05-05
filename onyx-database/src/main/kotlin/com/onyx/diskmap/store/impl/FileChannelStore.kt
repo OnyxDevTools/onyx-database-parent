@@ -20,6 +20,9 @@ import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.StandardOpenOption
+import java.util.LinkedHashMap
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Created by timothy.osborn on 3/25/15.
@@ -45,6 +48,11 @@ open class FileChannelStore() : Store {
     internal var channel: FileChannel? = null
     protected var contextId: String? = null
     private var fileSizeCounter: AtomicCounter = DefaultAtomicCounter(0)
+    private var physicalFileSize: Long = 0
+    private val fileChannelPageSize = max(1, FILE_CHANNEL_PAGE_SIZE)
+    private val maxFileChannelPageBuffers = max(1, MAX_FILE_CHANNEL_PAGE_BUFFERS)
+    private val pageBufferLock = Any()
+    private val pageBuffers = LinkedHashMap<Long, PageBuffer>(16, 0.75f, true)
 
     constructor(filePath: String = "", context: SchemaContext? = null, deleteOnClose: Boolean = false) : this() {
         this.bufferSliceSize = if (deleteOnClose || isSmallDevice) SMALL_FILE_SLICE_SIZE else LARGE_FILE_SLICE_SIZE
@@ -98,7 +106,8 @@ open class FileChannelStore() : Store {
                 StandardOpenOption.WRITE,
                 StandardOpenOption.CREATE
             )
-            this.fileSizeCounter.set(this.channel!!.size())
+            physicalFileSize = this.channel!!.size()
+            this.fileSizeCounter.set(physicalFileSize)
 
         } catch (e: FileNotFoundException) {
             return false
@@ -133,8 +142,10 @@ open class FileChannelStore() : Store {
      */
     override fun close(): Boolean = try {
         if (!deleteOnClose) {
+            flushDirtyPages()
             this.channel!!.force(true)
         }
+        clearPageBuffers()
         this.channel!!.close()
         async {
             if (deleteOnClose) {
@@ -152,8 +163,10 @@ open class FileChannelStore() : Store {
     override fun commit() {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
-        if (this.channel?.isOpen == true)
+        if (this.channel?.isOpen == true) {
+            flushDirtyPages()
             this.channel?.force(true)
+        }
     }
 
     /**
@@ -167,7 +180,26 @@ open class FileChannelStore() : Store {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
         val written = buffer.remaining()
-        channel!!.write(buffer, position)
+        synchronized(pageBufferLock) {
+            var current = position
+            while (buffer.hasRemaining()) {
+                val page = pageBufferAt(current)
+                val pageOffset = pageOffset(current)
+                val bytesToWrite = min(buffer.remaining(), fileChannelPageSize - pageOffset)
+
+                val destination = page.buffer.duplicate()
+                destination.position(pageOffset)
+                destination.limit(pageOffset + bytesToWrite)
+
+                val originalLimit = buffer.limit()
+                buffer.limit(buffer.position() + bytesToWrite)
+                destination.put(buffer)
+                buffer.limit(originalLimit)
+
+                page.markDirty(pageOffset, pageOffset + bytesToWrite)
+                current += bytesToWrite
+            }
+        }
         return written
     }
 
@@ -233,7 +265,21 @@ open class FileChannelStore() : Store {
     override fun read(buffer: ByteBuffer, position: Long) {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
-        channel!!.read(buffer, position)
+        synchronized(pageBufferLock) {
+            var current = position
+            while (buffer.hasRemaining()) {
+                val page = pageBufferAt(current)
+                val pageOffset = pageOffset(current)
+                val bytesToRead = min(buffer.remaining(), fileChannelPageSize - pageOffset)
+
+                val source = page.buffer.duplicate()
+                source.position(pageOffset)
+                source.limit(pageOffset + bytesToRead)
+                buffer.put(source)
+
+                current += bytesToRead
+            }
+        }
     }
 
     /**
@@ -263,6 +309,7 @@ open class FileChannelStore() : Store {
      * Delete File
      */
     override fun delete() {
+        clearPageBuffers()
         val dataFile = File(filePath)
         dataFile.delete()
     }
@@ -311,16 +358,119 @@ open class FileChannelStore() : Store {
      * @since 1.3.0
      */
     override fun reset() {
-        fileSizeCounter.set(0)
+        synchronized(pageBufferLock) {
+            fileSizeCounter.set(0)
+            physicalFileSize = 0
+            pageBuffers.clear()
+        }
         this.allocate(8)
     }
 
     private val localBuffer: ByteBuffer
         get() = threadLocalBuffer.get()
 
+    private fun pageBufferAt(position: Long): PageBuffer {
+        val pageIndex = position / fileChannelPageSize
+        pageBuffers[pageIndex]?.let { return it }
+
+        val page = PageBuffer(pageIndex, fileChannelPageSize)
+        readPage(page)
+        pageBuffers[pageIndex] = page
+        evictPageBuffers()
+        return page
+    }
+
+    private fun readPage(page: PageBuffer) {
+        val pagePosition = page.index * fileChannelPageSize
+        if (pagePosition >= physicalFileSize) {
+            return
+        }
+
+        val bytesAvailable = min(fileChannelPageSize.toLong(), physicalFileSize - pagePosition).toInt()
+        val destination = page.buffer.duplicate()
+        destination.clear()
+        destination.limit(bytesAvailable)
+
+        var current = pagePosition
+        while (destination.hasRemaining()) {
+            val read = channel!!.read(destination, current)
+            if (read <= 0) {
+                break
+            }
+            current += read
+        }
+    }
+
+    private fun evictPageBuffers() {
+        while (pageBuffers.size > maxFileChannelPageBuffers) {
+            val iterator = pageBuffers.entries.iterator()
+            if (!iterator.hasNext()) {
+                return
+            }
+
+            val page = iterator.next().value
+            flushPage(page)
+            iterator.remove()
+        }
+    }
+
+    private fun flushDirtyPages() = synchronized(pageBufferLock) {
+        pageBuffers.values.forEach { flushPage(it) }
+    }
+
+    private fun flushPage(page: PageBuffer) {
+        if (!page.dirty) {
+            return
+        }
+
+        val source = page.buffer.duplicate()
+        source.position(page.dirtyStart)
+        source.limit(page.dirtyEnd)
+
+        var current = page.index * fileChannelPageSize + page.dirtyStart
+        while (source.hasRemaining()) {
+            val bytesWritten = channel!!.write(source, current)
+            if (bytesWritten <= 0) {
+                Thread.yield()
+                continue
+            }
+            current += bytesWritten
+        }
+
+        physicalFileSize = max(physicalFileSize, current)
+        page.clearDirty()
+    }
+
+    private fun clearPageBuffers() = synchronized(pageBufferLock) {
+        pageBuffers.clear()
+    }
+
+    private fun pageOffset(position: Long): Int = (position % fileChannelPageSize).toInt()
+
+    private class PageBuffer(val index: Long, private val pageSize: Int) {
+        val buffer: ByteBuffer = ByteBuffer.allocate(pageSize)
+        var dirty: Boolean = false
+        var dirtyStart: Int = pageSize
+        var dirtyEnd: Int = 0
+
+        fun markDirty(start: Int, end: Int) {
+            dirty = true
+            dirtyStart = min(dirtyStart, start)
+            dirtyEnd = max(dirtyEnd, end)
+        }
+
+        fun clearDirty() {
+            dirty = false
+            dirtyStart = pageSize
+            dirtyEnd = 0
+        }
+    }
+
     companion object {
         const val SMALL_FILE_SLICE_SIZE = 1024 * 128 // 128K
         var LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 4 // 4MB
+        var FILE_CHANNEL_PAGE_SIZE = 1024 * 64 // 64KB
+        var MAX_FILE_CHANNEL_PAGE_BUFFERS = 256
 
         val isSmallDevice:Boolean by lazy {
             try {
