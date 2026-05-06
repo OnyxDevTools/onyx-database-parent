@@ -20,11 +20,6 @@ import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.StandardOpenOption
-import java.util.LinkedHashMap
-import java.util.LinkedHashSet
-import java.util.concurrent.atomic.AtomicLong
-import kotlin.math.max
-import kotlin.math.min
 
 /**
  * Created by timothy.osborn on 3/25/15.
@@ -50,9 +45,6 @@ open class FileChannelStore() : Store {
     internal var channel: FileChannel? = null
     protected var contextId: String? = null
     private var fileSizeCounter: AtomicCounter = DefaultAtomicCounter(0)
-    private var physicalFileSize: Long = 0
-    private val pageFileId = pageFileIdCounter.incrementAndGet()
-    private val fileChannelPageSize = max(1, FILE_CHANNEL_PAGE_SIZE)
 
     constructor(filePath: String = "", context: SchemaContext? = null, deleteOnClose: Boolean = false) : this() {
         this.bufferSliceSize = if (deleteOnClose || isSmallDevice) SMALL_FILE_SLICE_SIZE else LARGE_FILE_SLICE_SIZE
@@ -106,8 +98,7 @@ open class FileChannelStore() : Store {
                 StandardOpenOption.WRITE,
                 StandardOpenOption.CREATE
             )
-            physicalFileSize = this.channel!!.size()
-            this.fileSizeCounter.set(physicalFileSize)
+            this.fileSizeCounter.set(this.channel!!.size())
 
         } catch (e: FileNotFoundException) {
             return false
@@ -142,10 +133,8 @@ open class FileChannelStore() : Store {
      */
     override fun close(): Boolean = try {
         if (!deleteOnClose) {
-            flushDirtyPages()
             this.channel!!.force(true)
         }
-        clearPageBuffers()
         this.channel!!.close()
         async {
             if (deleteOnClose) {
@@ -163,10 +152,8 @@ open class FileChannelStore() : Store {
     override fun commit() {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
-        if (this.channel?.isOpen == true) {
-            flushDirtyPages()
+        if (this.channel?.isOpen == true)
             this.channel?.force(true)
-        }
     }
 
     /**
@@ -180,27 +167,7 @@ open class FileChannelStore() : Store {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
         val written = buffer.remaining()
-        synchronized(pageBufferLock) {
-            var current = position
-            while (buffer.hasRemaining()) {
-                val page = pageBufferAt(current)
-                val pageOffset = pageOffset(current)
-                val bytesToWrite = min(buffer.remaining(), fileChannelPageSize - pageOffset)
-
-                val destination = page.buffer.duplicate()
-                destination.position(pageOffset)
-                destination.limit(pageOffset + bytesToWrite)
-
-                val originalLimit = buffer.limit()
-                buffer.limit(buffer.position() + bytesToWrite)
-                destination.put(buffer)
-                buffer.limit(originalLimit)
-
-                page.markDirty(pageOffset, pageOffset + bytesToWrite)
-                dirtyPageKeys.add(page.key)
-                current += bytesToWrite
-            }
-        }
+        channel!!.write(buffer, position)
         return written
     }
 
@@ -266,21 +233,7 @@ open class FileChannelStore() : Store {
     override fun read(buffer: ByteBuffer, position: Long) {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
-        synchronized(pageBufferLock) {
-            var current = position
-            while (buffer.hasRemaining()) {
-                val page = pageBufferAt(current)
-                val pageOffset = pageOffset(current)
-                val bytesToRead = min(buffer.remaining(), fileChannelPageSize - pageOffset)
-
-                val source = page.buffer.duplicate()
-                source.position(pageOffset)
-                source.limit(pageOffset + bytesToRead)
-                buffer.put(source)
-
-                current += bytesToRead
-            }
-        }
+        channel!!.read(buffer, position)
     }
 
     /**
@@ -310,7 +263,6 @@ open class FileChannelStore() : Store {
      * Delete File
      */
     override fun delete() {
-        clearPageBuffers()
         val dataFile = File(filePath)
         dataFile.delete()
     }
@@ -359,205 +311,16 @@ open class FileChannelStore() : Store {
      * @since 1.3.0
      */
     override fun reset() {
-        synchronized(pageBufferLock) {
-            fileSizeCounter.set(0)
-            physicalFileSize = 0
-            clearPageBuffersLocked()
-        }
+        fileSizeCounter.set(0)
         this.allocate(8)
     }
 
     private val localBuffer: ByteBuffer
         get() = threadLocalBuffer.get()
 
-    private fun pageBufferAt(position: Long): PageBuffer {
-        val pageIndex = position / fileChannelPageSize
-        val pageKey = PageKey(pageFileId, pageIndex)
-        pageBuffers[pageKey]?.let { return it }
-
-        val page = PageBuffer(this, pageKey, fileChannelPageSize)
-        readPage(page)
-        pageBuffers[pageKey] = page
-        evictPageBuffers()
-        return page
-    }
-
-    private fun readPage(page: PageBuffer) {
-        val pagePosition = page.key.index * fileChannelPageSize
-        if (pagePosition >= physicalFileSize) {
-            return
-        }
-
-        val bytesAvailable = min(fileChannelPageSize.toLong(), physicalFileSize - pagePosition).toInt()
-        val destination = page.buffer.duplicate()
-        destination.clear()
-        destination.limit(bytesAvailable)
-
-        var current = pagePosition
-        while (destination.hasRemaining()) {
-            val read = channel!!.read(destination, current)
-            if (read <= 0) {
-                break
-            }
-            current += read
-        }
-    }
-
-    private fun evictPageBuffers() {
-        while (pageBuffers.size > max(1, MAX_FILE_CHANNEL_PAGE_BUFFERS)) {
-            val iterator = pageBuffers.entries.iterator()
-            if (!iterator.hasNext()) {
-                return
-            }
-
-            val page = iterator.next().value
-            page.store.flushPage(page)
-            dirtyPageKeys.remove(page.key)
-            iterator.remove()
-        }
-    }
-
-    private fun flushDirtyPages() = synchronized(pageBufferLock) {
-        pageBuffers.values
-            .filter { it.key.fileId == pageFileId }
-            .forEach {
-                flushPage(it)
-                dirtyPageKeys.remove(it.key)
-            }
-    }
-
-    private fun flushPage(page: PageBuffer) {
-        if (!page.dirty) {
-            return
-        }
-
-        val source = page.buffer.duplicate()
-        source.position(page.dirtyStart)
-        source.limit(page.dirtyEnd)
-
-        var current = page.key.index * fileChannelPageSize + page.dirtyStart
-        while (source.hasRemaining()) {
-            val bytesWritten = channel!!.write(source, current)
-            if (bytesWritten <= 0) {
-                Thread.yield()
-                continue
-            }
-            current += bytesWritten
-        }
-
-        physicalFileSize = max(physicalFileSize, current)
-        page.clearDirty()
-    }
-
-    private fun clearPageBuffers() = synchronized(pageBufferLock) {
-        clearPageBuffersLocked()
-    }
-
-    private fun clearPageBuffersLocked() {
-        val pageIterator = pageBuffers.entries.iterator()
-        while (pageIterator.hasNext()) {
-            if (pageIterator.next().key.fileId == pageFileId) {
-                pageIterator.remove()
-            }
-        }
-
-        val dirtyIterator = dirtyPageKeys.iterator()
-        while (dirtyIterator.hasNext()) {
-            if (dirtyIterator.next().fileId == pageFileId) {
-                dirtyIterator.remove()
-            }
-        }
-    }
-
-    private fun pageOffset(position: Long): Int = (position % fileChannelPageSize).toInt()
-
-    private data class PageKey(val fileId: Long, val index: Long)
-
-    private class PageBuffer(val store: FileChannelStore, val key: PageKey, private val pageSize: Int) {
-        val buffer: ByteBuffer = ByteBuffer.allocate(pageSize)
-        var dirty: Boolean = false
-        var dirtyStart: Int = pageSize
-        var dirtyEnd: Int = 0
-
-        fun markDirty(start: Int, end: Int) {
-            dirty = true
-            dirtyStart = min(dirtyStart, start)
-            dirtyEnd = max(dirtyEnd, end)
-        }
-
-        fun clearDirty() {
-            dirty = false
-            dirtyStart = pageSize
-            dirtyEnd = 0
-        }
-    }
-
     companion object {
         const val SMALL_FILE_SLICE_SIZE = 1024 * 128 // 128K
         var LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 4 // 4MB
-        var FILE_CHANNEL_PAGE_SIZE = 1024 * 64 // 64KB
-        var MAX_FILE_CHANNEL_PAGE_BUFFERS = System.getenv("MAX_FILE_CHANNEL_PAGE_BUFFERS")?.toIntOrNull() ?: 255
-        var FILE_CHANNEL_PAGE_FLUSH_INTERVAL_MS =
-            System.getenv("FILE_CHANNEL_PAGE_FLUSH_INTERVAL_MS")?.toLongOrNull() ?: 1_000L
-        var FILE_CHANNEL_PAGE_FLUSH_FORCE =
-            System.getenv("FILE_CHANNEL_PAGE_FLUSH_FORCE")?.toBooleanStrictOrNull() ?: true
-
-        private val pageFileIdCounter = AtomicLong()
-        private val pageBufferLock = Any()
-        private val pageBuffers = LinkedHashMap<PageKey, PageBuffer>(16, 0.75f, true)
-        private val dirtyPageKeys = LinkedHashSet<PageKey>()
-
-        init {
-            startPageFlusher()
-        }
-
-        private fun startPageFlusher() {
-            val thread = Thread({
-                while (true) {
-                    val interval = FILE_CHANNEL_PAGE_FLUSH_INTERVAL_MS
-                    if (interval <= 0L) {
-                        Thread.sleep(1_000L)
-                    } else {
-                        Thread.sleep(interval)
-                        flushQueuedDirtyPages(FILE_CHANNEL_PAGE_FLUSH_FORCE)
-                    }
-                }
-            }, "onyx-file-channel-page-flusher")
-            thread.isDaemon = true
-            thread.start()
-        }
-
-        private fun flushQueuedDirtyPages(force: Boolean) {
-            val storesToForce = LinkedHashSet<FileChannelStore>()
-            synchronized(pageBufferLock) {
-                val iterator = dirtyPageKeys.iterator()
-                while (iterator.hasNext()) {
-                    val pageKey = iterator.next()
-                    val page = pageBuffers[pageKey]
-                    if (page == null || !page.dirty) {
-                        iterator.remove()
-                        continue
-                    }
-
-                    page.store.flushPage(page)
-                    if (force) {
-                        storesToForce.add(page.store)
-                    }
-                    iterator.remove()
-                }
-
-                if (force) {
-                    storesToForce.forEach { store ->
-                        try {
-                            if (store.channel?.isOpen == true) {
-                                store.channel?.force(true)
-                            }
-                        } catch (_: IOException) {
-                        }
-                    }
-                }
-            }
-        }
 
         val isSmallDevice:Boolean by lazy {
             try {
