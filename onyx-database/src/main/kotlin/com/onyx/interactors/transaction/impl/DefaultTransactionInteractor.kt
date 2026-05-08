@@ -30,18 +30,26 @@ import java.nio.ByteBuffer
  */
 open class DefaultTransactionInteractor(private val transactionStore: TransactionStore, private val persistenceManager: PersistenceManager) : TransactionInteractor {
 
+    private val transactionWriteLock = Any()
+
     private fun writeTransaction(transactionType:Byte, buffer: ByteBuffer) {
         withBuffer(buffer) { transBuffer ->
-            val file = transactionStore.getTransactionFile()
-
             try {
-                BufferPool.allocateAndLimit(transBuffer.limit() + 5) {
-                    it.put(transactionType)
-                    it.putInt(transBuffer.limit())
-                    it.put(transBuffer)
-                    it.flip()
-                    file.write(it)
+                BufferPool.allocateAndLimit(transBuffer.limit() + TRANSACTION_METADATA_SIZE) { transactionBuffer ->
+                    transactionBuffer.put(transactionType)
+                    transactionBuffer.putInt(transBuffer.limit())
+                    transactionBuffer.put(transBuffer)
+                    transactionBuffer.flip()
+
+                    synchronized(transactionWriteLock) {
+                        val file = transactionStore.getTransactionFile()
+                        while (transactionBuffer.hasRemaining()) {
+                            file.write(transactionBuffer)
+                        }
+                    }
                 }
+            } catch (e: TransactionException) {
+                throw e
             } catch (_: Exception) {
                 throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE)
             }
@@ -54,8 +62,8 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
      * @param entity Entity to save
      */
     @Throws(TransactionException::class)
-    override fun writeSave(entity: IManagedEntity) = synchronized(this) {
-        if (entity is SystemEntity || entity is SystemPartitionEntry) return@synchronized
+    override fun writeSave(entity: IManagedEntity) {
+        if (entity is SystemEntity || entity is SystemPartitionEntry) return
         val map = (entity as ManagedEntity).toMap(persistenceManager.context)
         val value = hashMapOf<String, Any?>(
             "type" to entity::class.java.canonicalName,
@@ -70,7 +78,7 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
      * @param query Query to update
      */
     @Throws(TransactionException::class)
-    override fun writeQueryUpdate(query: Query) = synchronized(this) {
+    override fun writeQueryUpdate(query: Query) {
         writeTransaction(UPDATE_QUERY, BufferStream.toBuffer(query, persistenceManager.context))
     }
 
@@ -80,7 +88,7 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
      * @param entity Deleted entity
      */
     @Throws(TransactionException::class)
-    override fun writeDelete(entity: IManagedEntity) = synchronized(this) {
+    override fun writeDelete(entity: IManagedEntity) {
         val map = (entity as ManagedEntity).toMap(persistenceManager.context)
         val value = hashMapOf<String, Any?>(
             "type" to entity::class.java.canonicalName,
@@ -94,7 +102,7 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
      * @param query Query to write transaction of
      */
     @Throws(TransactionException::class)
-    override fun writeDeleteQuery(query: Query) = synchronized(this) {
+    override fun writeDeleteQuery(query: Query) {
         writeTransaction(DELETE_QUERY, BufferStream.toBuffer(query, persistenceManager.context))
     }
 
