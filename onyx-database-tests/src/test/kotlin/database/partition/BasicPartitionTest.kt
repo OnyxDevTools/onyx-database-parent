@@ -1,7 +1,10 @@
 package database.partition
 
 import com.onyx.exception.NoResultsException
+import com.onyx.entity.SystemPartitionEntry
 import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.query.eq
+import com.onyx.persistence.query.from
 import database.base.DatabaseBaseTest
 import entities.partition.BasicPartitionEntity
 import org.junit.FixMethodOrder
@@ -94,6 +97,31 @@ class BasicPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
         assertNotNull(entity2Find, "Entity should not be null")
         assertEquals(1L, entity2Find.id, "Id has incorrect value")
         assertEquals(2L, entity2Find.partitionId, "partitionId has incorrect value")
+    }
+
+    @Test
+    fun eTestRepeatedSavesReuseSystemPartitionEntry() {
+        val partitionId = 987654321L
+
+        for (i in 1L..3L) {
+            val entity = BasicPartitionEntity()
+            entity.partitionId = partitionId
+            entity.id = i
+            manager.saveEntity<IManagedEntity>(entity)
+        }
+
+        val partitionEntryId = BasicPartitionEntity::class.java.name + partitionId
+        val partitionEntryCount = manager.from(SystemPartitionEntry::class)
+            .where("id" eq partitionEntryId)
+            .count()
+
+        assertEquals(1L, partitionEntryCount, "Repeated saves in one partition should reuse the SystemPartitionEntry")
+
+        val emptyPartitionEntryCount = manager.from(SystemPartitionEntry::class)
+            .where("id" eq BasicPartitionEntity::class.java.name)
+            .count()
+
+        assertEquals(0L, emptyPartitionEntryCount, "Saving a concrete partition should not create an empty SystemPartitionEntry")
     }
 
     @Test

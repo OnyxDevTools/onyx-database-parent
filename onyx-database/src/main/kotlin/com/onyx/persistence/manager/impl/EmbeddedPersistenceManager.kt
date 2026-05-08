@@ -64,20 +64,25 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
         context.checkForKillSwitch()
 
         if (entity.isValid(context)) {
-            val putResult = entity.save(context)
+            val descriptor = entity.descriptor(context)
+            if (descriptor.partition?.partitionValue == nullPartition) {
+                context.ensureDefaultPartition(descriptor)
+            }
+
+            val putResult = entity.save(context, descriptor)
 
             journal {
                 context.transactionInteractor.writeSave(entity)
             }
 
-            entity.saveIndexes(context, if (putResult.isInsert) 0L else putResult.recordId, putResult.recordId)
-            entity.saveRelationships(context)
+            entity.saveIndexes(context, if (putResult.isInsert) 0L else putResult.recordId, putResult.recordId, descriptor)
+            entity.saveRelationships(context, descriptor = descriptor)
 
             // Update Cached queries
             context.queryCacheInteractor.updateCachedQueryResultsForEntity(
                 entity,
-                entity.descriptor(context),
-                entity.reference(putResult.recordId, context),
+                descriptor,
+                entity.reference(putResult.recordId, context, descriptor),
                 if (putResult.isInsert) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE
             )
 

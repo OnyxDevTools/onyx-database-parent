@@ -5,6 +5,7 @@ package com.onyx.persistence.context.impl
 import com.onyx.descriptor.DEFAULT_DATA_FILE
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.IndexDescriptor
+import com.onyx.descriptor.PartitionDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
@@ -342,17 +343,40 @@ open class DefaultSchemaContext : SchemaContext {
      */
     @Throws(OnyxException::class)
     protected open fun checkForValidDescriptorPartition(descriptor: EntityDescriptor) {
+        val partition = descriptor.partition ?: return
+        val partitionValue = partition.partitionValue
+        if (partitionValue == nullPartition) {
+            return
+        }
+
         // Check to see if the partition already exists
-        if (descriptor.partition != null && getPartitionWithValue(descriptor.entityClass, descriptor.partition?.partitionValue ?: "") != null) {
+        if (getPartitionWithValue(descriptor.entityClass, partitionValue) != null) {
             return
         }
 
         // Add a new partition entry if it does not exist
-        if (descriptor.partition != null) {
-            val entry = SystemPartitionEntry(descriptor, descriptor.partition!!, partitionCounter.incrementAndGet())
-            serializedPersistenceManager.saveEntity<IManagedEntity>(entry)
-            partitionsByClass.remove(descriptor.entityClass)
+        savePartitionEntry(descriptor, partition)
+    }
+
+    override fun ensureDefaultPartition(descriptor: EntityDescriptor) {
+        val partition = descriptor.partition ?: return
+        if (partition.partitionValue != nullPartition) {
+            return
         }
+
+        if (getPartitionWithValue(descriptor.entityClass, nullPartition) != null) {
+            return
+        }
+
+        savePartitionEntry(descriptor, partition)
+    }
+
+    private fun savePartitionEntry(descriptor: EntityDescriptor, partition: PartitionDescriptor) {
+        val entry = SystemPartitionEntry(descriptor, partition, partitionCounter.incrementAndGet())
+        serializedPersistenceManager.saveEntity<IManagedEntity>(entry)
+        partitionsByValue[PartitionInfo(descriptor.entityClass, partition.partitionValue)] = entry
+        partitionsById[entry.index] = entry
+        partitionsByClass.remove(descriptor.entityClass)
     }
 
     /**

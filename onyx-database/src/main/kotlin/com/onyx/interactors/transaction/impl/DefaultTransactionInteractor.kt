@@ -55,6 +55,7 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
      */
     @Throws(TransactionException::class)
     override fun writeSave(entity: IManagedEntity) = synchronized(this) {
+        if (entity is SystemEntity || entity is SystemPartitionEntry) return@synchronized
         val map = (entity as ManagedEntity).toMap(persistenceManager.context)
         val value = hashMapOf<String, Any?>(
             "type" to entity::class.java.canonicalName,
@@ -164,10 +165,10 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
                                 SAVE -> {
                                     val value = BufferStream.fromBuffer(transactionBuffer, persistenceManager.context) as Map<String, Any?>
                                     val className = value["type"] as? String ?: continue
+                                    if (className.contains("SystemPartitionEntry")) continue
                                     val instance = metadata(persistenceManager.context.contextId).classForName(className).createNewEntity<ManagedEntity>(this.persistenceManager.context.contextId)
                                     instance.fromMap(value["value"] as Map<String, Any?>, persistenceManager.context)
                                     transaction = SaveTransaction(instance)
-                                    if (className.endsWith("SystemPartitionEntry")) continue
 
                                     if (executeTransaction.invoke(transaction!!)) {
                                         instance.ignoreListeners = true
@@ -206,8 +207,10 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
                             transactionBuffer.clear()
                         }
                         metadataBuffer.flip()
-                    } catch (cause: Exception) {
-                        println("Failed to execute transaction ${transaction.toString()}, ${cause.message}")
+                    } catch (ignore: Exception) {
+//                        cause.printStackTrace()
+//                        throw cause
+//                        println("Failed to execute transaction ${transaction.toString()}, ${cause.message}")
                     }
                 }
             } catch (_: IOException) {

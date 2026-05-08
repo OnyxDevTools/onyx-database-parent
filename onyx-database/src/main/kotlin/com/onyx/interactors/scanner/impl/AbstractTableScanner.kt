@@ -27,7 +27,11 @@ abstract class AbstractTableScanner constructor(protected val criteria: QueryCri
     protected val records: DiskMap<Any, IManagedEntity>
         get() = context.getDataFile(descriptor).getHashMap(descriptor.identifier!!.type, descriptor.entityClass.name)
 
-    protected var partitionId= if(descriptor.hasPartition) context.getPartitionWithValue(classToScan, descriptor.partition!!.partitionValue)!!.primaryKey.toLong() else 0L
+    protected var partitionId = if (descriptor.hasPartition) {
+        context.getPartitionWithValue(classToScan, descriptor.partition!!.partitionValue)?.primaryKey?.toLong() ?: 0L
+    } else {
+        0L
+    }
     protected val contextId = context.contextId
 
     var collector:QueryCollector<Any>? = null

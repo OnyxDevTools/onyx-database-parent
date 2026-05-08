@@ -256,6 +256,11 @@ interface SchemaContext {
     fun getPartitionWithId(partitionId: Long): SystemPartitionEntry?
 
     /**
+     * Ensure metadata exists for the default/null partition of a partitioned entity.
+     */
+    fun ensureDefaultPartition(descriptor: EntityDescriptor): Unit = Unit
+
+    /**
      * Get Record Controller
      *
      * @since 1.0.0
