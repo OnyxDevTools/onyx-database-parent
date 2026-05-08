@@ -54,7 +54,9 @@ fun IManagedEntity.partitionValue(context: SchemaContext? = null, descriptor: En
  */
 fun IManagedEntity.setPartitionValue(context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, ""), value:Any?) {
     if(descriptor!!.partition != null) {
-        set(context, descriptor, descriptor.partition!!.name, value)
+        val partition = descriptor.partition!!
+        val partitionValue = if (value == nullPartition && partition.type != String::class.java && !partition.type.isPrimitive) null else value
+        set(context, descriptor, partition.name, partitionValue)
     }
 }
 

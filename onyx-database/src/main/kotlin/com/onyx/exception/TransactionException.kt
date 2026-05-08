@@ -20,6 +20,7 @@ class TransactionException @JvmOverloads constructor(message: String? = "") : On
     constructor(message: String, transaction: Transaction?, cause: Throwable) : this(message) {
         this.transaction = transaction
         this.rootCause = cause
+        initCause(cause)
     }
 
     companion object {

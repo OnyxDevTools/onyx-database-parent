@@ -145,12 +145,14 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
         }
 
         var transaction: Transaction? = null
-        BufferPool.allocateAndLimit(5) { metadataBuffer ->
+        BufferPool.allocateAndLimit(TRANSACTION_METADATA_SIZE) { metadataBuffer ->
             try {
                 channel.position(0)
-                while (channel.position() < channel.size()) {
+                val logSize = channel.size()
+                while (channel.position() < logSize) {
 
                     try {
+                        transaction = null
                         channel.read(metadataBuffer)
                         metadataBuffer.flip()
 
@@ -164,28 +166,37 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
                             when (transactionType) {
                                 SAVE -> {
                                     val value = BufferStream.fromBuffer(transactionBuffer, persistenceManager.context) as Map<String, Any?>
-                                    val className = value["type"] as? String ?: continue
-                                    if (className.contains("SystemPartitionEntry")) continue
-                                    val instance = metadata(persistenceManager.context.contextId).classForName(className).createNewEntity<ManagedEntity>(this.persistenceManager.context.contextId)
-                                    instance.fromMap(value["value"] as Map<String, Any?>, persistenceManager.context)
-                                    transaction = SaveTransaction(instance)
+                                    val className = value["type"] as? String
+                                    if (className != null && !className.contains("SystemPartitionEntry")) {
+                                        val instance = metadata(persistenceManager.context.contextId).classForName(className).createNewEntity<ManagedEntity>(this.persistenceManager.context.contextId)
+                                        instance.fromMap(value["value"] as Map<String, Any?>, persistenceManager.context)
+                                        transaction = SaveTransaction(instance)
 
-                                    if (executeTransaction.invoke(transaction!!)) {
-                                        instance.ignoreListeners = true
-                                        this.persistenceManager.saveEntity<IManagedEntity>(instance)
-                                        instance.ignoreListeners = false
+                                        if (executeTransaction.invoke(transaction!!)) {
+                                            instance.ignoreListeners = true
+                                            try {
+                                                this.persistenceManager.saveEntity<IManagedEntity>(instance)
+                                            } finally {
+                                                instance.ignoreListeners = false
+                                            }
+                                        }
                                     }
                                 }
                                 DELETE -> {
                                     val value = BufferStream.fromBuffer(transactionBuffer, persistenceManager.context) as Map<String, Any?>
-                                    val className = value["type"] as? String ?: continue
-                                    val instance = metadata(persistenceManager.context.contextId).classForName(className).createNewEntity<ManagedEntity>(this.persistenceManager.context.contextId)
-                                    instance.fromMap(value["value"] as Map<String, Any?>, persistenceManager.context)
-                                    transaction = DeleteTransaction(instance)
-                                    if (executeTransaction.invoke(transaction!!)) {
-                                        instance.ignoreListeners = true
-                                        this.persistenceManager.deleteEntity(instance)
-                                        instance.ignoreListeners = false
+                                    val className = value["type"] as? String
+                                    if (className != null) {
+                                        val instance = metadata(persistenceManager.context.contextId).classForName(className).createNewEntity<ManagedEntity>(this.persistenceManager.context.contextId)
+                                        instance.fromMap(value["value"] as Map<String, Any?>, persistenceManager.context)
+                                        transaction = DeleteTransaction(instance)
+                                        if (executeTransaction.invoke(transaction!!)) {
+                                            instance.ignoreListeners = true
+                                            try {
+                                                this.persistenceManager.deleteEntity(instance)
+                                            } finally {
+                                                instance.ignoreListeners = false
+                                            }
+                                        }
                                     }
                                 }
                                 UPDATE_QUERY -> {
@@ -206,15 +217,19 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
 
                             transactionBuffer.clear()
                         }
-                        metadataBuffer.flip()
-                    } catch (ignore: Exception) {
-//                        cause.printStackTrace()
-//                        throw cause
-//                        println("Failed to execute transaction ${transaction.toString()}, ${cause.message}")
+                        metadataBuffer.clear()
+                        metadataBuffer.limit(TRANSACTION_METADATA_SIZE)
+                    } catch (cause: Exception) {
+                        throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_EXECUTE, transaction, cause)
                     }
                 }
             } catch (_: IOException) {
                 throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_READ_FILE)
+            } finally {
+                try {
+                    channel.close()
+                } catch (_: IOException) {
+                }
             }
         }
 
@@ -226,6 +241,7 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
         private const val DELETE: Byte = 2
         private const val DELETE_QUERY: Byte = 3
         private const val UPDATE_QUERY: Byte = 4
+        private const val TRANSACTION_METADATA_SIZE = 5
     }
 }
 
