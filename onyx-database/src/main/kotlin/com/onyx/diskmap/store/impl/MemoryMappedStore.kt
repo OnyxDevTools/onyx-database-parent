@@ -152,9 +152,14 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * Closes the store, removing its associated buffers from the cache.
      * @return True if the store was closed successfully, false otherwise.
      */
-    override fun close(): Boolean {
+    override fun close(): Boolean = try {
         mappedFileSegmentCache.removeFile(fileId)
-        return super.close()
+        if (!deleteOnClose && channel?.isOpen == true) {
+            channel?.truncate(getFileSize())
+        }
+        super.close()
+    } catch (_: IOException) {
+        false
     }
 
     /**

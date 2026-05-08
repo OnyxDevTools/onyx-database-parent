@@ -13,6 +13,35 @@ import kotlin.test.assertTrue
 class MemoryMappedStoreCacheTest {
 
     @Test
+    fun closeTruncatesMappedFileToAllocatedSize() {
+        val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-truncate")
+        var store: MemoryMappedStore? = null
+
+        try {
+            val path = tempDirectory.resolve("truncate.db")
+            store = MemoryMappedStore()
+            store.bufferSliceSize = 1024
+            assertTrue(store.open(path.toAbsolutePath().toString()))
+
+            store.allocate(java.lang.Long.BYTES)
+            val payload = ByteArray(128) { 1 }
+            val payloadPosition = store.allocate(payload.size)
+            store.write(ByteBuffer.wrap(payload), payloadPosition)
+            val allocatedSize = store.getFileSize()
+
+            assertEquals((java.lang.Long.BYTES + payload.size).toLong(), allocatedSize)
+            assertTrue(Files.size(path) >= store.bufferSliceSize)
+            assertTrue(store.close())
+            store = null
+
+            assertEquals(allocatedSize, Files.size(path))
+        } finally {
+            store?.close()
+            deleteDirectory(tempDirectory)
+        }
+    }
+
+    @Test
     fun constructorOpenedStoreRemovesChunksOnClose() {
         val previousMax = MemoryMappedStore.maxCachedFileChunks
         val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-constructor")
