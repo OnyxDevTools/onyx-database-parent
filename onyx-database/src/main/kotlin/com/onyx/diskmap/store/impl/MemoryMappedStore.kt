@@ -61,9 +61,8 @@ open class MemoryMappedStore : FileChannelStore, Store {
             if (!super.open(filePath)) {
                 return false
             }
-            withMappedBuffer(0) {
-                // Warm the first slice to preserve the previous open-time mapping behavior.
-            }
+            // Warm the first slice to preserve the previous open-time mapping behavior.
+            getBuffer(0)
             return true
         } catch (_: FileNotFoundException) {
             return false
@@ -81,10 +80,9 @@ open class MemoryMappedStore : FileChannelStore, Store {
     override fun write(buffer: ByteBuffer, position: Long): Int {
         var current = position
         while (buffer.hasRemaining()) {
-            current += withMappedBuffer(current) { destination ->
-                destination.position(getBufferLocation(current))
-                copy(buffer, destination)
-            }
+            val destination = getBuffer(current)
+            destination.position(getBufferLocation(current))
+            current += copy(buffer, destination)
         }
         return (current - position).toInt()
     }
@@ -97,10 +95,9 @@ open class MemoryMappedStore : FileChannelStore, Store {
     override fun read(buffer: ByteBuffer, position: Long) {
         var current = position
         while (buffer.hasRemaining()) {
-            current += withMappedBuffer(current) { source ->
-                source.position(getBufferLocation(current))
-                copy(source, buffer)
-            }
+            val source = getBuffer(current)
+            source.position(getBufferLocation(current))
+            current += copy(source, buffer)
         }
     }
 
@@ -137,16 +134,6 @@ open class MemoryMappedStore : FileChannelStore, Store {
         ) {
             mappedFileSegmentCache.evictLeastRecentlyUsed()
         }
-
-    private fun <T> withMappedBuffer(position: Long, block: (ByteBuffer) -> T): T {
-        ensureOpen()
-        val key = keyForPosition(position)
-        return mappedFileSegmentCache.withBuffer(
-            key = key,
-            mapper = { mapSegment(key) },
-            block = block
-        )
-    }
 
     /**
      * Closes the store, removing its associated buffers from the cache.

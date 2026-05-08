@@ -14,10 +14,9 @@ internal class MappedFileSegment(
     val buffer: ByteBuffer,
     private val closeAction: () -> Unit
 ) {
-    var leases: Int = 0
-    var evicted: Boolean = false
     private var closed: Boolean = false
 
+    @Synchronized
     fun close() {
         if (closed) {
             return
@@ -35,16 +34,18 @@ internal class MappedFileSegment(
 internal class MappedFileSegmentCache(defaultMaxChunks: Int) {
 
     private val lock = Any()
+    private val mappingLock = Any()
     private val entries = LinkedHashMap<MappedFileSegmentKey, MappedFileSegment>(16, 0.75f, true)
     private var configuredMaxChunks = maxOf(1, defaultMaxChunks)
 
     var maxChunks: Int
         get() = synchronized(lock) { configuredMaxChunks }
         set(value) {
-            synchronized(lock) {
+            val evicted = synchronized(lock) {
                 configuredMaxChunks = maxOf(1, value)
-                evictOverflowLocked().forEach { evictSegmentLocked(it) }
+                evictOverflowLocked()
             }
+            evicted.closeAll()
         }
 
     val size: Int
@@ -53,79 +54,76 @@ internal class MappedFileSegmentCache(defaultMaxChunks: Int) {
     fun getBuffer(
         key: MappedFileSegmentKey,
         mapper: () -> MappedFileSegment
-    ): ByteBuffer = synchronized(lock) {
-        val segment = entries[key] ?: mapAndCacheLocked(key, mapper)
-        evictOverflowLocked().forEach { evictSegmentLocked(it) }
-        segment.buffer.duplicate()
-    }
-
-    fun <T> withBuffer(
-        key: MappedFileSegmentKey,
-        mapper: () -> MappedFileSegment,
-        block: (ByteBuffer) -> T
-    ): T {
-        val segment = synchronized(lock) {
-            val mapped = entries[key] ?: mapAndCacheLocked(key, mapper)
-            mapped.leases += 1
-            evictOverflowLocked().forEach { evictSegmentLocked(it) }
-            mapped
-        }
-
-        try {
-            return block(segment.buffer.duplicate())
-        } finally {
-            synchronized(lock) {
-                segment.leases -= 1
-                if (segment.evicted && segment.leases == 0) {
-                    segment.close()
-                }
-                evictOverflowLocked().forEach { evictSegmentLocked(it) }
-            }
-        }
-    }
+    ): ByteBuffer = getOrMapSegment(key, mapper).buffer.duplicate()
 
     fun removeFile(fileId: Int) {
-        synchronized(lock) {
+        val removed = synchronized(lock) {
+            val removed = ArrayList<MappedFileSegment>()
             val iterator = entries.iterator()
             while (iterator.hasNext()) {
                 val entry = iterator.next()
                 if (entry.key.fileId == fileId) {
                     iterator.remove()
-                    evictSegmentLocked(entry.value)
+                    removed.add(entry.value)
                 }
             }
+            removed
         }
+        removed.closeAll()
     }
 
-    fun evictLeastRecentlyUsed(): Boolean = synchronized(lock) {
-        val iterator = entries.iterator()
-        while (iterator.hasNext()) {
-            val entry = iterator.next()
-            val segment = entry.value
-            if (segment.leases == 0) {
-                iterator.remove()
-                evictSegmentLocked(segment)
-                return@synchronized true
-            }
+    fun evictLeastRecentlyUsed(): Boolean {
+        val evicted = synchronized(lock) {
+            evictLeastRecentlyUsedLocked()
         }
-        false
+        evicted?.close()
+        return evicted != null
     }
 
-    private fun mapAndCacheLocked(
+    private fun getOrMapSegment(
         key: MappedFileSegmentKey,
         mapper: () -> MappedFileSegment
     ): MappedFileSegment {
-        evictToRoomForNewSegmentLocked()
-        val segment = mapper.invoke()
-        entries[key] = segment
+        synchronized(lock) {
+            entries[key]?.let { return it }
+        }
+
+        synchronized(lock) {
+            evictToRoomForNewSegmentLocked()
+        }.closeAll()
+
+        val mapped = synchronized(mappingLock) {
+            synchronized(lock) {
+                entries[key]?.let { return it }
+            }
+            mapper.invoke()
+        }
+        var segment = mapped
+        val duplicate = ArrayList<MappedFileSegment>(1)
+        val overflow = synchronized(lock) {
+            entries[key]?.let {
+                segment = it
+                duplicate.add(mapped)
+                return@synchronized emptyList()
+            }
+
+            entries[key] = mapped
+            evictOverflowLocked()
+        }
+
+        duplicate.closeAll()
+        overflow.closeAll()
+
         return segment
     }
 
-    private fun evictToRoomForNewSegmentLocked() {
+    private fun evictToRoomForNewSegmentLocked(): List<MappedFileSegment> {
+        val evicted = ArrayList<MappedFileSegment>()
         while (entries.size >= configuredMaxChunks) {
-            val evicted = evictLeastRecentlyUsedLocked() ?: return
-            evictSegmentLocked(evicted)
+            val segment = evictLeastRecentlyUsedLocked() ?: return evicted
+            evicted.add(segment)
         }
+        return evicted
     }
 
     private fun evictOverflowLocked(): List<MappedFileSegment> {
@@ -139,22 +137,18 @@ internal class MappedFileSegmentCache(defaultMaxChunks: Int) {
 
     private fun evictLeastRecentlyUsedLocked(): MappedFileSegment? {
         val iterator = entries.iterator()
-        while (iterator.hasNext()) {
+        if (iterator.hasNext()) {
             val entry = iterator.next()
-            val segment = entry.value
-            if (segment.leases == 0) {
-                iterator.remove()
-                return segment
-            }
+            iterator.remove()
+            return entry.value
         }
         return null
     }
+}
 
-    private fun evictSegmentLocked(segment: MappedFileSegment) {
-        segment.evicted = true
-        if (segment.leases == 0) {
-            segment.close()
-        }
+private fun List<MappedFileSegment>.closeAll() {
+    forEach {
+        it.close()
     }
 }
 

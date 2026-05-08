@@ -59,10 +59,8 @@ class InMemoryStore(context: SchemaContext?, storeId: String) : MemoryMappedStor
         var current = position
         while (buffer.hasRemaining()) {
             val destination = getBuffer(current)
-            synchronized(destination) {
-                destination.position(getBufferLocation(current))
-                current += copy(buffer, destination)
-            }
+            destination.position(getBufferLocation(current))
+            current += copy(buffer, destination)
         }
         return (current - position).toInt()
     }
@@ -76,10 +74,8 @@ class InMemoryStore(context: SchemaContext?, storeId: String) : MemoryMappedStor
         var current = position
         while (buffer.hasRemaining()) {
             val source = getBuffer(current)
-            synchronized(source) {
-                source.position(getBufferLocation(current))
-                current += copy(source, buffer)
-            }
+            source.position(getBufferLocation(current))
+            current += copy(source, buffer)
         }
     }
 
