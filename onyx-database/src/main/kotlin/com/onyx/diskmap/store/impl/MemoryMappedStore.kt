@@ -57,7 +57,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     override fun open(filePath: String): Boolean {
         try {
-            fileId = fileIdCounter.incrementAndGet()
+            fileId = nextMappedFileId()
             if (!super.open(filePath)) {
                 return false
             }
@@ -155,7 +155,10 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * This is a no-op if deleteOnClose is true.
      */
     override fun commit() {
-        if (!deleteOnClose) super.commit()
+        if (!deleteOnClose) {
+            forceMappedFileSegments(fileId)
+            super.commit()
+        }
     }
 
     /**
@@ -198,6 +201,24 @@ open class MemoryMappedStore : FileChannelStore, Store {
             }
 
         private val mappedFileSegmentCache = MappedFileSegmentCache(defaultMaxCachedFileChunks)
+
+        internal fun nextMappedFileId(): Int = fileIdCounter.incrementAndGet()
+
+        internal fun getMappedFileSegmentBuffer(
+            key: MappedFileSegmentKey,
+            mapper: () -> MappedFileSegment
+        ): ByteBuffer = mappedFileSegmentCache.getBuffer(key, mapper)
+
+        internal fun removeMappedFileSegments(fileId: Int) {
+            mappedFileSegmentCache.removeFile(fileId)
+        }
+
+        internal fun forceMappedFileSegments(fileId: Int) {
+            mappedFileSegmentCache.forceFile(fileId)
+        }
+
+        internal fun evictLeastRecentlyUsedMappedFileSegment(): Boolean =
+            mappedFileSegmentCache.evictLeastRecentlyUsed()
 
         /**
          * Maximum number of memory-mapped file chunks retained globally across all stores.

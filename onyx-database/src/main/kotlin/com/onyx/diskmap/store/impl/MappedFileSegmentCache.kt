@@ -12,19 +12,32 @@ internal data class MappedFileSegmentKey(val fileId: Int, val idx: Int)
 
 internal class MappedFileSegment(
     val buffer: ByteBuffer,
+    private val forceAction: () -> Unit = {
+        runCatching {
+            (buffer as? MappedByteBuffer)?.force()
+        }
+    },
     private val closeAction: () -> Unit
 ) {
     private var closed: Boolean = false
+
+    @Synchronized
+    fun force() {
+        if (closed) {
+            return
+        }
+        runCatching {
+            forceAction.invoke()
+        }
+    }
 
     @Synchronized
     fun close() {
         if (closed) {
             return
         }
+        force()
         closed = true
-        runCatching {
-            (buffer as? MappedByteBuffer)?.force()
-        }
         runCatching {
             closeAction.invoke()
         }
@@ -70,6 +83,17 @@ internal class MappedFileSegmentCache(defaultMaxChunks: Int) {
             removed
         }
         removed.closeAll()
+    }
+
+    fun forceFile(fileId: Int) {
+        val segments = synchronized(lock) {
+            entries
+                .filter { it.key.fileId == fileId }
+                .map { it.value }
+        }
+        segments.forEach {
+            it.force()
+        }
     }
 
     fun evictLeastRecentlyUsed(): Boolean {
@@ -192,9 +216,12 @@ private interface SegmentMapper {
 private object MappedByteBufferSegmentMapper : SegmentMapper {
     override fun map(channel: FileChannel, offset: Long, size: Int): MappedFileSegment {
         val buffer = channel.map(FileChannel.MapMode.READ_WRITE, offset, size.toLong())
-        return MappedFileSegment(buffer) {
-            UnsafeByteBufferCleaner.unmap(buffer)
-        }
+        return MappedFileSegment(
+            buffer = buffer,
+            closeAction = {
+                UnsafeByteBufferCleaner.unmap(buffer)
+            }
+        )
     }
 }
 
@@ -217,12 +244,17 @@ private class ForeignMemorySegmentMapper(
                 arena
             )
             val buffer = segmentAsByteBufferMethod.invoke(segment) as ByteBuffer
-            return MappedFileSegment(buffer) {
-                runCatching {
-                    segmentForceMethod?.invoke(segment)
+            return MappedFileSegment(
+                buffer = buffer,
+                forceAction = {
+                    runCatching {
+                        segmentForceMethod?.invoke(segment)
+                    }
+                },
+                closeAction = {
+                    arenaCloseMethod.invoke(arena)
                 }
-                arenaCloseMethod.invoke(arena)
-            }
+            )
         } catch (throwable: Throwable) {
             runCatching {
                 arenaCloseMethod.invoke(arena)

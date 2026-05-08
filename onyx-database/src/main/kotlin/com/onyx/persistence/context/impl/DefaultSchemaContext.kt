@@ -36,6 +36,7 @@ import com.onyx.interactors.transaction.TransactionInteractor
 import com.onyx.interactors.transaction.TransactionStore
 import com.onyx.interactors.transaction.impl.DefaultTransactionInteractor
 import com.onyx.interactors.transaction.impl.DefaultTransactionStore
+import com.onyx.interactors.transaction.impl.MemoryMappedTransactionStore
 import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity
@@ -72,6 +73,15 @@ open class DefaultSchemaContext : SchemaContext {
     final override val contextId: String
 
     override var storeType: StoreType = StoreType.FILE
+        set(value) {
+            if (field == value) {
+                return
+            }
+            field = value
+            if (::location.isInitialized) {
+                initializeTransactionStore()
+            }
+        }
     override var encryption: EncryptionInteractor? = null
     override var encryptDatabase: Boolean = false
     override var maxCardinality: Int = 1000000
@@ -114,7 +124,7 @@ open class DefaultSchemaContext : SchemaContext {
         this.contextId = contextId
         this.location = location
         @Suppress("LeakingThis")
-        this.transactionStore = DefaultTransactionStore(location)
+        initializeTransactionStore()
 
         @Suppress("LeakingThis")
         Contexts.put(this)
@@ -142,11 +152,25 @@ open class DefaultSchemaContext : SchemaContext {
         set(systemPersistenceManager) {
             field = systemPersistenceManager!!
             serializedPersistenceManager = field!!
-            if(transactionStore != null)
-                this.transactionInteractor = DefaultTransactionInteractor(transactionStore!!, field!!)
+            initializeTransactionInteractor()
         }
 
     // endregion
+
+    protected open fun initializeTransactionStore() {
+        catchAll { transactionStore?.close() }
+        transactionStore = when (storeType) {
+            StoreType.MEMORY_MAPPED_FILE -> MemoryMappedTransactionStore(location)
+            else -> DefaultTransactionStore(location)
+        }
+        initializeTransactionInteractor()
+    }
+
+    protected open fun initializeTransactionInteractor() {
+        val store = transactionStore ?: return
+        val manager = systemPersistenceManager ?: return
+        this.transactionInteractor = DefaultTransactionInteractor(store, manager)
+    }
 
     // region Context Lifecycle - Start/Stop
 

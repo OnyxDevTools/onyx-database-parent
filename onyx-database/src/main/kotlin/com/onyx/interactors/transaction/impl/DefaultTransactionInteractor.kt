@@ -22,6 +22,7 @@ import com.onyx.interactors.transaction.TransactionStore
 import java.io.File
 import java.io.IOException
 import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 
 /**
  * Created by Tim Osborn on 3/25/16.
@@ -161,15 +162,35 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
 
                     try {
                         transaction = null
-                        channel.read(metadataBuffer)
+                        metadataBuffer.clear()
+                        metadataBuffer.limit(TRANSACTION_METADATA_SIZE)
+                        val metadataBytesRead = channel.readFully(metadataBuffer)
+                        if (metadataBytesRead == 0) {
+                            break
+                        }
                         metadataBuffer.flip()
+                        if (metadataBytesRead < TRANSACTION_METADATA_SIZE) {
+                            if (metadataBuffer.isZeroFilled()) {
+                                break
+                            }
+                            throw IllegalStateException("WAL transaction header is incomplete")
+                        }
 
                         val transactionType = metadataBuffer.get()
                         val transactionDataLength = metadataBuffer.int
+                        if (transactionType == PADDING && transactionDataLength == 0) {
+                            break
+                        }
+                        if (transactionType !in TRANSACTION_TYPES || transactionDataLength <= 0) {
+                            throw IllegalStateException("WAL transaction header is invalid")
+                        }
 
                         BufferPool.allocateAndLimit(transactionDataLength) { transactionBuffer ->
-                            channel.read(transactionBuffer)
-                            transactionBuffer.rewind()
+                            val transactionBytesRead = channel.readFully(transactionBuffer)
+                            if (transactionBytesRead < transactionDataLength) {
+                                throw IllegalStateException("WAL transaction data is incomplete")
+                            }
+                            transactionBuffer.flip()
 
                             when (transactionType) {
                                 SAVE -> {
@@ -225,8 +246,8 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
 
                             transactionBuffer.clear()
                         }
-                        metadataBuffer.clear()
-                        metadataBuffer.limit(TRANSACTION_METADATA_SIZE)
+                    } catch (cause: TransactionException) {
+                        throw cause
                     } catch (cause: Exception) {
                         throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_EXECUTE, transaction, cause)
                     }
@@ -245,12 +266,38 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
     }
 
     companion object {
+        private const val PADDING: Byte = 0
         private const val SAVE: Byte = 1
         private const val DELETE: Byte = 2
         private const val DELETE_QUERY: Byte = 3
         private const val UPDATE_QUERY: Byte = 4
         private const val TRANSACTION_METADATA_SIZE = 5
+        private val TRANSACTION_TYPES = setOf(SAVE, DELETE, DELETE_QUERY, UPDATE_QUERY)
     }
+}
+
+private fun FileChannel.readFully(buffer: ByteBuffer): Int {
+    var total = 0
+    while (buffer.hasRemaining()) {
+        val bytesRead = read(buffer)
+        if (bytesRead < 0) {
+            break
+        }
+        if (bytesRead == 0) {
+            break
+        }
+        total += bytesRead
+    }
+    return total
+}
+
+private fun ByteBuffer.isZeroFilled(): Boolean {
+    for (index in position() until limit()) {
+        if (get(index) != 0.toByte()) {
+            return false
+        }
+    }
+    return true
 }
 
 /**
