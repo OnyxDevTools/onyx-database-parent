@@ -42,6 +42,12 @@ open class OptimisticLockingMap<K, V>(@Suppress("MemberVisibilityCanPrivate") va
 
     // endregion
 
+    inline fun removeKeys(crossinline predicate: (K) -> Boolean): Boolean =
+        lock.writeLock { m.keys.removeIf { predicate(it) } }
+
+    inline fun removeEntries(crossinline predicate: (MutableMap.MutableEntry<K, V>) -> Boolean): Boolean =
+        lock.writeLock { m.entries.removeIf { predicate(it) } }
+
     /**
      * Get or put overridden so that it first uses optimistic locking.  If it failed to return a value, check again
      * in order to account for a race condition.  Lastly put a new value by calling the unit.

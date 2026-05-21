@@ -775,6 +775,8 @@ open class DefaultSchemaContext : SchemaContext {
     // region Data Files
 
     @JvmField internal val dataFiles: MutableMap<String, DiskMapFactory> = hashMapOf()
+    private val dataFilesLock = Any()
+    private val dataDeletionLock = Any()
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor.
@@ -785,16 +787,20 @@ open class DefaultSchemaContext : SchemaContext {
      * @return Underlying data storage factory
      * @since 1.0.0
      */
-    @Synchronized
     override fun getDataFile(descriptor: EntityDescriptor): DiskMapFactory {
-        val key = if (descriptor.partition == null) descriptor.fileName else descriptor.fileName + descriptor.partition!!.partitionValue
+        val key = dataFileKey(descriptor)
         var finalLocation = descriptor.primaryLocation
         finalLocation = if(finalLocation != null) "$finalLocation/$key" else "$location/$key"
 
-        return dataFiles.getOrPut(key) {
-            return@getOrPut DefaultDiskMapFactory(finalLocation, storeType, this@DefaultSchemaContext)
+        return synchronized(dataFilesLock) {
+            dataFiles.getOrPut(key) {
+                return@getOrPut DefaultDiskMapFactory(finalLocation, storeType, this@DefaultSchemaContext)
+            }
         }
     }
+
+    private fun dataFileKey(descriptor: EntityDescriptor): String =
+        if (descriptor.partition == null) descriptor.fileName else descriptor.fileName + descriptor.partition!!.partitionValue
 
     protected open val partitionCache: MutableMap<Long, SystemPartitionEntry> = Collections.synchronizedMap(WeakHashMap())
 
@@ -830,7 +836,7 @@ open class DefaultSchemaContext : SchemaContext {
     data class PartitionInfo(val classToGet: Class<*>, val partitionValue:Any)
 
     protected open val partitionsByValue: MutableMap<PartitionInfo, SystemPartitionEntry?> = Collections.synchronizedMap(WeakHashMap<PartitionInfo, SystemPartitionEntry?>())
-    protected open val partitionsByClass = WeakHashMap<Class<*>, List<SystemPartitionEntry>>()
+    protected open val partitionsByClass: MutableMap<Class<*>, List<SystemPartitionEntry>> = Collections.synchronizedMap(WeakHashMap())
 
     /**
      * Get Partition Entry for entity.
@@ -845,9 +851,15 @@ open class DefaultSchemaContext : SchemaContext {
         return@getOrPut serializedPersistenceManager.from<SystemPartitionEntry>().where("id" eq classToGet.name + partitionValue.toString()).firstOrNull()
     }
 
-    override fun getAllPartitions(classToGet: Class<*>): List<SystemPartitionEntry> = synchronized(descriptors) {
-        partitionsByClass.getOrPut(classToGet) {
-            return@getOrPut serializedPersistenceManager.from<SystemPartitionEntry>().where("entityClass" eq classToGet.name).list<SystemPartitionEntry>()
+    override fun getAllPartitions(classToGet: Class<*>): List<SystemPartitionEntry> {
+        synchronized(partitionsByClass) {
+            partitionsByClass[classToGet]?.let { return it }
+        }
+
+        val partitions = serializedPersistenceManager.from<SystemPartitionEntry>().where("entityClass" eq classToGet.name).list<SystemPartitionEntry>()
+
+        return synchronized(partitionsByClass) {
+            partitionsByClass.getOrPut(classToGet) { partitions }
         }
     }
 
@@ -874,7 +886,8 @@ open class DefaultSchemaContext : SchemaContext {
      * clear non-volatile cached items in the disk maps
      */
     override fun flush() {
-        dataFiles.values.forEach { it.flush() }
+        val files = synchronized(dataFilesLock) { dataFiles.values.toList() }
+        files.forEach { it.flush() }
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
@@ -894,72 +907,69 @@ open class DefaultSchemaContext : SchemaContext {
      * @param descriptor Entity descriptor to delete data files for
      * @since 3.9.10
      */
-    @Synchronized
     override fun deleteEntityDataFiles(descriptor: EntityDescriptor) {
-        // Do not delete system entity data files
-        if (isDescriptorSystemEntity(descriptor) == true) {
-            return
-        }
+        synchronized(dataDeletionLock) {
+            // Do not delete system entity data files
+            if (isDescriptorSystemEntity(descriptor) == true) {
+                return@synchronized
+            }
 
-        // Delete index resources for all indexes of this entity
-        descriptor.indexes.values.forEach { indexDescriptor ->
-            val indexInteractor = getIndexInteractor(indexDescriptor)
-            indexInteractor.deleteResources()
-        }
+            // Delete index resources for all indexes of this entity
+            descriptor.indexes.values.forEach { indexDescriptor ->
+                val indexInteractor = getIndexInteractor(indexDescriptor)
+                indexInteractor.deleteResources()
+            }
 
-        // Delete the main data file for this entity
-        deleteDataFile(descriptor, descriptor.entityClass)
+            // Delete the main data file for this entity
+            deleteDataFile(descriptor, descriptor.entityClass)
 
-        // Delete all partition data files and SystemPartitionEntry records if this entity is partitioned
-        if (!descriptor.hasPartition) {
-            // Get all partition entries for this entity class
-            val partitionEntries = getAllPartitions(descriptor.entityClass)
-            
-            // Delete each partition's data files
-            partitionEntries.forEach { partitionEntry ->
-                val partitionDescriptor = getDescriptorForEntity(descriptor.entityClass, partitionEntry.value)
-                
-                // Delete index resources for partition-specific indexes
-                partitionDescriptor.indexes.values.forEach { indexDescriptor ->
-                    val indexInteractor = getIndexInteractor(indexDescriptor)
-                    indexInteractor.deleteResources()
+            // Delete all partition data files and SystemPartitionEntry records if this entity is partitioned
+            if (!descriptor.hasPartition) {
+                // Get all partition entries for this entity class
+                val partitionEntries = getAllPartitions(descriptor.entityClass)
+
+                // Delete each partition's data files
+                partitionEntries.forEach { partitionEntry ->
+                    val partitionDescriptor = getDescriptorForEntity(descriptor.entityClass, partitionEntry.value)
+
+                    // Delete index resources for partition-specific indexes
+                    partitionDescriptor.indexes.values.forEach { indexDescriptor ->
+                        val indexInteractor = getIndexInteractor(indexDescriptor)
+                        indexInteractor.deleteResources()
+                    }
+
+                    deleteDataFile(partitionDescriptor, descriptor.entityClass)
+
+                    val entityKey = Base64.concat(partitionDescriptor.entityClass.name, partitionDescriptor.partition?.partitionValue ?: "")
+                    synchronized(descriptors) {
+                        descriptors.remove(entityKey)
+                    }
                 }
-                
-                deleteDataFile(partitionDescriptor, descriptor.entityClass)
 
-                val entityKey = Base64.concat(partitionDescriptor.entityClass.name, partitionDescriptor.partition?.partitionValue ?: "")
-                synchronized(descriptors) {
-                    descriptors.remove(entityKey)
+                // Delete all SystemPartitionEntry records for this entity class
+                partitionEntries.forEach { entry ->
+                    serializedPersistenceManager.deleteEntity(entry)
                 }
-            }
-            
-            // Delete all SystemPartitionEntry records for this entity class
-            partitionEntries.forEach { entry ->
-                serializedPersistenceManager.deleteEntity(entry)
-            }
-            
-            // Clear partition caches
-            partitionEntries.forEach { entry ->
-                partitionsByValue.remove(PartitionInfo(descriptor.entityClass, entry.value))
-                partitionsById.remove(entry.index)
-            }
-            partitionsByClass.remove(descriptor.entityClass)
-        }
 
-        // Remove interactors from cache to prevent reuse of deleted files
-        synchronized(recordInteractors) {
-            recordInteractors.keys.removeIf { it.entityClass == descriptor.entityClass }
-        }
-        synchronized(indexInteractors) {
-            indexInteractors.keys.removeIf { it.entityDescriptor.entityClass == descriptor.entityClass }
-        }
-        synchronized(relationshipInteractors) {
-            relationshipInteractors.keys.removeIf { it.entityDescriptor.entityClass == descriptor.entityClass }
-        }
+                // Clear partition caches
+                partitionEntries.forEach { entry ->
+                    partitionsByValue.remove(PartitionInfo(descriptor.entityClass, entry.value))
+                    partitionsById.remove(entry.index)
+                }
+                partitionsByClass.remove(descriptor.entityClass)
+            }
 
-        val entityKey = Base64.concat(descriptor.entityClass.name, descriptor.partition?.partitionValue ?: "")
-        synchronized(descriptors) {
-            descriptors.remove(entityKey)
+            // Remove interactors from cache to prevent reuse of deleted files
+            recordInteractors.removeKeys { it.entityClass == descriptor.entityClass }
+            synchronized(indexInteractors) {
+                indexInteractors.keys.removeIf { it.entityDescriptor.entityClass == descriptor.entityClass }
+            }
+            relationshipInteractors.removeKeys { it.entityDescriptor.entityClass == descriptor.entityClass }
+
+            val entityKey = Base64.concat(descriptor.entityClass.name, descriptor.partition?.partitionValue ?: "")
+            synchronized(descriptors) {
+                descriptors.remove(entityKey)
+            }
         }
     }
 
@@ -973,49 +983,46 @@ open class DefaultSchemaContext : SchemaContext {
      * @param partitionId Partition ID
      * @since 3.4.0
      */
-    @Synchronized
     override fun deletePartitionDataFiles(descriptor: EntityDescriptor, partitionId: Long) {
-        // Do not delete system entity data files
-        if (isDescriptorSystemEntity(descriptor) == true) {
-            return
-        }
+        synchronized(dataDeletionLock) {
+            // Do not delete system entity data files
+            if (isDescriptorSystemEntity(descriptor) == true) {
+                return@synchronized
+            }
 
-        val partition = getPartitionWithId(partitionId) ?: return
+            val partition = getPartitionWithId(partitionId) ?: return@synchronized
 
-        // Get the partition-specific descriptor
-        val partitionDescriptor = getDescriptorForEntity(descriptor.entityClass, partition.value)
+            // Get the partition-specific descriptor
+            val partitionDescriptor = getDescriptorForEntity(descriptor.entityClass, partition.value)
 
-        // Delete index resources for all indexes of this partition
-        partitionDescriptor.indexes.values.forEach { indexDescriptor ->
-            val indexInteractor = getIndexInteractor(indexDescriptor)
-            indexInteractor.deleteResources()
-        }
+            // Delete index resources for all indexes of this partition
+            partitionDescriptor.indexes.values.forEach { indexDescriptor ->
+                val indexInteractor = getIndexInteractor(indexDescriptor)
+                indexInteractor.deleteResources()
+            }
 
-        // Delete the data file for this partition
-        deleteDataFile(partitionDescriptor, descriptor.entityClass)
+            // Delete the data file for this partition
+            deleteDataFile(partitionDescriptor, descriptor.entityClass)
 
-        // Delete the SystemPartitionEntry for this partition
-        serializedPersistenceManager.deleteEntity(partition)
+            // Delete the SystemPartitionEntry for this partition
+            serializedPersistenceManager.deleteEntity(partition)
 
-        // Remove interactors from cache for this partition descriptor
-        synchronized(recordInteractors) {
+            // Remove interactors from cache for this partition descriptor
             recordInteractors.remove(partitionDescriptor)
-        }
-        synchronized(indexInteractors) {
-            indexInteractors.entries.removeIf { it.key.entityDescriptor == partitionDescriptor }
-        }
-        synchronized(relationshipInteractors) {
-            relationshipInteractors.entries.removeIf { it.key.entityDescriptor == partitionDescriptor }
-        }
+            synchronized(indexInteractors) {
+                indexInteractors.entries.removeIf { it.key.entityDescriptor == partitionDescriptor }
+            }
+            relationshipInteractors.removeEntries { it.key.entityDescriptor == partitionDescriptor }
 
-        // Remove the partition entry from cache
-        partitionsByClass.remove(descriptor.entityClass)
-        partitionsByValue.remove(PartitionInfo(descriptor.entityClass, partition.value))
-        partitionsById.remove(partitionId)
+            // Remove the partition entry from cache
+            partitionsByClass.remove(descriptor.entityClass)
+            partitionsByValue.remove(PartitionInfo(descriptor.entityClass, partition.value))
+            partitionsById.remove(partitionId)
 
-        val entityKey = Base64.concat(descriptor.entityClass.name, descriptor.partition?.partitionValue ?: "")
-        synchronized(descriptors) {
-            descriptors.remove(entityKey)
+            val entityKey = Base64.concat(descriptor.entityClass.name, descriptor.partition?.partitionValue ?: "")
+            synchronized(descriptors) {
+                descriptors.remove(entityKey)
+            }
         }
     }
 
@@ -1048,15 +1055,17 @@ open class DefaultSchemaContext : SchemaContext {
      * @param entityClassToDelete The entity class being deleted (to exclude from sharing check)
      */
     private fun deleteDataFile(descriptor: EntityDescriptor, entityClassToDelete: Class<*>) {
-        val key = if (descriptor.partition == null) descriptor.fileName else descriptor.fileName + descriptor.partition!!.partitionValue
+        val key = dataFileKey(descriptor)
 
         // Check if this is a default data file that might be shared with other entities
         if (descriptor.fileName == DEFAULT_DATA_FILE) {
             // Check if any other entities (not the one being deleted) are using this file
-            val otherEntitiesUsingFile = descriptors.values.any { 
-                it.entityClass != entityClassToDelete && 
-                it.fileName == DEFAULT_DATA_FILE && 
-                it.partition?.partitionValue == descriptor.partition?.partitionValue
+            val otherEntitiesUsingFile = synchronized(descriptors) {
+                descriptors.values.any {
+                    it.entityClass != entityClassToDelete &&
+                        it.fileName == DEFAULT_DATA_FILE &&
+                        it.partition?.partitionValue == descriptor.partition?.partitionValue
+                }
             }
             
             // If other entities are using the same file, don't delete it
@@ -1065,24 +1074,26 @@ open class DefaultSchemaContext : SchemaContext {
             }
         }
 
-        // Get the data file from cache
-        val dataFile = dataFiles[key]
+        synchronized(dataFilesLock) {
+            // Get the data file from cache
+            val dataFile = dataFiles[key]
 
-        if (dataFile != null) {
-            // Close and delete the data file
-            dataFile.close()
-            dataFile.delete()
+            if (dataFile != null) {
+                // Close and delete the data file
+                dataFile.close()
+                dataFile.delete()
 
-            // Remove from cache
-            dataFiles.remove(key)
-        } else {
-            // Data file might not be in cache, try to find and delete it directly
-            var finalLocation = descriptor.primaryLocation
-            finalLocation = if(finalLocation != null) "$finalLocation/$key" else "$location/$key"
+                // Remove from cache
+                dataFiles.remove(key)
+            } else {
+                // Data file might not be in cache, try to find and delete it directly
+                var finalLocation = descriptor.primaryLocation
+                finalLocation = if(finalLocation != null) "$finalLocation/$key" else "$location/$key"
 
-            val factory = DefaultDiskMapFactory(finalLocation, storeType, this@DefaultSchemaContext)
-            factory.close()
-            factory.delete()
+                val factory = DefaultDiskMapFactory(finalLocation, storeType, this@DefaultSchemaContext)
+                factory.close()
+                factory.delete()
+            }
         }
     }
 
