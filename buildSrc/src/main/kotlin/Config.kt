@@ -5,8 +5,8 @@ object Config {
     const val ONYX_VERSION = "3.9.11"
 
     // Took Versions
-    const val JAVA_VERSION = 23
-    val JAVA_TARGET = JavaVersion.VERSION_23
+    const val JAVA_VERSION = 21
+    val JAVA_TARGET = JavaVersion.VERSION_21
     const val KOTLIN_VERSION = "2.2.10"
     const val GSON_VERSION = "2.13.1"
 
