@@ -246,6 +246,44 @@ if (approval.requiresApproval) {
 
 ---
 
+## Published Model Predictions
+
+Use a published model key with raw input rows, or let a saved script provide the input rows for prediction.
+
+```kotlin
+val rawPrediction = db.predict(
+    "churn-model",
+    listOf(
+        mapOf("age" to 42, "country" to "US", "usageScore" to 0.87),
+        mapOf("age" to 31, "country" to "CA", "usageScore" to 0.42)
+    )
+)
+
+println(rawPrediction.predictions)
+println(rawPrediction.rawPredictions)
+
+val scriptPrediction = db.predictFromScript(
+    "churn-model",
+    "score-active-users",
+    mapOf("segment" to "enterprise")
+)
+
+println(scriptPrediction.inputCount)
+```
+
+Saved scripts can also be executed directly:
+
+```kotlin
+val execution = db.executeScript(
+    "score-active-users",
+    mapOf("segment" to "enterprise")
+)
+
+println(execution.resultsJson)
+```
+
+---
+
 ## Query helpers at a glance
 
 Import condition and sort helpers:

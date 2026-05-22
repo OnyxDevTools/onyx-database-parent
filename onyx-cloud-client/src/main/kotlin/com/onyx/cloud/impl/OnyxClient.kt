@@ -20,9 +20,15 @@ import com.onyx.cloud.api.IQueryResults
 import com.onyx.cloud.api.IStreamSubscription
 import com.onyx.cloud.api.LogicalOperator
 import com.onyx.cloud.api.OnyxDocument
+import com.onyx.cloud.api.PublishedModelPredictionInput
+import com.onyx.cloud.api.PublishedModelPredictionInputs
+import com.onyx.cloud.api.PublishedModelPredictionResponse
+import com.onyx.cloud.api.PublishedModelRawPredictionRequest
+import com.onyx.cloud.api.PublishedModelScriptPredictionRequest
 import com.onyx.cloud.api.QueryCriteria
 import com.onyx.cloud.api.QueryCriteriaOperator
 import com.onyx.cloud.api.SaveOptions
+import com.onyx.cloud.api.ScriptExecutionResponse
 import com.onyx.cloud.api.Sort
 import com.onyx.cloud.exceptions.NotFoundException
 import com.onyx.cloud.extensions.fromJson
@@ -186,6 +192,70 @@ class OnyxClient(
         val path = "/data/${encode(databaseId)}/document"
         return makeRequest(HttpMethod.Put, path, doc).fromJson<OnyxDocument>()
             ?: throw IllegalStateException("Failed to parse response for saveDocument")
+    }
+
+    // ---------------------------------------------------------------------
+    // Saved scripts and published model predictions
+    // ---------------------------------------------------------------------
+
+    /**
+     * Executes a saved script by ID, applying optional template parameters as query parameters.
+     */
+    override fun executeScript(scriptId: String, parameters: Map<String, String>): ScriptExecutionResponse {
+        require(scriptId.isNotBlank()) { "scriptId must not be blank" }
+
+        val queryString = buildQueryString(parameters)
+        val path = "/data/${encode(databaseId)}/execute/${encode(scriptId)}"
+        val response = makeRequest(HttpMethod.Get, path, queryString = queryString)
+        return response.fromJson<ScriptExecutionResponse>()
+            ?: throw IllegalStateException("Failed to parse response for executeScript")
+    }
+
+    /**
+     * Predicts with a published model using a single raw input row.
+     */
+    override fun predict(
+        publishedModelId: String,
+        input: PublishedModelPredictionInput
+    ): PublishedModelPredictionResponse =
+        predictFromRawInputs(publishedModelId, input)
+
+    /**
+     * Predicts with a published model using raw input rows.
+     */
+    override fun predict(
+        publishedModelId: String,
+        inputs: PublishedModelPredictionInputs
+    ): PublishedModelPredictionResponse =
+        predictFromRawInputs(publishedModelId, inputs)
+
+    /**
+     * Predicts with a published model using rows returned from a saved script.
+     */
+    override fun predictFromScript(
+        publishedModelId: String,
+        scriptId: String,
+        scriptParameters: Map<String, String>
+    ): PublishedModelPredictionResponse {
+        require(publishedModelId.isNotBlank()) { "publishedModelId must not be blank" }
+        require(scriptId.isNotBlank()) { "scriptId must not be blank" }
+
+        val path = "/data/${encode(databaseId)}/model-builder/published-model/${encode(publishedModelId)}/predict/script"
+        val body = PublishedModelScriptPredictionRequest(scriptId = scriptId, scriptParameters = scriptParameters)
+        return makeRequest(HttpMethod.Post, path, body).fromJson<PublishedModelPredictionResponse>()
+            ?: throw IllegalStateException("Failed to parse response for predictFromScript")
+    }
+
+    private fun predictFromRawInputs(
+        publishedModelId: String,
+        inputs: Any
+    ): PublishedModelPredictionResponse {
+        require(publishedModelId.isNotBlank()) { "publishedModelId must not be blank" }
+
+        val path = "/data/${encode(databaseId)}/model-builder/published-model/${encode(publishedModelId)}/predict"
+        val body = PublishedModelRawPredictionRequest(inputs = inputs)
+        return makeRequest(HttpMethod.Post, path, body).fromJson<PublishedModelPredictionResponse>()
+            ?: throw IllegalStateException("Failed to parse response for predict")
     }
 
     // ---------------------------------------------------------------------

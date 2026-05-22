@@ -139,6 +139,146 @@ class OnyxClientTest {
     }
 
     @Test
+    fun predictPostsRawInputsToPublishedModelEndpoint() {
+        var capturedUrl: String? = null
+        var capturedInit: FetchInit? = null
+        val predictionClient = OnyxClient(
+            baseUrl = "https://example.com",
+            databaseId = "db",
+            apiKey = "key",
+            apiSecret = "secret",
+            fetch = { url, init ->
+                capturedUrl = url
+                capturedInit = init
+                StubFetchResponse(
+                    bodyText = """
+                        {
+                          "publishedModelId": "churn-model",
+                          "modelId": "model-1",
+                          "inputCount": 2,
+                          "inputs": [{"age": 42}, {"age": 31}],
+                          "predictions": [{"churn": 0.9}, {"churn": 0.1}],
+                          "records": [
+                            {"prediction": {"churn": 0.9}, "input": {"age": 42}},
+                            {"prediction": {"churn": 0.1}, "input": {"age": 31}}
+                          ],
+                          "rawPredictions": [[0.9], [0.1]],
+                          "scriptId": null,
+                          "scriptParameters": {}
+                        }
+                    """.trimIndent()
+                )
+            }
+        )
+
+        val response = predictionClient.predict(
+            "churn-model",
+            listOf(
+                mapOf("age" to 42, "country" to "US"),
+                mapOf("age" to 31, "country" to "CA")
+            )
+        )
+
+        assertEquals("https://example.com/data/db/model-builder/published-model/churn-model/predict", capturedUrl)
+        assertEquals("POST", capturedInit?.method)
+        assertTrue(capturedInit?.body?.contains("\"inputs\"") == true)
+        assertTrue(capturedInit?.body?.contains("\"country\":\"US\"") == true)
+        assertEquals("churn-model", response.publishedModelId)
+        assertEquals(2, response.inputCount)
+        assertEquals(0.9, response.rawPredictions.first().first())
+        assertEquals(0.1, response.predictions[1]["churn"])
+    }
+
+    @Test
+    fun predictFromScriptPostsScriptPayloadToPredictionEndpoint() {
+        var capturedUrl: String? = null
+        var capturedInit: FetchInit? = null
+        val predictionClient = OnyxClient(
+            baseUrl = "https://example.com",
+            databaseId = "db",
+            apiKey = "key",
+            apiSecret = "secret",
+            fetch = { url, init ->
+                capturedUrl = url
+                capturedInit = init
+                StubFetchResponse(
+                    bodyText = """
+                        {
+                          "publishedModelId": "churn-model",
+                          "modelId": "model-1",
+                          "inputCount": 1,
+                          "inputs": [{"age": 42}],
+                          "predictions": [{"churn": 0.9}],
+                          "records": [{"prediction": {"churn": 0.9}, "input": {"age": 42}}],
+                          "rawPredictions": [[0.9]],
+                          "scriptId": "score-active-users",
+                          "scriptParameters": {"segment": "enterprise"}
+                        }
+                    """.trimIndent()
+                )
+            }
+        )
+
+        val response = predictionClient.predictFromScript(
+            "churn-model",
+            "score-active-users",
+            mapOf("segment" to "enterprise")
+        )
+
+        assertEquals("https://example.com/data/db/model-builder/published-model/churn-model/predict/script", capturedUrl)
+        assertEquals("POST", capturedInit?.method)
+        assertTrue(capturedInit?.body?.contains("\"scriptId\":\"score-active-users\"") == true)
+        assertTrue(capturedInit?.body?.contains("\"segment\":\"enterprise\"") == true)
+        assertEquals("score-active-users", response.scriptId)
+        assertEquals("enterprise", response.scriptParameters["segment"])
+    }
+
+    @Test
+    fun executeScriptCallsSavedScriptEndpointWithParameters() {
+        var capturedUrl: String? = null
+        var capturedInit: FetchInit? = null
+        val scriptClient = OnyxClient(
+            baseUrl = "https://example.com",
+            databaseId = "db",
+            apiKey = "key",
+            apiSecret = "secret",
+            fetch = { url, init ->
+                capturedUrl = url
+                capturedInit = init
+                StubFetchResponse(
+                    bodyText = """
+                        {
+                          "success": true,
+                          "resultsText": "[{\"id\":\"u1\"}]",
+                          "resultsJson": [{"id": "u1"}],
+                          "logs": "",
+                          "logEntries": [],
+                          "nextPage": null,
+                          "durationMs": 12.5,
+                          "error": null
+                        }
+                    """.trimIndent()
+                )
+            }
+        )
+
+        val response = scriptClient.executeScript(
+            "score-active-users",
+            mapOf("segment" to "enterprise", "limit" to "10")
+        )
+
+        assertTrue(capturedUrl?.startsWith("https://example.com/data/db/execute/score-active-users?") == true)
+        assertTrue(capturedUrl?.contains("segment=enterprise") == true)
+        assertTrue(capturedUrl?.contains("limit=10") == true)
+        assertEquals("GET", capturedInit?.method)
+        assertTrue(response.success)
+        assertEquals(12.5, response.durationMs)
+        val rows = response.resultsJson as List<*>
+        val first = rows.first() as Map<*, *>
+        assertEquals("u1", first["id"])
+    }
+
+    @Test
     fun defaultTimeoutsMatchBuiltInDefaults() {
         val defaultsClass = OnyxClient::class.java.declaredClasses.first { it.simpleName == "Defaults" }
         val defaultRequest = defaultsClass.getDeclaredField("REQUEST_TIMEOUT_MS").apply { isAccessible = true }.getInt(null)
@@ -197,4 +337,3 @@ class OnyxClientTest {
         override val body: Any? = bodyText
     }
 }
-

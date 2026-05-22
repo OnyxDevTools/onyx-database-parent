@@ -892,8 +892,69 @@ interface IOnyxDatabase<Schema : Any> {
     /** Permanently removes a stored document. */
     fun deleteDocument(documentId: String): Any?
 
+    /**
+     * Executes a saved script and returns the script runner response.
+     *
+     * @param scriptId Saved script/query identifier.
+     * @param parameters Template parameters applied to the saved script.
+     */
+    fun executeScript(scriptId: String, parameters: Map<String, String> = emptyMap()): ScriptExecutionResponse =
+        unsupportedCloudOperation("executeScript")
+
+    /**
+     * Predicts with a published model using one raw input row.
+     *
+     * @param publishedModelId Published model key.
+     * @param input Input row to score.
+     */
+    fun predict(
+        publishedModelId: String,
+        input: PublishedModelPredictionInput
+    ): PublishedModelPredictionResponse =
+        predict(publishedModelId, listOf(input))
+
+    /**
+     * Predicts with a published model using raw input rows.
+     *
+     * @param publishedModelId Published model key.
+     * @param inputs Input rows to score.
+     */
+    fun predict(
+        publishedModelId: String,
+        inputs: PublishedModelPredictionInputs
+    ): PublishedModelPredictionResponse =
+        unsupportedCloudOperation("predict")
+
+    /**
+     * Predicts with a published model using input rows returned by a saved script.
+     *
+     * @param publishedModelId Published model key.
+     * @param scriptId Saved script/query identifier.
+     * @param scriptParameters Template parameters applied to the saved script.
+     */
+    fun predictFromScript(
+        publishedModelId: String,
+        scriptId: String,
+        scriptParameters: Map<String, String> = emptyMap()
+    ): PublishedModelPredictionResponse =
+        unsupportedCloudOperation("predictFromScript")
+
+    /**
+     * Alias for [predictFromScript].
+     */
+    fun predictWithScript(
+        publishedModelId: String,
+        scriptId: String,
+        scriptParameters: Map<String, String> = emptyMap()
+    ): PublishedModelPredictionResponse =
+        predictFromScript(publishedModelId, scriptId, scriptParameters)
+
     /** Cancels all active streams associated with this database instance. Safe to call multiple times. */
     fun close()
+}
+
+private fun unsupportedCloudOperation(operation: String): Nothing {
+    throw UnsupportedOperationException("$operation is not supported by this IOnyxDatabase implementation")
 }
 
 // --- IOnyxDatabase Extension Functions ---
@@ -1058,6 +1119,81 @@ data class DeleteOptions(val partition: String? = null, val relationships: List<
  * @property height The desired height for image documents.
  */
 data class DocumentOptions(val width: Int? = null, val height: Int? = null)
+
+/** A single input row for published model prediction. */
+typealias PublishedModelPredictionInput = Map<String, Any?>
+
+/** Input rows for published model prediction. */
+typealias PublishedModelPredictionInputs = List<PublishedModelPredictionInput>
+
+/** Request payload for predicting from raw input rows. */
+data class PublishedModelRawPredictionRequest(
+    val inputs: Any
+)
+
+/** Request payload for predicting from rows returned by a saved script. */
+data class PublishedModelScriptPredictionRequest(
+    val scriptId: String,
+    val scriptParameters: Map<String, String> = emptyMap()
+)
+
+/** Prediction paired with the input row that produced it. */
+data class PublishedModelPredictionRecord(
+    val prediction: PublishedModelPredictionInput = emptyMap(),
+    val input: PublishedModelPredictionInput = emptyMap()
+)
+
+/**
+ * Response returned by published model prediction endpoints.
+ *
+ * @property publishedModelId Published model key used for inference.
+ * @property modelId Source model identifier.
+ * @property inputCount Number of input rows evaluated by the model.
+ * @property inputs Input rows used for prediction.
+ * @property predictions Decoded prediction rows.
+ * @property records Prediction rows paired with their corresponding input rows.
+ * @property rawPredictions Raw numeric model output rows.
+ * @property scriptId Saved script identifier when prediction inputs came from a script.
+ * @property scriptParameters Saved script parameters used to materialize prediction inputs.
+ */
+data class PublishedModelPredictionResponse(
+    val publishedModelId: String = "",
+    val modelId: String = "",
+    val inputCount: Int = 0,
+    val inputs: PublishedModelPredictionInputs = emptyList(),
+    val predictions: PublishedModelPredictionInputs = emptyList(),
+    val records: List<PublishedModelPredictionRecord> = emptyList(),
+    val rawPredictions: List<List<Double>> = emptyList(),
+    val scriptId: String? = null,
+    val scriptParameters: Map<String, String> = emptyMap()
+)
+
+/**
+ * Response returned by saved script execution.
+ *
+ * The script runner returns both string and parsed JSON representations of the script result.
+ * When the script result is JSON, [resultsJson] is typically a `List`, `Map`, primitive, or `null`.
+ */
+data class ScriptExecutionResponse(
+    val success: Boolean = false,
+    val resultsText: String? = null,
+    val resultsJson: Any? = null,
+    val logs: String = "",
+    val logEntries: List<Map<String, Any?>> = emptyList(),
+    val nextPage: String? = null,
+    val durationMs: Double? = null,
+    val error: String? = null,
+    val errorName: String? = null,
+    val errorStack: String? = null,
+    val relativeErrorStack: String? = null,
+    val rawErrorStack: String? = null,
+    val rawError: String? = null,
+    val errorLine: Int? = null,
+    val errorColumn: Int? = null,
+    val submittedScript: String? = null,
+    val scriptLineCount: Int? = null,
+    val scriptPreview: String? = null
+)
 
 /**
  * A facade for creating and managing database client instances.
