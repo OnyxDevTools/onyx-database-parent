@@ -599,7 +599,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                 val partitionId = if (descriptor.hasPartition) context.getPartitionWithValue(
                     query.entityType!!,
                     descriptor.partition!!.partitionValue
-                )!!.primaryKey.toLong() else 0L
+                )?.primaryKey?.toLong() ?: 0L else 0L
                 context.getRecordInteractor(descriptor).forEach<T> record@{ it ->
                     val entry = it as? AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any?, IManagedEntity>
 
