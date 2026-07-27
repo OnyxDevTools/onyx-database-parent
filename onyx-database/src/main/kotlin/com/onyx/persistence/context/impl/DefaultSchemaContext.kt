@@ -998,14 +998,16 @@ open class DefaultSchemaContext : SchemaContext {
             // Get the partition-specific descriptor
             val partitionDescriptor = getDescriptorForEntity(descriptor.entityClass, partition.value)
 
-            // Release partition-specific record resources, such as a searchable
-            // entity's Lucene record index, before deleting the partition files.
-            getRecordInteractor(partitionDescriptor).deleteResources()
-
-            // Delete index resources for all indexes of this partition
-            partitionDescriptor.indexes.values.forEach { indexDescriptor ->
-                val indexInteractor = getIndexInteractor(indexDescriptor)
-                indexInteractor.deleteResources()
+            // A searchable entity's record index is shared across partition
+            // deletion operations. Clearing the partition above removes its
+            // documents; closing/deleting the writer here would make subsequent
+            // partition deletes reuse a closed IndexWriter.
+            val retainSearchResources = partitionDescriptor.entityType == EntityType.SEARCHABLE
+            if (!retainSearchResources) {
+                getRecordInteractor(partitionDescriptor).deleteResources()
+                partitionDescriptor.indexes.values.forEach { indexDescriptor ->
+                    getIndexInteractor(indexDescriptor).deleteResources()
+                }
             }
 
             // Delete the data file for this partition
@@ -1015,9 +1017,11 @@ open class DefaultSchemaContext : SchemaContext {
             serializedPersistenceManager.deleteEntity(partition)
 
             // Remove interactors from cache for this partition descriptor
-            recordInteractors.remove(partitionDescriptor)
-            synchronized(indexInteractors) {
-                indexInteractors.entries.removeIf { it.key.entityDescriptor == partitionDescriptor }
+            if (!retainSearchResources) {
+                recordInteractors.remove(partitionDescriptor)
+                synchronized(indexInteractors) {
+                    indexInteractors.entries.removeIf { it.key.entityDescriptor == partitionDescriptor }
+                }
             }
             relationshipInteractors.removeEntries { it.key.entityDescriptor == partitionDescriptor }
 

@@ -19,11 +19,9 @@ import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import java.io.File
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertContains
-import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -106,7 +104,78 @@ class FullTextSearchTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
     }
 
     @Test
-    fun testDeleteAllSearchablePartitionsRemovesFilesAndSurvivesReopen() {
+    fun testDeleteSearchablePartitionPreservesOtherPartitionAndSurvivesReopen() {
+        val deleted = manager.saveEntity<IManagedEntity>(LucenePartitionedEntity().apply {
+            region = "individual-delete"
+            tag = "deleted"
+            body = "unique deleted searchable payload"
+        }) as LucenePartitionedEntity
+        val retained = manager.saveEntity<IManagedEntity>(LucenePartitionedEntity().apply {
+            region = "individual-retained"
+            tag = "retained"
+            body = "unique retained searchable payload"
+        }) as LucenePartitionedEntity
+
+        assertEquals(
+            1,
+            manager.from<LucenePartitionedEntity>()
+                .inPartition("individual-delete")
+                .delete()
+        )
+
+        assertEquals(0L, manager.from<LucenePartitionedEntity>()
+            .inPartition("individual-delete")
+            .count())
+        assertTrue(manager.from<LucenePartitionedEntity>()
+            .inPartition("individual-delete")
+            .search("unique deleted payload")
+            .list<LucenePartitionedEntity>()
+            .isEmpty())
+
+        val retainedImmediately = manager.from<LucenePartitionedEntity>()
+            .inPartition("individual-retained")
+            .search("unique retained payload")
+            .list<LucenePartitionedEntity>()
+        assertTrue(retainedImmediately.any { it.id == retained.id })
+        assertEquals("retained", retainedImmediately.first { it.id == retained.id }.tag)
+
+        factory.close()
+        initialize()
+
+        assertEquals(0L, manager.from<LucenePartitionedEntity>()
+            .inPartition("individual-delete")
+            .count())
+        assertTrue(manager.from<LucenePartitionedEntity>()
+            .inPartition("individual-delete")
+            .search("unique deleted payload")
+            .list<LucenePartitionedEntity>()
+            .none { it.id == deleted.id })
+
+        val retainedAfterReopen = manager.from<LucenePartitionedEntity>()
+            .inPartition("individual-retained")
+            .search("unique retained payload")
+            .list<LucenePartitionedEntity>()
+        assertTrue(retainedAfterReopen.any { it.id == retained.id })
+
+        val recreated = manager.saveEntity<IManagedEntity>(LucenePartitionedEntity().apply {
+            region = "individual-delete"
+            tag = "recreated"
+            body = "recreated searchable partition payload"
+        }) as LucenePartitionedEntity
+        assertTrue(
+            manager.from<LucenePartitionedEntity>()
+                .inPartition("individual-delete")
+                .search("recreated partition payload")
+                .list<LucenePartitionedEntity>()
+                .any { it.id == recreated.id }
+        )
+        assertEquals(1L, manager.from<LucenePartitionedEntity>()
+            .inPartition("individual-retained")
+            .count())
+    }
+
+    @Test
+    fun testDeleteAllSearchablePartitionsSurvivesReopen() {
         manager.saveEntity<IManagedEntity>(LucenePartitionedEntity().apply {
             region = "delete-all-north"
             tag = "deleted"
@@ -118,20 +187,7 @@ class FullTextSearchTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
             body = "south searchable partition"
         })
 
-        val northIndexDirectory = File(
-            factory.databaseLocation,
-            "partitioned/_LucenePartitionedEntity_delete-all-north.rec.idx"
-        )
-        val southIndexDirectory = File(
-            factory.databaseLocation,
-            "partitioned/_LucenePartitionedEntity_delete-all-south.rec.idx"
-        )
-        assertTrue(northIndexDirectory.isDirectory)
-        assertTrue(southIndexDirectory.isDirectory)
-
         assertEquals(2, manager.from<LucenePartitionedEntity>().delete())
-        assertFalse(northIndexDirectory.exists())
-        assertFalse(southIndexDirectory.exists())
 
         factory.close()
         initialize()

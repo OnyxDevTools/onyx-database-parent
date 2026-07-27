@@ -52,4 +52,29 @@ class LuceneIndexEntityTest(override var factoryClass: KClass<*>) : DatabaseBase
         assertNotNull(res.firstOrNull())
         assertEquals(0.13076457f, res[0]["__score__"])
     }
+
+    @Test
+    fun deletingSubsequentSearchablePartitionsKeepsFieldIndexWriterOpen() {
+        manager.saveEntity(LuceneIndexedPartitionedEntity().apply {
+            region = "lucene-index-first"
+            value = "first searchable value"
+        })
+        manager.saveEntity(LuceneIndexedPartitionedEntity().apply {
+            region = "lucene-index-second"
+            value = "second searchable value"
+        })
+
+        assertEquals(
+            1,
+            manager.from<LuceneIndexedPartitionedEntity>()
+                .inPartition("lucene-index-first")
+                .delete()
+        )
+        assertEquals(
+            1,
+            manager.from<LuceneIndexedPartitionedEntity>()
+                .inPartition("lucene-index-second")
+                .delete()
+        )
+    }
 }
