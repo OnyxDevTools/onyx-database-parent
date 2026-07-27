@@ -1,5 +1,6 @@
 package database.query
 
+import com.onyx.diskmap.store.StoreType
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.query.Query
@@ -27,6 +28,16 @@ import kotlin.test.assertTrue
 
 @RunWith(Parameterized::class)
 class FullTextSearchTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
+
+    @Before
+    override fun initialize() {
+        factory = EmbeddedPersistenceManagerFactory(EMBEDDED_DATABASE_LOCATION).apply {
+            storeType = StoreType.MEMORY_MAPPED_FILE
+            setCredentials("admin", "admin")
+            initialize()
+        }
+        manager = factory.persistenceManager
+    }
 
     @Before
     fun prepare() {

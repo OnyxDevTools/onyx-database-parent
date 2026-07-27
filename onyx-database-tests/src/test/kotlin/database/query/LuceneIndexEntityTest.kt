@@ -1,5 +1,6 @@
 package database.query
 
+import com.onyx.diskmap.store.StoreType
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.query.eq
 import com.onyx.persistence.query.from
@@ -14,9 +15,23 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import kotlin.reflect.KClass
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 @RunWith(Parameterized::class)
-class LuceneIndexEntityTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
+class LuceneIndexEntityTest(
+    override var factoryClass: KClass<*>,
+    private val testStoreType: StoreType
+) : DatabaseBaseTest(factoryClass) {
+
+    @Before
+    override fun initialize() {
+        factory = EmbeddedPersistenceManagerFactory(EMBEDDED_DATABASE_LOCATION).apply {
+            storeType = testStoreType
+            setCredentials("admin", "admin")
+            initialize()
+        }
+        manager = factory.persistenceManager
+    }
 
     @Before
     fun prepare() {
@@ -25,8 +40,11 @@ class LuceneIndexEntityTest(override var factoryClass: KClass<*>) : DatabaseBase
 
     companion object {
         @JvmStatic
-        @Parameterized.Parameters
-        fun persistenceManagersToTest(): Collection<KClass<*>> = listOf(EmbeddedPersistenceManagerFactory::class)
+        @Parameterized.Parameters(name = "{1}")
+        fun persistenceManagersToTest(): Collection<Array<Any>> = listOf(
+            arrayOf(EmbeddedPersistenceManagerFactory::class, StoreType.FILE),
+            arrayOf(EmbeddedPersistenceManagerFactory::class, StoreType.MEMORY_MAPPED_FILE)
+        )
     }
 
     @Test
@@ -58,10 +76,12 @@ class LuceneIndexEntityTest(override var factoryClass: KClass<*>) : DatabaseBase
         manager.saveEntity(LuceneIndexedPartitionedEntity().apply {
             region = "lucene-index-first"
             value = "first searchable value"
+            databaseId = "database-first"
         })
         manager.saveEntity(LuceneIndexedPartitionedEntity().apply {
             region = "lucene-index-second"
             value = "second searchable value"
+            databaseId = "database-second"
         })
 
         assertEquals(
@@ -75,6 +95,67 @@ class LuceneIndexEntityTest(override var factoryClass: KClass<*>) : DatabaseBase
             manager.from<LuceneIndexedPartitionedEntity>()
                 .inPartition("lucene-index-second")
                 .delete()
+        )
+    }
+
+    @Test
+    fun deletingSearchablePartitionWithDefaultIndexDoesNotCorruptIndexData() {
+        manager.saveEntity(LuceneIndexedPartitionedEntity().apply {
+            region = "indexed-delete"
+            value = "deleted lucene content"
+            databaseId = "deleted-database"
+        })
+        val retained = manager.saveEntity(LuceneIndexedPartitionedEntity().apply {
+            region = "indexed-retained"
+            value = "retained lucene content"
+            databaseId = "retained-database"
+        })
+
+        assertEquals(
+            1,
+            manager.from<LuceneIndexedPartitionedEntity>()
+                .inPartition("indexed-delete")
+                .delete()
+        )
+
+        val recreated = manager.saveEntity(LuceneIndexedPartitionedEntity().apply {
+            region = "indexed-delete"
+            value = "recreated lucene content"
+            databaseId = "recreated-database"
+        })
+        assertEquals(
+            recreated.id,
+            manager.from<LuceneIndexedPartitionedEntity>()
+                .inPartition("indexed-delete")
+                .where("databaseId" eq "recreated-database")
+                .first<LuceneIndexedPartitionedEntity>()
+                .id
+        )
+        assertTrue(
+            manager.from<LuceneIndexedPartitionedEntity>()
+                .inPartition("indexed-retained")
+                .where("databaseId" eq "retained-database")
+                .list<LuceneIndexedPartitionedEntity>()
+                .any { it.id == retained.id }
+        )
+
+        factory.close()
+        initialize()
+
+        assertEquals(
+            recreated.id,
+            manager.from<LuceneIndexedPartitionedEntity>()
+                .inPartition("indexed-delete")
+                .where("databaseId" eq "recreated-database")
+                .first<LuceneIndexedPartitionedEntity>()
+                .id
+        )
+        assertTrue(
+            manager.from<LuceneIndexedPartitionedEntity>()
+                .inPartition("indexed-retained")
+                .where("databaseId" eq "retained-database")
+                .list<LuceneIndexedPartitionedEntity>()
+                .any { it.id == retained.id }
         )
     }
 }

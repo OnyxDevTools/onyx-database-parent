@@ -13,8 +13,8 @@ import com.onyx.persistence.annotations.values.IndexType
 @Entity(type = EntityType.SEARCHABLE, fileName = "lucene/")
 class LuceneIndexedPartitionedEntity : ManagedEntity() {
 
-    @Identifier(generator = IdentifierGenerator.SEQUENCE)
-    var id: Long = 0
+    @Identifier(generator = IdentifierGenerator.UUID)
+    var id: String = ""
 
     @Partition
     @Attribute
@@ -28,4 +28,7 @@ class LuceneIndexedPartitionedEntity : ManagedEntity() {
 
     @Index(type = IndexType.LUCENE)
     var value: String? = null
+
+    @Index
+    var databaseId: String? = null
 }

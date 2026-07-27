@@ -1019,8 +1019,11 @@ open class DefaultSchemaContext : SchemaContext {
             // Remove interactors from cache for this partition descriptor
             if (!retainSearchResources) {
                 recordInteractors.remove(partitionDescriptor)
-                synchronized(indexInteractors) {
-                    indexInteractors.entries.removeIf { it.key.entityDescriptor == partitionDescriptor }
+            }
+            synchronized(indexInteractors) {
+                indexInteractors.entries.removeIf {
+                    it.key.entityDescriptor == partitionDescriptor &&
+                        (!retainSearchResources || it.key.indexType == IndexType.DEFAULT)
                 }
             }
             relationshipInteractors.removeEntries { it.key.entityDescriptor == partitionDescriptor }

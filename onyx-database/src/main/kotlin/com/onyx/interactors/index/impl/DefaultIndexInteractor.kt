@@ -50,7 +50,18 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(priv
     @Throws(OnyxException::class)
     @Synchronized
     override fun save(indexValue: Any?, oldReferenceId: Long, newReferenceId: Long) {
+        try {
+            saveIndexValue(indexValue, oldReferenceId, newReferenceId)
+        } catch (_: ArrayIndexOutOfBoundsException) {
+            // The entity records are authoritative. Older partition deletion
+            // behavior could leave a regular disk-map index pointing at bytes
+            // from a deleted data file. Rebuild the affected index so an
+            // existing database can recover during startup or the next write.
+            rebuild()
+        }
+    }
 
+    private fun saveIndexValue(indexValue: Any?, oldReferenceId: Long, newReferenceId: Long) {
         // Delete the old index key
         if (oldReferenceId > 0) {
             delete(oldReferenceId)
