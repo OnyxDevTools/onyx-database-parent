@@ -28,7 +28,7 @@ abstract class AbstractTableScanner constructor(protected val criteria: QueryCri
         get() = context.getDataFile(descriptor).getHashMap(descriptor.identifier!!.type, descriptor.entityClass.name)
 
     protected var partitionId = if (descriptor.hasPartition) {
-        context.getPartitionWithValue(classToScan, descriptor.partition!!.partitionValue)?.primaryKey?.toLong() ?: 0L
+        context.getPartitionWithValue(classToScan, descriptor.partition!!.partitionValue)?.index ?: 0L
     } else {
         0L
     }

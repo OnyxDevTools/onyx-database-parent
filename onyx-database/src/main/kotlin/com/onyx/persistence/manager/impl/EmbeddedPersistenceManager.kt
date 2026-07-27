@@ -182,7 +182,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
             if (partitionId.toString().isNotBlank() && baseDescriptor.hasPartition && partitionId.toString() != QueryPartitionMode.ALL.toString()) {
                 val partitionEntry = context.getPartitionWithValue(baseDescriptor.entityClass, partitionId)
                 if (partitionEntry != null) {
-                    baseDescriptor.truncatePartitionData(partitionEntry.primaryKey.toLong())
+                    baseDescriptor.truncatePartitionData(partitionEntry.index)
                 }
             } else {
                 baseDescriptor.truncateData(true)
@@ -599,7 +599,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                 val partitionId = if (descriptor.hasPartition) context.getPartitionWithValue(
                     query.entityType!!,
                     descriptor.partition!!.partitionValue
-                )?.primaryKey?.toLong() ?: 0L else 0L
+                )!!.index else 0L
                 context.getRecordInteractor(descriptor).forEach<T> record@{ it ->
                     val entry = it as? AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any?, IManagedEntity>
 
