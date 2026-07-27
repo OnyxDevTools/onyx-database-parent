@@ -914,6 +914,9 @@ open class DefaultSchemaContext : SchemaContext {
                 return@synchronized
             }
 
+            // Release resources owned by the record interactor before deleting its data.
+            getRecordInteractor(descriptor).deleteResources()
+
             // Delete index resources for all indexes of this entity
             descriptor.indexes.values.forEach { indexDescriptor ->
                 val indexInteractor = getIndexInteractor(indexDescriptor)
@@ -994,6 +997,10 @@ open class DefaultSchemaContext : SchemaContext {
 
             // Get the partition-specific descriptor
             val partitionDescriptor = getDescriptorForEntity(descriptor.entityClass, partition.value)
+
+            // Release partition-specific record resources, such as a searchable
+            // entity's Lucene record index, before deleting the partition files.
+            getRecordInteractor(partitionDescriptor).deleteResources()
 
             // Delete index resources for all indexes of this partition
             partitionDescriptor.indexes.values.forEach { indexDescriptor ->

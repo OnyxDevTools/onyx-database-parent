@@ -19,9 +19,11 @@ import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import java.io.File
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertContains
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -101,6 +103,52 @@ class FullTextSearchTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
             .list<LucenePartitionedEntity>()
         assertEquals(1, northOnly.size)
         assertEquals("north", northOnly.first().region)
+    }
+
+    @Test
+    fun testDeleteAllSearchablePartitionsRemovesFilesAndSurvivesReopen() {
+        manager.saveEntity<IManagedEntity>(LucenePartitionedEntity().apply {
+            region = "delete-all-north"
+            tag = "deleted"
+            body = "north searchable partition"
+        })
+        manager.saveEntity<IManagedEntity>(LucenePartitionedEntity().apply {
+            region = "delete-all-south"
+            tag = "deleted"
+            body = "south searchable partition"
+        })
+
+        val northIndexDirectory = File(
+            factory.databaseLocation,
+            "partitioned/_LucenePartitionedEntity_delete-all-north.rec.idx"
+        )
+        val southIndexDirectory = File(
+            factory.databaseLocation,
+            "partitioned/_LucenePartitionedEntity_delete-all-south.rec.idx"
+        )
+        assertTrue(northIndexDirectory.isDirectory)
+        assertTrue(southIndexDirectory.isDirectory)
+
+        assertEquals(2, manager.from<LucenePartitionedEntity>().delete())
+        assertFalse(northIndexDirectory.exists())
+        assertFalse(southIndexDirectory.exists())
+
+        factory.close()
+        initialize()
+
+        assertEquals(0L, manager.from<LucenePartitionedEntity>().count())
+
+        val savedAfterReopen = manager.saveEntity<IManagedEntity>(LucenePartitionedEntity().apply {
+            region = "delete-all-recreated"
+            tag = "recreated"
+            body = "searchable data saved after deleting all partitions"
+        }) as LucenePartitionedEntity
+
+        val searchResults = manager.from<LucenePartitionedEntity>()
+            .inPartition("delete-all-recreated")
+            .search("saved after deleting")
+            .list<LucenePartitionedEntity>()
+        assertTrue(searchResults.any { it.id == savedAfterReopen.id })
     }
 
     @Test
