@@ -1,8 +1,10 @@
 package com.onyx.diskmap.factory.impl
 
+import com.onyx.diskmap.IndexPostingMap
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.impl.DiskBTreeMap
+import com.onyx.diskmap.impl.DiskIndexPostingMap
 import com.onyx.diskmap.store.*
 import com.onyx.diskmap.store.impl.*
 import com.onyx.extension.common.metadata
@@ -34,6 +36,10 @@ open class DefaultDiskMapFactory : DiskMapFactory {
 
     // Contains all initialized maps
     open protected val maps = OptimisticLockingMap<String, Map<*, *>>(WeakHashMap())
+
+    // Retain native posting trees until flush/close so their page caches remain
+    // stable throughout large write batches.
+    open protected val indexMaps = ConcurrentHashMap<String, IndexPostingMap>()
 
     // Contains all initialized maps
     open protected val mapsByHeader = ConcurrentHashMap<Long, WeakReference<Map<*, *>>>()
@@ -187,6 +193,10 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      * @since 1.3.0
      */
     override fun reset() {
+        maps.clear()
+        indexMaps.clear()
+        mapsByHeader.clear()
+
         // Reset the file size
         nodeStore.reset()
 
@@ -242,6 +252,23 @@ open class DefaultDiskMapFactory : DiskMapFactory {
         }
     }
 
+    override fun getIndexMap(valueType: Class<*>, name: String): IndexPostingMap =
+        requireNotNull(indexMaps.compute(name) { _, existing ->
+            if (existing != null) {
+                require(existing.valueType.kotlin == valueType.kotlin) {
+                    "Index posting map '$name' uses ${existing.valueType.name}, not ${valueType.name}"
+                }
+                existing
+            } else {
+                DiskIndexPostingMap(
+                    WeakReference(nodeStore),
+                    WeakReference(store),
+                    getOrCreateHeader(name),
+                    valueType
+                )
+            }
+        })
+
     /**
      * Default Map factory.  This creates or gets a map based on the name and puts it into a map
      *
@@ -251,21 +278,20 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      * @since 1.2.0
      */
     open protected fun <T : Map<*, *>> getMapWithType(keyType: Class<*>, name: String): T = maps.getOrPut(name) {
-        var header: Header? = null
-        val headerReference = internalMaps[name]
-        if (headerReference != null)
-            header = nodeStore.read(headerReference, Header.HEADER_SIZE, Header()) as Header?
+        DiskBTreeMap<Any, Any>(WeakReference(nodeStore), WeakReference(store), getOrCreateHeader(name), keyType)
+    } as T
 
-        // Create a new header for the new structure we are creating
-        if (header == null) {
-            header = Header()
+    private fun getOrCreateHeader(name: String): Header {
+        internalMaps[name]?.let { headerReference ->
+            (nodeStore.read(headerReference, Header.HEADER_SIZE, Header()) as? Header)?.let { return it }
+        }
+
+        return Header().also { header ->
             header.position = nodeStore.allocate(Header.HEADER_SIZE)
             nodeStore.write(header, header.position)
             internalMaps[name] = header.position
         }
-
-        return@getOrPut DiskBTreeMap<Any, Any>(WeakReference(nodeStore), WeakReference(store), header, keyType)
-    } as T
+    }
 
     // endregion
 
@@ -297,6 +323,7 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      */
     override fun flush() {
         maps.clear()
+        indexMaps.clear()
         mapsByHeader.clear()
     }
 }
