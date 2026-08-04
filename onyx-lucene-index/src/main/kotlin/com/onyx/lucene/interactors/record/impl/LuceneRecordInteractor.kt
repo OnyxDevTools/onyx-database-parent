@@ -218,6 +218,17 @@ open class LuceneRecordInteractor(
         shutdownInstance(indexKey)
     }
 
+    override fun deleteResources() {
+        shutdownInstance(indexKey)
+
+        val indexDirectory = File(indexKey)
+        if (indexDirectory.exists()) {
+            indexDirectory.deleteRecursively()
+        }
+
+        luceneDirectories.remove(indexKey)
+    }
+
     /* ─────────────────────────── internals ─────────────────────────── */
 
     private data class LuceneRecordState(

@@ -1,6 +1,7 @@
 package database.partition
 
 import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.query.eq
 import com.onyx.persistence.query.from
 import database.base.DatabaseBaseTest
@@ -8,8 +9,10 @@ import entities.delete.TestPartitionEntity
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import java.nio.file.Files
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 /**
  * Test to verify the bug where using inPartition().delete() deletes ALL partitions
@@ -85,6 +88,87 @@ class PartitionDeleteBugTest(override var factoryClass: KClass<*>) : DatabaseBas
 
         val totalAfterDelete = manager.from(TestPartitionEntity::class).count()
         assertEquals(3L, totalAfterDelete, "Should have 3 entities total after deleting only partition 1")
+    }
+
+    @Test
+    fun testInPartitionDeleteDoesNotCorruptDatabaseOnReopen() {
+        val databaseDirectory = Files.createTempDirectory("onyx-partition-delete-reopen-")
+        var isolatedFactory = EmbeddedPersistenceManagerFactory(
+            databaseDirectory.toString(),
+            addShutdownHook = false
+        )
+
+        try {
+            isolatedFactory.initialize()
+            var isolatedManager = isolatedFactory.persistenceManager
+
+            isolatedManager.saveEntity<IManagedEntity>(TestPartitionEntity().apply {
+                id = "deleted-entity"
+                partitionId = "partition-to-delete"
+                data = "deleted data"
+            })
+            isolatedManager.saveEntity<IManagedEntity>(TestPartitionEntity().apply {
+                id = "retained-entity"
+                partitionId = "partition-to-retain"
+                data = "retained data"
+            })
+
+            // Persist a logical partition index that differs from the system
+            // record's primary key, as can occur in an existing database after
+            // partition history or migration.
+            val partitionToUpdate = isolatedFactory.schemaContext
+                .getPartitionWithValue(TestPartitionEntity::class.java, "partition-to-delete")!!
+            partitionToUpdate.index += 100
+            isolatedFactory.schemaContext.serializedPersistenceManager
+                .saveEntity<IManagedEntity>(partitionToUpdate)
+
+            isolatedFactory.close()
+            isolatedFactory = EmbeddedPersistenceManagerFactory(
+                databaseDirectory.toString(),
+                addShutdownHook = false
+            )
+            isolatedFactory.initialize()
+            isolatedManager = isolatedFactory.persistenceManager
+
+            val partitionToDelete = isolatedFactory.schemaContext
+                .getPartitionWithValue(TestPartitionEntity::class.java, "partition-to-delete")!!
+            assertNotEquals(
+                partitionToDelete.index,
+                partitionToDelete.primaryKey.toLong(),
+                "The regression setup must reproduce divergent partition identifiers"
+            )
+
+            assertEquals(
+                1,
+                isolatedManager.from<TestPartitionEntity>()
+                    .inPartition("partition-to-delete")
+                    .delete()
+            )
+
+            isolatedFactory.close()
+            isolatedFactory = EmbeddedPersistenceManagerFactory(
+                databaseDirectory.toString(),
+                addShutdownHook = false
+            )
+            isolatedFactory.initialize()
+            isolatedManager = isolatedFactory.persistenceManager
+
+            assertEquals(
+                0L,
+                isolatedManager.from<TestPartitionEntity>()
+                    .inPartition("partition-to-delete")
+                    .count()
+            )
+            assertEquals(
+                1L,
+                isolatedManager.from<TestPartitionEntity>()
+                    .inPartition("partition-to-retain")
+                    .count()
+            )
+        } finally {
+            isolatedFactory.close()
+            databaseDirectory.toFile().deleteRecursively()
+        }
     }
 
     /**

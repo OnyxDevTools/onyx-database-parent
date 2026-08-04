@@ -914,6 +914,9 @@ open class DefaultSchemaContext : SchemaContext {
                 return@synchronized
             }
 
+            // Release resources owned by the record interactor before deleting its data.
+            getRecordInteractor(descriptor).deleteResources()
+
             // Delete index resources for all indexes of this entity
             descriptor.indexes.values.forEach { indexDescriptor ->
                 val indexInteractor = getIndexInteractor(indexDescriptor)
@@ -995,10 +998,16 @@ open class DefaultSchemaContext : SchemaContext {
             // Get the partition-specific descriptor
             val partitionDescriptor = getDescriptorForEntity(descriptor.entityClass, partition.value)
 
-            // Delete index resources for all indexes of this partition
-            partitionDescriptor.indexes.values.forEach { indexDescriptor ->
-                val indexInteractor = getIndexInteractor(indexDescriptor)
-                indexInteractor.deleteResources()
+            // A searchable entity's record index is shared across partition
+            // deletion operations. Clearing the partition above removes its
+            // documents; closing/deleting the writer here would make subsequent
+            // partition deletes reuse a closed IndexWriter.
+            val retainSearchResources = partitionDescriptor.entityType == EntityType.SEARCHABLE
+            if (!retainSearchResources) {
+                getRecordInteractor(partitionDescriptor).deleteResources()
+                partitionDescriptor.indexes.values.forEach { indexDescriptor ->
+                    getIndexInteractor(indexDescriptor).deleteResources()
+                }
             }
 
             // Delete the data file for this partition
@@ -1008,9 +1017,14 @@ open class DefaultSchemaContext : SchemaContext {
             serializedPersistenceManager.deleteEntity(partition)
 
             // Remove interactors from cache for this partition descriptor
-            recordInteractors.remove(partitionDescriptor)
+            if (!retainSearchResources) {
+                recordInteractors.remove(partitionDescriptor)
+            }
             synchronized(indexInteractors) {
-                indexInteractors.entries.removeIf { it.key.entityDescriptor == partitionDescriptor }
+                indexInteractors.entries.removeIf {
+                    it.key.entityDescriptor == partitionDescriptor &&
+                        (!retainSearchResources || it.key.indexType == IndexType.DEFAULT)
+                }
             }
             relationshipInteractors.removeEntries { it.key.entityDescriptor == partitionDescriptor }
 

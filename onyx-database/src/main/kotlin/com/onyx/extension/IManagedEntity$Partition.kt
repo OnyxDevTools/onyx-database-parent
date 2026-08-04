@@ -16,7 +16,7 @@ fun IManagedEntity.partitionId(context:SchemaContext, descriptor: EntityDescript
         val partitionVal = partitionValue(context, descriptor)
         if(partitionVal != nullPartition) {
             val systemPartitionEntry = context.getPartitionWithValue(this::class.java, partitionVal)
-            return systemPartitionEntry?.primaryKey?.toLong() ?: 0L
+            return systemPartitionEntry?.index ?: 0L
         }
     }
     return 0L

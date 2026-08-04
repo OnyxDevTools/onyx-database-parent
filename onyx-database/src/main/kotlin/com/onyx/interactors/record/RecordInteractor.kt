@@ -158,4 +158,11 @@ interface RecordInteractor {
      * Shutdown the record interactor and close cleanly
      */
     fun shutdown() = Unit
+
+    /**
+     * Release and delete resources owned exclusively by this record interactor.
+     * The default record implementation stores its data in the entity data file,
+     * so shutting down is sufficient before that file is deleted.
+     */
+    fun deleteResources() = shutdown()
 }
