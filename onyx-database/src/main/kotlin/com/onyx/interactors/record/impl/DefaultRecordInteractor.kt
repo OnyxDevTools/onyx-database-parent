@@ -5,7 +5,6 @@ import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.SortedDiskMap
 import com.onyx.diskmap.data.PutResult
 import com.onyx.diskmap.factory.DiskMapFactory
-import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
 import com.onyx.exception.AttributeTypeMismatchException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*

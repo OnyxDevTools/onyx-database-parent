@@ -33,9 +33,11 @@ open class BufferStream(buffer: ByteBuffer) {
 
     protected var context: SchemaContext? = null
 
-    val metadata by lazy {
-        metadata(contextId = context?.contextId ?: "")
-    }
+    private var cachedMetadata: ClassMetadata? = null
+    val metadata: ClassMetadata
+        get() = cachedMetadata ?: metadata(contextId = context?.contextId ?: "").also {
+            cachedMetadata = it
+        }
 
     // Number of references to retain the index number of the said reference
     private var referenceCount = 0
@@ -47,10 +49,10 @@ open class BufferStream(buffer: ByteBuffer) {
     private var isComingFromBuffer = false
 
     // References by class and value hash.
-    private val references = HashMap<Class<*>, HashMap<Any, Int>>()
+    private var references: HashMap<Class<*>, HashMap<Any, Int>>? = null
 
     // References by index number ordered by first used
-    private val referencesByIndex = HashMap<Int, Any>()
+    private var referencesByIndex: HashMap<Int, Any>? = null
 
     /**
      * Getter for underlying byte buffer
@@ -95,12 +97,15 @@ open class BufferStream(buffer: ByteBuffer) {
         // especially since they are not fully hydrated and may not have valid hashes yet.
         if (isComingFromBuffer) {
             referenceCount++
-            referencesByIndex[referenceCount] = reference
+            if (referencesByIndex == null) referencesByIndex = HashMap()
+            referencesByIndex!![referenceCount] = reference
         } else {
-            references.getOrPut(reference.javaClass) { HashMap() }
+            if (references == null) references = HashMap()
+            if (referencesByIndex == null) referencesByIndex = HashMap()
+            references!!.getOrPut(reference.javaClass) { HashMap() }
                     .getOrPut(reference) {
                         referenceCount++
-                        referencesByIndex[referenceCount] = reference
+                        referencesByIndex!![referenceCount] = reference
                         referenceCount
                     }
         }
@@ -115,7 +120,7 @@ open class BufferStream(buffer: ByteBuffer) {
         if (reference == null)
             return -1
 
-        val classMap = references[reference.javaClass] ?: return -1
+        val classMap = references?.get(reference.javaClass) ?: return -1
         return classMap[reference] ?: return -1
     }
 
@@ -124,7 +129,7 @@ open class BufferStream(buffer: ByteBuffer) {
      * @param index Index to seek to
      * @return The actual value referenced
      */
-    private fun referenceOf(index: Int): Any = referencesByIndex[index]!!
+    private fun referenceOf(index: Int): Any = referencesByIndex?.get(index)!!
 
     //endregion
 
@@ -146,6 +151,7 @@ open class BufferStream(buffer: ByteBuffer) {
     fun clear() {
         this.expandableByteBuffer!!.buffer.clear()
         clearReferences()
+        cachedMetadata = null
     }
 
     /**
@@ -155,8 +161,8 @@ open class BufferStream(buffer: ByteBuffer) {
      * @since 2.0.0
      */
     private fun clearReferences() {
-        references.clear()
-        referencesByIndex.clear()
+        references?.clear()
+        referencesByIndex?.clear()
         referenceCount = 0
     }
 

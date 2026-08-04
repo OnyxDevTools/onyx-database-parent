@@ -45,6 +45,9 @@ open class FileChannelStore() : Store {
     internal var channel: FileChannel? = null
     protected var contextId: String? = null
     private var fileSizeCounter: AtomicCounter = DefaultAtomicCounter(0)
+    private val allocationLock = Any()
+    private val slotRanges = HashMap<Int, SlotRange>()
+    private var objectRange: SlotRange? = null
 
     constructor(filePath: String = "", context: SchemaContext? = null, deleteOnClose: Boolean = false) : this() {
         this.bufferSliceSize = if (deleteOnClose || isSmallDevice) SMALL_FILE_SLICE_SIZE else LARGE_FILE_SLICE_SIZE
@@ -167,7 +170,12 @@ open class FileChannelStore() : Store {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
         val written = buffer.remaining()
-        channel!!.write(buffer, position)
+        var current = position
+        while (buffer.hasRemaining()) {
+            val count = channel!!.write(buffer, current)
+            check(count > 0) { "Unable to write store buffer at $current" }
+            current += count
+        }
         return written
     }
 
@@ -233,7 +241,13 @@ open class FileChannelStore() : Store {
     override fun read(buffer: ByteBuffer, position: Long) {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
-        channel!!.read(buffer, position)
+        var current = position
+        while (buffer.hasRemaining()) {
+            val count = channel!!.read(buffer, current)
+            check(count >= 0) { "Unexpected end of store at $current" }
+            if (count == 0) break
+            current += count
+        }
     }
 
     /**
@@ -249,14 +263,64 @@ open class FileChannelStore() : Store {
      * @param size Allocate space within the store.
      * @return position of started allocated bytes
      */
-    override fun allocate(size: Int): Long = withLongBuffer {
+    override fun allocate(size: Int): Long = synchronized(allocationLock) {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
-        val newFileSize = fileSizeCounter.getAndAdd(size)
-        it.putLong(newFileSize + size)
-        it.rewind()
-        this.write(it, 0)
-        return@withLongBuffer newFileSize
+        allocateLocked(size, 1)
+    }
+
+    override fun allocateAligned(size: Int, alignment: Int): Long = synchronized(allocationLock) {
+        require(alignment > 0 && alignment and (alignment - 1) == 0) {
+            "Alignment must be a positive power of two: $alignment"
+        }
+        allocateLocked(size, alignment)
+    }
+
+    override fun allocateSlot(size: Int): Long = synchronized(allocationLock) {
+        require(size > 0) { "Slot size must be positive: $size" }
+        var range = slotRanges[size]
+        if (range == null || range.next + size > range.end) {
+            val batchSize = maxOf(SLOT_RESERVATION_SIZE, size)
+            val alignment = if (size and (size - 1) == 0) minOf(size, java.lang.Long.BYTES) else 1
+            val start = allocateLocked(batchSize, alignment)
+            range = SlotRange(start, start + batchSize)
+            slotRanges[size] = range
+        }
+        val position = range.next
+        range.next += size
+        position
+    }
+
+    override fun allocateObject(size: Int): Long = synchronized(allocationLock) {
+        require(size >= 0) { "Object allocation size must not be negative: $size" }
+        var range = objectRange
+        if (range == null || range.next + size > range.end) {
+            val extentSize = maxOf(OBJECT_RESERVATION_SIZE, size)
+            val start = allocateLocked(extentSize, java.lang.Long.BYTES)
+            range = SlotRange(start, start + extentSize)
+            objectRange = range
+        }
+        val position = range.next
+        range.next += size
+        position
+    }
+
+    private fun allocateLocked(size: Int, alignment: Int): Long {
+        require(size >= 0) { "Allocation size must not be negative: $size" }
+        val current = fileSizeCounter.get()
+        val position = if (alignment == 1) current else (current + alignment - 1) and -alignment.toLong()
+        val newFileSize = Math.addExact(position, size.toLong())
+        fileSizeCounter.set(newFileSize)
+        // In-memory stores have no reopen state to persist.
+        if (this !is InMemoryStore) {
+            withLongBuffer {
+                it.clear()
+                it.putLong(newFileSize)
+                it.flip()
+                this.write(it, 0)
+            }
+        }
+        return position
     }
 
     /**
@@ -311,14 +375,20 @@ open class FileChannelStore() : Store {
      * @since 1.3.0
      */
     override fun reset() {
-        fileSizeCounter.set(0)
-        this.allocate(8)
+        synchronized(allocationLock) {
+            slotRanges.clear()
+            objectRange = null
+            fileSizeCounter.set(0)
+        }
+        allocate(8)
     }
 
     private val localBuffer: ByteBuffer
         get() = threadLocalBuffer.get()
 
     companion object {
+        private const val SLOT_RESERVATION_SIZE = 64 * 1024
+        private const val OBJECT_RESERVATION_SIZE = 1024 * 1024
         const val SMALL_FILE_SLICE_SIZE = 1024 * 128 // 128K
         var LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 4 // 4MB
 
@@ -335,4 +405,6 @@ open class FileChannelStore() : Store {
             ByteBuffer.allocate(20000)
         }
     }
+
+    private data class SlotRange(var next: Long, val end: Long)
 }

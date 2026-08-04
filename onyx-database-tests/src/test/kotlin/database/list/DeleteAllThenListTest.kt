@@ -12,7 +12,7 @@ import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 
 /**
- * Verify that deleting all entities leaves the skiplist in a valid state
+ * Verify that deleting all entities leaves the B-tree in a valid state
  * and iterating over a list query on the emptied set does not throw.
  */
 @RunWith(Parameterized::class)

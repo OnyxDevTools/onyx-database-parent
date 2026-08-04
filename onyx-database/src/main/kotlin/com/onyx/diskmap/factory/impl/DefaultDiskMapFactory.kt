@@ -2,7 +2,7 @@ package com.onyx.diskmap.factory.impl
 
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.data.Header
-import com.onyx.diskmap.impl.DiskSkipListMap
+import com.onyx.diskmap.impl.DiskBTreeMap
 import com.onyx.diskmap.store.*
 import com.onyx.diskmap.store.impl.*
 import com.onyx.extension.common.metadata
@@ -12,6 +12,7 @@ import com.onyx.persistence.context.SchemaContext
 import java.io.File
 import java.lang.ref.WeakReference
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -35,7 +36,7 @@ open class DefaultDiskMapFactory : DiskMapFactory {
     open protected val maps = OptimisticLockingMap<String, Map<*, *>>(WeakHashMap())
 
     // Contains all initialized maps
-    open protected val mapsByHeader = OptimisticLockingMap(WeakHashMap<Header, Map<*, *>>())
+    open protected val mapsByHeader = ConcurrentHashMap<Long, WeakReference<Map<*, *>>>()
 
     // Internal map that runs on storage
     protected open var internalMaps: MutableMap<String, Long> = hashMapOf()
@@ -212,7 +213,7 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      * @since 1.1.0
      *
      * Note, this was changed to use what was being referred to as a DefaultDiskMap which was a parent of AbstractBitmap.
-     * It is now an implementation of an inter-changeable index followed by a skip list.
+     * It is now implemented by a persistent B-tree.
      */
     override fun <T : Map<*, *>> getHashMap(keyType: Class<*>, name: String): T = getMapWithType(keyType, name)
 
@@ -224,11 +225,22 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      *
      * @since 1.0.0
      */
-    override fun <T : Map<*, *>> getHashMap(keyType: Class<*>, header: Header): T = mapsByHeader.getOrPut(header) {
-        DiskSkipListMap<Any, Any>(
-            WeakReference(nodeStore), WeakReference(store), header, keyType
+    override fun <T : Map<*, *>> getHashMap(keyType: Class<*>, header: Header): T {
+        mapsByHeader[header.position]?.get()?.let { return it as T }
+
+        // A rehydrated Header value can lag behind a root split. On a cache miss,
+        // attach using the canonical bytes before publishing the map instance.
+        val canonicalHeader = nodeStore.read(header.position, Header.HEADER_SIZE, Header()) as? Header ?: header
+        val created = DiskBTreeMap<Any, Any>(
+            WeakReference(nodeStore), WeakReference(store), canonicalHeader, keyType
         )
-    } as T
+        while (true) {
+            val existingReference = mapsByHeader.putIfAbsent(header.position, WeakReference(created))
+                ?: return created as T
+            existingReference.get()?.let { return it as T }
+            if (mapsByHeader.replace(header.position, existingReference, WeakReference(created))) return created as T
+        }
+    }
 
     /**
      * Default Map factory.  This creates or gets a map based on the name and puts it into a map
@@ -252,7 +264,7 @@ open class DefaultDiskMapFactory : DiskMapFactory {
             internalMaps[name] = header.position
         }
 
-        return@getOrPut DiskSkipListMap<Any, Any>(WeakReference(nodeStore), WeakReference(store), header, keyType)
+        return@getOrPut DiskBTreeMap<Any, Any>(WeakReference(nodeStore), WeakReference(store), header, keyType)
     } as T
 
     // endregion

@@ -22,7 +22,7 @@ interface DiskMapFactory {
      * @since 1.1.0
      *
      * Note, this was changed to use what was being referred to as a DefaultDiskMap which was a parent of AbstractBitmap.
-     * It is now an implementation of an inter changeable index followed by a skip list.
+     * It is now implemented by a persistent B-tree.
      */
     fun <T : Map<*,*>> getHashMap(keyType:Class<*>, name: String): T
 

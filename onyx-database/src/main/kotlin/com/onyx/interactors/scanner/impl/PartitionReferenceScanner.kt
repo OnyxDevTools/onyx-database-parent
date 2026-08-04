@@ -58,7 +58,7 @@ open class PartitionReferenceScanner @Throws(OnyxException::class) constructor(c
                             val partitionDescriptor = context.getDescriptorForEntity(query.entityType, it.value)
                             val dataFile = context.getDataFile(partitionDescriptor)
                             val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(descriptor.identifier!!.type, partitionDescriptor.entityClass.name)
-                            (records.references.map { Reference(partitionId, it.position) } - existingValues).forEach {
+                            (records.references.map { Reference(partitionId, it) } - existingValues).forEach {
                                 collector?.collect(it, it.toManagedEntity(context, descriptor))
                                 if (matching.size > maxCardinality)
                                     throw MaxCardinalityExceededException(context.maxCardinality)

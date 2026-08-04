@@ -3,9 +3,28 @@ package com.onyx.diskmap.store
 import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
-import com.onyx.extension.withBuffer
 import com.onyx.persistence.context.SchemaContext
 import java.nio.ByteBuffer
+import java.util.ArrayDeque
+
+private const val MAX_SERIALIZATION_STREAMS_PER_THREAD = 2
+private const val MAX_RETAINED_SERIALIZATION_BUFFER = 64 * 1024
+private val serializationStreams = ThreadLocal.withInitial { ArrayDeque<BufferStream>(2) }
+
+private fun borrowSerializationStream(): BufferStream =
+    serializationStreams.get().pollFirst()?.also { it.clear() } ?: BufferStream()
+
+private fun releaseSerializationStream(stream: BufferStream) {
+    val pool = serializationStreams.get()
+    if (stream.byteBuffer.capacity() <= MAX_RETAINED_SERIALIZATION_BUFFER &&
+        pool.size < MAX_SERIALIZATION_STREAMS_PER_THREAD
+    ) {
+        stream.clear()
+        pool.offerFirst(stream)
+    } else {
+        stream.recycle()
+    }
+}
 
 /**
  * Created by Tim Osborn on 3/27/15.
@@ -79,6 +98,15 @@ interface Store {
      */
     fun allocate(size: Int): Long
 
+    /** Allocates a fixed-size slot; stores may reserve these in batches. */
+    fun allocateSlot(size: Int): Long = allocate(size)
+
+    /** Allocates serialized object bytes; stores may serve these from an extent. */
+    fun allocateObject(size: Int): Long = allocate(size)
+
+    /** Allocates a block at an alignment boundary when the store supports it. */
+    fun allocateAligned(size: Int, alignment: Int): Long = allocate(size)
+
     /**
      * Getter for file longSize
      *
@@ -130,25 +158,29 @@ interface Store {
      */
     fun writeObject(value:Any?): Long {
         if (value == null) {
-            return this.allocate(Integer.BYTES)
-        } else {
-            val stream = BufferStream()
+            val position = allocateObject(Integer.BYTES)
+            BufferPool.withIntBuffer {
+                it.clear()
+                it.putInt(0)
+                it.flip()
+                write(it, position)
+            }
+            return position
+        }
+
+        val stream = borrowSerializationStream()
+        try {
+            // Leave room for the payload length so allocation and data use one write.
+            stream.byteBuffer.position(Integer.BYTES)
             stream.putObject(value, context)
             stream.flip()
-            return withBuffer(stream.byteBuffer) { valueBuffer ->
-                val size = valueBuffer.limit()
-                val position = this.allocate(size + Integer.BYTES)
-
-                BufferPool.withIntBuffer {
-                    it.putInt(size)
-                    it.rewind()
-                    this.write(it, position)
-                }
-
-                this.write(valueBuffer, position + Integer.BYTES)
-
-                return@withBuffer position
-            }
+            val valueBuffer = stream.byteBuffer
+            valueBuffer.putInt(0, valueBuffer.limit() - Integer.BYTES)
+            val position = allocateObject(valueBuffer.remaining())
+            write(valueBuffer, position)
+            return position
+        } finally {
+            releaseSerializationStream(stream)
         }
     }
 

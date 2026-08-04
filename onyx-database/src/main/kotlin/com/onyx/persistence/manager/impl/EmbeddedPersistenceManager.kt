@@ -2,7 +2,7 @@ package com.onyx.persistence.manager.impl
 
 import com.onyx.descriptor.truncateData
 import com.onyx.descriptor.truncatePartitionData
-import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
+import com.onyx.diskmap.DiskMapEntry
 import com.onyx.exception.*
 import com.onyx.extension.*
 import com.onyx.extension.common.instance
@@ -601,11 +601,11 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                     descriptor.partition!!.partitionValue
                 )!!.index else 0L
                 context.getRecordInteractor(descriptor).forEach<T> record@{ it ->
-                    val entry = it as? AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any?, IManagedEntity>
+                    val entry = it as? DiskMapEntry<Any?, IManagedEntity?>
 
                     if (entry != null) {
-                        val reference = Reference(partitionId, entry.node?.position ?: 0)
-                        if (query.criteria == null || entry.node != null && query.meetsCriteria(
+                        val reference = Reference(partitionId, entry.recordId)
+                        if (query.criteria == null || query.meetsCriteria(
                                 entry.value!!,
                                 reference,
                                 context,

@@ -2,7 +2,6 @@ package com.onyx.interactors.scanner.impl
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap
-import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
 import com.onyx.exception.MaxCardinalityExceededException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.common.async
@@ -39,12 +38,10 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
         val context = Contexts.get(contextId)!!
         val maxCardinality = context.maxCardinality
 
-        @Suppress("UNCHECKED_CAST")
-        records.entries.forEach {
-            val entry = it as AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any?, IManagedEntity>
-            val reference = Reference(partitionId, entry.node?.position ?: 0)
-            if(entry.node != null && query.meetsCriteria(entry.value!!, reference, context, descriptor)) {
-                collector?.collect(reference, entry.value)
+        records.forEachReference { recordId, value ->
+            val reference = Reference(partitionId, recordId)
+            if(query.meetsCriteria(value, reference, context, descriptor)) {
+                collector?.collect(reference, value)
                 if (matching.size > maxCardinality)
                     throw MaxCardinalityExceededException(context.maxCardinality)
                 if(collector == null)
