@@ -48,6 +48,22 @@ interface QueryFunction {
     fun execute(value:Any?):Any? = Unit
 
     /**
+     * Normalize an attribute value before it is passed to this function.
+     * Numeric functions accept values exposed as strings by dynamic or computed
+     * attributes while leaving non-numeric strings unchanged.
+     */
+    fun normalizeInput(value: Any?): Any? {
+        if (!type.coerceNumericStrings || value !is String)
+            return value
+
+        val numericValue = value.trim()
+        return numericValue.toIntOrNull()
+            ?: numericValue.toLongOrNull()
+            ?: numericValue.toDoubleOrNull()
+            ?: value
+    }
+
+    /**
      * Create a new instance of the same type of function
      */
     fun newInstance():QueryFunction

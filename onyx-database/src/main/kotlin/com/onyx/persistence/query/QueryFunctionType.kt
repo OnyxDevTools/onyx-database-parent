@@ -2,20 +2,23 @@ package com.onyx.persistence.query
 
 import java.util.*
 
-enum class QueryFunctionType(val isGroupFunction:Boolean) {
-    SUM(true),
-    MIN(true),
-    STD(true),
-    MEDIAN(true),
-    MAX(true),
-    AVG(true),
-    VARIANCE(true),
+enum class QueryFunctionType(
+    val isGroupFunction: Boolean,
+    val coerceNumericStrings: Boolean = false,
+) {
+    SUM(true, true),
+    MIN(true, true),
+    STD(true, true),
+    MEDIAN(true, true),
+    MAX(true, true),
+    AVG(true, true),
+    VARIANCE(true, true),
     COUNT(true),
     UPPER(false),
     LOWER(false),
     REPLACE(false),
     SUBSTRING(false),
-    PERCENTILE(true),
+    PERCENTILE(true, true),
     FORMAT(false),
     ;
 

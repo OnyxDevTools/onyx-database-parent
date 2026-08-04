@@ -212,28 +212,91 @@ class GroupByTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(facto
         manager.from(NullableGetterStarter::class).delete()
 
         listOf(
-            NullableGetterStarter("1", "A", hasPerformance = true, finishPosition = 1),
-            NullableGetterStarter("2", "A", hasPerformance = true, finishPosition = 3),
+            NullableGetterStarter("1", "A", hasPerformance = true, finishPosition = 2),
+            NullableGetterStarter("2", "A", hasPerformance = true, finishPosition = 10),
             NullableGetterStarter("3", "A", hasPerformance = true, finishPosition = null),
             NullableGetterStarter("4", "A", hasPerformance = false, finishPosition = 2),
-            NullableGetterStarter("5", "B", hasPerformance = true, finishPosition = 2),
+            NullableGetterStarter("5", "B", hasPerformance = true, finishPosition = 4),
         ).forEach(manager::save)
 
+        val totals = manager
+            .select(
+                avg("performance.finishPosition"),
+                sum("performance.finishPosition"),
+                min("performance.finishPosition"),
+                max("performance.finishPosition"),
+                median("performance.finishPosition"),
+                count("starterId"),
+            )
+            .from<NullableGetterStarter>()
+            .where("performance.finishPosition".notNull())
+            .first<Map<String, Any?>>()
+
+        assertEquals(5, totals["avg(performance.finishPosition)"])
+        assertEquals(16, totals["sum(performance.finishPosition)"])
+        assertEquals(2, totals["min(performance.finishPosition)"])
+        assertEquals(10, totals["max(performance.finishPosition)"])
+        assertEquals(4, totals["median(performance.finishPosition)"])
+        assertEquals(3, totals["count(starterId)"])
+
         val results = manager
-            .select(avg("performance.finishPosition"), "medication", count("starterId"))
+            .select(
+                avg("performance.finishPosition"),
+                sum("performance.finishPosition"),
+                min("performance.finishPosition"),
+                max("performance.finishPosition"),
+                std("performance.finishPosition"),
+                variance("performance.finishPosition"),
+                median("performance.finishPosition"),
+                percentile("performance.finishPosition", 50.0),
+                "medication",
+                count("starterId"),
+            )
             .from<NullableGetterStarter>()
             .where("performance.finishPosition".notNull())
             .groupBy("medication")
+            .orderBy(avg("performance.finishPosition").desc())
             .list<Map<String, Any?>>()
 
         assertEquals(2, results.size)
+        assertEquals("A", results.first()["medication"])
 
         val medicationA = results.first { it["medication"] == "A" }
-        assertEquals(2, medicationA["avg(performance.finishPosition)"])
+        assertEquals(6, medicationA["avg(performance.finishPosition)"])
+        assertEquals(12, medicationA["sum(performance.finishPosition)"])
+        assertEquals(2, medicationA["min(performance.finishPosition)"])
+        assertEquals(10, medicationA["max(performance.finishPosition)"])
+        assertEquals(4.0, medicationA["std(performance.finishPosition)"])
+        assertEquals(16.0, medicationA["variance(performance.finishPosition)"])
+        assertEquals(6, medicationA["median(performance.finishPosition)"])
+        assertEquals(6, medicationA["percentile(performance.finishPosition, 50.0)"])
         assertEquals(2, medicationA["count(starterId)"])
 
         val medicationB = results.first { it["medication"] == "B" }
-        assertEquals(2, medicationB["avg(performance.finishPosition)"])
+        assertEquals(4, medicationB["avg(performance.finishPosition)"])
+        assertEquals(4, medicationB["sum(performance.finishPosition)"])
+        assertEquals(4, medicationB["min(performance.finishPosition)"])
+        assertEquals(4, medicationB["max(performance.finishPosition)"])
+        assertEquals(0.0, medicationB["std(performance.finishPosition)"])
+        assertEquals(0.0, medicationB["variance(performance.finishPosition)"])
+        assertEquals(4, medicationB["median(performance.finishPosition)"])
+        assertEquals(4, medicationB["percentile(performance.finishPosition, 50.0)"])
         assertEquals(1, medicationB["count(starterId)"])
+    }
+
+    @Test
+    fun testCountDistinctPreservesNumericStringIdentity() {
+        manager.from(NullableGetterStarter::class).delete()
+
+        manager.save(NullableGetterStarter(starterId = "01"))
+        manager.save(NullableGetterStarter(starterId = "1"))
+
+        val result = manager
+            .select(count("starterId"))
+            .from<NullableGetterStarter>()
+            .distinct()
+            .first<Map<String, Any?>>()
+
+        assertEquals(2, result["count(starterId)"])
     }
 }
