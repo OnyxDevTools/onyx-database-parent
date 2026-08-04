@@ -4,6 +4,7 @@ import com.onyx.persistence.query.*
 import database.base.DatabaseBaseTest
 import entities.AllAttributeEntity
 import entities.AllAttributeEntityWithRelationship
+import entities.NullableGetterStarter
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -204,5 +205,35 @@ class GroupByTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(facto
         assertEquals(157L, results.first { it["relationship.id"] == "HI5" }["sum(longPrimitive)"] , "148L should be the sum result")
         assertEquals(40, results.first { it["relationship.id"] == "HI5"}["sum(relationship.intValue)"] , "Relationship intValue is invalid")
         assertEquals(results.first(), results.first { it["relationship.id"] == "HI5" }, "Failure to sort")
+    }
+
+    @Test
+    fun testAggregateOnNullableEntityGetterAttribute() {
+        manager.from(NullableGetterStarter::class).delete()
+
+        listOf(
+            NullableGetterStarter("1", "A", hasPerformance = true, finishPosition = 1),
+            NullableGetterStarter("2", "A", hasPerformance = true, finishPosition = 3),
+            NullableGetterStarter("3", "A", hasPerformance = true, finishPosition = null),
+            NullableGetterStarter("4", "A", hasPerformance = false, finishPosition = 2),
+            NullableGetterStarter("5", "B", hasPerformance = true, finishPosition = 2),
+        ).forEach(manager::save)
+
+        val results = manager
+            .select(avg("performance.finishPosition"), "medication", count("starterId"))
+            .from<NullableGetterStarter>()
+            .where("performance.finishPosition".notNull())
+            .groupBy("medication")
+            .list<Map<String, Any?>>()
+
+        assertEquals(2, results.size)
+
+        val medicationA = results.first { it["medication"] == "A" }
+        assertEquals(2, medicationA["avg(performance.finishPosition)"])
+        assertEquals(2, medicationA["count(starterId)"])
+
+        val medicationB = results.first { it["medication"] == "B" }
+        assertEquals(2, medicationB["avg(performance.finishPosition)"])
+        assertEquals(1, medicationB["count(starterId)"])
     }
 }

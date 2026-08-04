@@ -108,7 +108,13 @@ class QueryAttributeResource(
                         relationshipDescriptor = previousDescriptor.relationships[token]
 
                         if (relationshipDescriptor == null) {
-                            inspectAttribute(token)
+                            // Validate the first non-relationship path segment, but do not add it as
+                            // a separate selection. The complete dotted path is added below.
+                            if (previousDescriptor.attributes[token] == null &&
+                                !hasMember(previousDescriptor.entityClass.kotlin, token)
+                            ) {
+                                throw AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE + ": " + token + " not found on entity " + previousDescriptor.entityClass.name)
+                            }
                             innerLoop@break
                         } else {
                             tmpObject =
