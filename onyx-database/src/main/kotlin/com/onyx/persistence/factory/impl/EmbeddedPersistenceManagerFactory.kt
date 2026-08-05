@@ -68,7 +68,7 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
 
     override var encryption: EncryptionInteractor = DefaultEncryptionInteractorInstance
 
-    override var storeType: StoreType = StoreType.MEMORY_MAPPED_FILE
+    override var storeType: StoreType = StoreType.FILE
 
     override var encryptDatabase: Boolean = false
 
