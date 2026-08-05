@@ -52,14 +52,19 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, conte
         val identifierValue = entity.identifier(context)!!
         val partitionId = entity.partitionId(context)
 
-        val result = records.putAndGet(identifierValue, entity) {
-            if(it > 0L) {
-                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, Reference(partitionId, it), QueryListenerEvent.PRE_UPDATE)
-                entity.onPreUpdate(context, entityDescriptor)
-            } else {
-                entity.onPreInsert(context, entityDescriptor)
-            }
-        }
+        val result = records.putAndGet(
+            identifierValue,
+            entity,
+            {
+                if (it > 0L) {
+                    context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, Reference(partitionId, it), QueryListenerEvent.PRE_UPDATE)
+                    entity.onPreUpdate(context, entityDescriptor)
+                } else {
+                    entity.onPreInsert(context, entityDescriptor)
+                }
+            },
+            capturePreviousValue = entityDescriptor.hasIndexes
+        )
 
         if(result.isInsert)
             entity.onPostInsert(context, entityDescriptor)

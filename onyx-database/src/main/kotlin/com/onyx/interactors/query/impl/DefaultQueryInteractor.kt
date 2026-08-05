@@ -183,11 +183,17 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
             query.updates.forEach { entity?.set(context = context, descriptor = descriptor, name = it.fieldName!!, value = it.value) }
 
             val putResult = entity?.save(context)
-            entity?.saveIndexes(context, it.reference, putResult!!.recordId)
+            val previousIndexReference = if (updatedPartitionValue || putResult?.isInsert != false) 0L else it.reference
+            if (entity != null && putResult != null) {
+                entity.saveIndexes(
+                    context,
+                    previousIndexReference,
+                    putResult.recordId,
+                    previousEntity = putResult.previousValue as? IManagedEntity
+                )
 
-            // Update Cached queries
-            if (entity != null) {
-                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, descriptor, entity.reference(putResult!!.recordId, context, descriptor), QueryListenerEvent.UPDATE)
+                // Update Cached queries
+                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, descriptor, entity.reference(putResult.recordId, context, descriptor), QueryListenerEvent.UPDATE)
                 updateCount++
             }
         }

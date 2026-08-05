@@ -40,10 +40,6 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(
     private val references: IndexPostingMap
         get() = dataFile.getIndexMap(indexDescriptor.type, mapBaseName)
 
-    /** Reverse lookup remains necessary because mutation callers provide only the old record reference. */
-    protected open val indexValues: DiskMap<Long, Any>
-        get() = dataFile.getHashMap(Long::class.java, mapBaseName + INDEX_VALUES_SUFFIX)
-
     private val mapBaseName: String
         get() = descriptor.entityClass.name + indexDescriptor.name
 
@@ -56,60 +52,61 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(
     @Throws(OnyxException::class)
     @Synchronized
     override fun save(indexValue: Any?, oldReferenceId: Long, newReferenceId: Long) {
-        saveIndexValue(indexValue, oldReferenceId, newReferenceId)
-    }
-
-    private fun saveIndexValue(indexValue: Any?, oldReferenceId: Long, newReferenceId: Long) {
-        if (oldReferenceId > 0L && oldReferenceId == newReferenceId) {
-            updateIndexValue(indexValue, newReferenceId)
-            return
+        require(oldReferenceId <= 0L) {
+            "The old index value is required when updating an index without a reverse mapping"
         }
-
-        if (oldReferenceId > 0L) deleteIndexValue(oldReferenceId)
-        if (indexValue == null || newReferenceId <= 0L) return
-
-        val normalizedValue = normalize(indexValue)
-        references.add(normalizedValue, newReferenceId)
-        indexValues[newReferenceId] = normalizedValue
+        saveIndexValue(null, indexValue, oldReferenceId, newReferenceId)
     }
 
-    /** Update a stable entity reference without deleting and recreating its reverse-map entry. */
-    private fun updateIndexValue(indexValue: Any?, reference: Long) {
-        val persistedValue = indexValues[reference]?.let(::normalize)
+    @Throws(OnyxException::class)
+    @Synchronized
+    override fun save(
+        oldIndexValue: Any?,
+        indexValue: Any?,
+        oldReferenceId: Long,
+        newReferenceId: Long
+    ) {
+        saveIndexValue(oldIndexValue, indexValue, oldReferenceId, newReferenceId)
+    }
+
+    private fun saveIndexValue(
+        oldIndexValue: Any?,
+        indexValue: Any?,
+        oldReferenceId: Long,
+        newReferenceId: Long
+    ) {
+        val persistedValue = oldIndexValue?.let(::normalize)
         val normalizedValue = indexValue?.let(::normalize)
 
-        if (persistedValue == null) {
-            if (normalizedValue != null) {
-                references.add(normalizedValue, reference)
-                indexValues[reference] = normalizedValue
-            }
+        if (oldReferenceId > 0L && oldReferenceId == newReferenceId &&
+            persistedValue != null && normalizedValue != null &&
+            valuesHaveSameIndexOrder(persistedValue, normalizedValue)
+        ) {
             return
         }
 
-        if (normalizedValue == null) {
-            indexValues.remove(reference)
-            references.remove(persistedValue, reference)
-            return
+        if (persistedValue != null && oldReferenceId > 0L) {
+            references.remove(persistedValue, oldReferenceId)
         }
-
-        if (valuesHaveSameIndexOrder(persistedValue, normalizedValue)) return
-
-        references.remove(persistedValue, reference)
-        references.add(normalizedValue, reference)
-        indexValues[reference] = normalizedValue
+        if (normalizedValue != null && newReferenceId > 0L) {
+            references.add(normalizedValue, newReferenceId)
+        }
     }
 
-    /** Delete an index posting using the persisted old value from the reverse lookup. */
+    /** Legacy insert-only API cannot identify a posting for deletion without its indexed value. */
     @Throws(OnyxException::class)
     @Synchronized
     override fun delete(reference: Long) {
-        deleteIndexValue(reference)
+        throw IllegalArgumentException(
+            "The index value is required when deleting an index entry without a reverse mapping"
+        )
     }
 
-    private fun deleteIndexValue(reference: Long) {
-        if (reference <= 0L) return
-        val indexValue = indexValues.remove(reference) ?: return
-        references.remove(indexValue, reference)
+    @Throws(OnyxException::class)
+    @Synchronized
+    override fun delete(indexValue: Any?, reference: Long) {
+        if (indexValue == null || reference <= 0L) return
+        references.remove(normalize(indexValue), reference)
     }
 
     /** Find every record whose indexed value exactly matches [indexValue]. */
@@ -225,7 +222,7 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(
         }
     }
 
-    /** Rebuild the flat and reverse mappings from authoritative entity records. */
+    /** Rebuild the posting tree from authoritative entity records. */
     @Throws(OnyxException::class)
     @Synchronized
     override fun rebuild() {
@@ -239,11 +236,10 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(
         )
 
         references.clear()
-        indexValues.clear()
         records.forEachReference { recordId, entity ->
             if (recordId > 0L) {
                 val indexValue = entity.get<Any?>(context, descriptor, indexDescriptor.name)
-                saveIndexValue(indexValue, 0L, recordId)
+                saveIndexValue(null, indexValue, 0L, recordId)
             }
         }
     }
@@ -252,7 +248,6 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(
     @Synchronized
     override fun clear() {
         references.clear()
-        indexValues.clear()
     }
 
     override fun shutdown() {
@@ -261,9 +256,5 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(
 
     override fun deleteResources() {
         // Default indexes are owned by the entity data file.
-    }
-
-    private companion object {
-        const val INDEX_VALUES_SUFFIX = "indexValues"
     }
 }

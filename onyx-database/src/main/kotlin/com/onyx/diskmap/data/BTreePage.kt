@@ -7,7 +7,9 @@ import java.nio.ByteBuffer
  * Cache- and disk-friendly B+ tree page.
  *
  * A compact root avoids wasting 4 KiB for the many tiny maps used by indexes.
- * Once promoted, pages use 64-bit keys, packed file pointers, and 4 KiB blocks.
+ * Once promoted, pages use 64-bit keys, 40-bit page/entry pointers, and 4 KiB blocks.
+ * Version-four pages pair those node-store pointers with 48-bit value-store
+ * pointers in their stable [BTreeEntry] records.
  * Parents are deliberately not persisted; mutations retain their descent path.
  */
 class BTreePage private constructor(
@@ -15,8 +17,11 @@ class BTreePage private constructor(
     var leaf: Boolean,
     val compact: Boolean,
     val packedPointers: Boolean,
+    val packedEntryRecords: Boolean,
     cacheDecodedKeys: Boolean
 ) {
+    val entryRecordSize: Int =
+        if (packedEntryRecords) BTreeEntry.PACKED_ENTRY_SIZE else BTreeEntry.LEGACY_ENTRY_SIZE
     val capacity: Int = when {
         compact -> COMPACT_MAX_KEYS
         packedPointers -> MAX_KEYS
@@ -165,7 +170,13 @@ class BTreePage private constructor(
 
     private fun writeHeader(buffer: ByteBuffer) {
         buffer.putInt(MAGIC)
-        buffer.put(if (packedPointers) FORMAT_VERSION else LEGACY_FORMAT_VERSION)
+        buffer.put(
+            when {
+                packedEntryRecords -> FORMAT_VERSION
+                packedPointers -> PACKED_POINTER_FORMAT_VERSION
+                else -> LEGACY_FORMAT_VERSION
+            }
+        )
         var flags = if (leaf) LEAF_FLAG else 0
         if (compact) flags = flags or COMPACT_FLAG
         buffer.put(flags.toByte())
@@ -190,7 +201,8 @@ class BTreePage private constructor(
         const val UNLOADED_RECORD = Long.MIN_VALUE
 
         private const val LEGACY_FORMAT_VERSION: Byte = 2
-        private const val FORMAT_VERSION: Byte = 3
+        private const val PACKED_POINTER_FORMAT_VERSION: Byte = 3
+        private const val FORMAT_VERSION: Byte = 4
         private const val LEAF_FLAG = 1
         private const val COMPACT_FLAG = 2
         private const val HEADER_SIZE = 32
@@ -205,12 +217,38 @@ class BTreePage private constructor(
             leaf: Boolean,
             compact: Boolean = false,
             packedPointers: Boolean = true,
+            packedEntryRecords: Boolean = packedPointers,
             cacheDecodedKeys: Boolean = true
         ): BTreePage {
+            require(packedPointers || !packedEntryRecords) {
+                "Packed B-tree entry records require packed page pointers"
+            }
             val size = if (compact) COMPACT_PAGE_SIZE else PAGE_SIZE
             val position = if (compact) store.allocate(size) else store.allocateAligned(size, PAGE_SIZE)
-            return BTreePage(position, leaf, compact, packedPointers, cacheDecodedKeys)
+            return BTreePage(
+                position,
+                leaf,
+                compact,
+                packedPointers,
+                packedEntryRecords,
+                cacheDecodedKeys
+            )
         }
+
+        fun createLike(
+            store: Store,
+            source: BTreePage,
+            leaf: Boolean,
+            compact: Boolean = false,
+            cacheDecodedKeys: Boolean = source.decodedKeys.enabled
+        ): BTreePage = create(
+            store,
+            leaf,
+            compact,
+            source.packedPointers,
+            source.packedEntryRecords,
+            cacheDecodedKeys
+        )
 
         fun get(store: Store, position: Long, cacheDecodedKeys: Boolean = true): BTreePage {
             val header = getPageBuffer(HEADER_SIZE)
@@ -218,10 +256,15 @@ class BTreePage private constructor(
             header.flip()
             require(header.int == MAGIC) { "Invalid B-tree page at position $position" }
             val formatVersion = header.get()
-            require(formatVersion == LEGACY_FORMAT_VERSION || formatVersion == FORMAT_VERSION) {
+            require(
+                formatVersion == LEGACY_FORMAT_VERSION ||
+                    formatVersion == PACKED_POINTER_FORMAT_VERSION ||
+                    formatVersion == FORMAT_VERSION
+            ) {
                 "Unsupported B-tree page version $formatVersion at position $position"
             }
-            val packedPointers = formatVersion == FORMAT_VERSION
+            val packedPointers = formatVersion >= PACKED_POINTER_FORMAT_VERSION
+            val packedEntryRecords = formatVersion >= FORMAT_VERSION
             val flags = header.get().toInt()
             val count = header.short.toInt() and 0xffff
             val previous = if (packedPointers) header.bigInt else header.long
@@ -232,6 +275,7 @@ class BTreePage private constructor(
                 leaf = flags and LEAF_FLAG != 0,
                 compact = flags and COMPACT_FLAG != 0,
                 packedPointers = packedPointers,
+                packedEntryRecords = packedEntryRecords,
                 cacheDecodedKeys = cacheDecodedKeys
             )
             require(count <= page.capacity) { "Invalid B-tree key count $count at position $position" }

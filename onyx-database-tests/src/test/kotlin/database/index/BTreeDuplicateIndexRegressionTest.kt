@@ -150,7 +150,7 @@ class BTreeDuplicateIndexRegressionTest {
     }
 
     @Test
-    fun clearRebuildAndReopenPreserveSplitDuplicateEntriesAndReverseLookups() {
+    fun clearRebuildAndReopenPreserveSplitDuplicateEntriesAndValueDrivenMutations() {
         val seed = seedSplitIndex()
         val allEqualReferences = references(seed.equal)
         val deleted = seed.equal[0]
@@ -165,7 +165,7 @@ class BTreeDuplicateIndexRegressionTest {
         index.rebuild()
         assertEquals(allEqualReferences, index.findAll(EQUAL_VALUE).keys.toSet())
 
-        assertTrue(manager.deleteEntity(deleted), "Delete after rebuild must use the rebuilt reverse lookup")
+        assertTrue(manager.deleteEntity(deleted), "Delete after rebuild must remove the supplied value/reference posting")
         val afterDelete = allEqualReferences - deletedReference
         assertEquals(afterDelete, index.findAll(EQUAL_VALUE).keys.toSet())
 

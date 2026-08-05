@@ -166,6 +166,18 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         updateDocument(newReferenceId, indexValue)
     }
 
+    @Throws(OnyxException::class)
+    @Synchronized
+    override fun save(
+        oldIndexValue: Any?,
+        indexValue: Any?,
+        oldReferenceId: Long,
+        newReferenceId: Long
+    ) {
+        super.save(oldIndexValue, indexValue, oldReferenceId, newReferenceId)
+        updateDocument(newReferenceId, indexValue)
+    }
+
     /**
      * Deletes an entity from the Lucene index using its record ID.
      *
@@ -177,6 +189,14 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         super.delete(reference)
         indexWriter.deleteDocuments(Term(ID_FIELD, reference.toString()))
         // Mark as dirty so the deletion gets committed
+        IndexCommitScheduler.markDirty(indexKey)
+    }
+
+    @Throws(OnyxException::class)
+    @Synchronized
+    override fun delete(indexValue: Any?, reference: Long) {
+        super.delete(indexValue, reference)
+        indexWriter.deleteDocuments(Term(ID_FIELD, reference.toString()))
         IndexCommitScheduler.markDirty(indexKey)
     }
 

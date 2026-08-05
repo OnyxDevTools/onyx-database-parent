@@ -46,8 +46,16 @@ open class DiskBTreeMap<K, V>(
     }
 
     override fun putAndGet(key: K, value: V, preUpdate: ((Long) -> Unit)?): PutResult =
+        putAndGet(key, value, preUpdate, capturePreviousValue = false)
+
+    override fun putAndGet(
+        key: K,
+        value: V,
+        preUpdate: ((Long) -> Unit)?,
+        capturePreviousValue: Boolean
+    ): PutResult =
         mapReadWriteLock.writeLock {
-            super.internalPutAndGet(key.castTo(keyType) as K, value, preUpdate)
+            super.internalPutAndGet(key.castTo(keyType) as K, value, preUpdate, capturePreviousValue)
         }
 
     override fun containsValue(value: V): Boolean = mapReadWriteLock.readLock {

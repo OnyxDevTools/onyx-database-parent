@@ -57,7 +57,18 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      * @since 2.1.3
      * @return Value for previous record ID and if the value is been updated or inserted
      */
-    fun putAndGet(key:K, value:V, preUpdate:((Long) -> Unit)? = null): PutResult
+    fun putAndGet(key: K, value: V, preUpdate: ((Long) -> Unit)? = null): PutResult
+
+    /**
+     * Variant used by record persistence when index maintenance needs the previously persisted value.
+     * Existing disk-map implementations retain source compatibility through the default delegation.
+     */
+    fun putAndGet(
+        key: K,
+        value: V,
+        preUpdate: ((Long) -> Unit)?,
+        capturePreviousValue: Boolean
+    ): PutResult = putAndGet(key, value, preUpdate)
 
     /**
      * Get the record id for a key

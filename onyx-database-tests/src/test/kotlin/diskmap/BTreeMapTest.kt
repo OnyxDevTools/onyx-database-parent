@@ -37,6 +37,21 @@ class BTreeMapTest {
     }
 
     @Test
+    fun putCanCaptureThePreviouslyPersistedValueForIndexMaintenance() {
+        val store = DefaultDiskMapFactory(TEST_DATABASE)
+        val map = store.getHashMap<DiskMap<Int, String>>(Int::class.java, "tree")
+        val stable = map.putAndGet(10, "before").recordId
+
+        val result = map.putAndGet(10, "after", preUpdate = null, capturePreviousValue = true)
+
+        assertFalse(result.isInsert)
+        assertEquals(stable, result.recordId)
+        assertEquals("before", result.previousValue)
+        assertEquals("after", map.getWithRecID(stable))
+        store.close()
+    }
+
+    @Test
     fun deleteRebalancesPagesAndContractsTheRoot() {
         val store = DefaultDiskMapFactory(TEST_DATABASE)
         val map = store.getHashMap<DiskMap<Int, String>>(Int::class.java, "tree")

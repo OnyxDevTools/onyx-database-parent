@@ -12,7 +12,8 @@ import java.nio.ByteBuffer
  */
 data class BTreeEntry(
     var position: Long = 0L,
-    var record: Long = 0L
+    var record: Long = 0L,
+    val recordSize: Int = LEGACY_ENTRY_SIZE
 ) {
 
     private var recordValue: WeakReference<Any?>? = null
@@ -21,8 +22,8 @@ data class BTreeEntry(
         if (this.record == record) return
         this.record = record
         recordValue = null
-        val buffer = getBuffer()
-        buffer.putLong(record)
+        val buffer = getBuffer(recordSize)
+        buffer.putRecord(record, recordSize)
         buffer.flip()
         store.write(buffer, position)
     }
@@ -40,53 +41,76 @@ data class BTreeEntry(
     }
 
     fun write(store: Store) {
-        val buffer = getBuffer()
-        buffer.putLong(record)
+        val buffer = getBuffer(recordSize)
+        buffer.putRecord(record, recordSize)
         buffer.flip()
         store.write(buffer, position)
     }
 
     fun read(store: Store): BTreeEntry {
-        val buffer = getBuffer()
+        val buffer = getBuffer(recordSize)
         store.read(buffer, position)
         buffer.flip()
-        record = buffer.long
+        record = buffer.readRecord(recordSize)
         recordValue = null
         return this
     }
 
     companion object {
+        /** Source-compatible legacy entry width. New version-four trees use [PACKED_ENTRY_SIZE]. */
         const val ENTRY_SIZE = java.lang.Long.BYTES
+        const val LEGACY_ENTRY_SIZE = ENTRY_SIZE
+        const val PACKED_ENTRY_SIZE = 6
         const val NULL_RECORD = 0L
 
-        fun create(store: Store, record: Long): BTreeEntry =
-            BTreeEntry(createPosition(store, record), record)
+        fun create(store: Store, record: Long, recordSize: Int = LEGACY_ENTRY_SIZE): BTreeEntry =
+            BTreeEntry(createPosition(store, record, recordSize), record, recordSize)
 
-        fun createPosition(store: Store, record: Long): Long =
-            store.allocateSlot(ENTRY_SIZE).also { writeRecord(store, it, record) }
+        fun createPosition(store: Store, record: Long, recordSize: Int = LEGACY_ENTRY_SIZE): Long =
+            store.allocateSlot(recordSize).also { writeRecord(store, it, record, recordSize) }
 
-        fun get(store: Store, position: Long): BTreeEntry =
-            BTreeEntry(position = position).read(store)
+        fun get(store: Store, position: Long, recordSize: Int = LEGACY_ENTRY_SIZE): BTreeEntry =
+            BTreeEntry(position = position, recordSize = recordSize).read(store)
 
-        fun readRecord(store: Store, position: Long): Long {
-            val buffer = getBuffer()
+        fun readRecord(store: Store, position: Long, recordSize: Int = LEGACY_ENTRY_SIZE): Long {
+            val buffer = getBuffer(recordSize)
             store.read(buffer, position)
             buffer.flip()
-            return buffer.long
+            return buffer.readRecord(recordSize)
         }
 
-        fun writeRecord(store: Store, position: Long, record: Long) {
-            val buffer = getBuffer()
-            buffer.putLong(record)
+        fun writeRecord(
+            store: Store,
+            position: Long,
+            record: Long,
+            recordSize: Int = LEGACY_ENTRY_SIZE
+        ) {
+            val buffer = getBuffer(recordSize)
+            buffer.putRecord(record, recordSize)
             buffer.flip()
             store.write(buffer, position)
         }
 
         private val buffer = ThreadLocal.withInitial { ByteBuffer.allocate(ENTRY_SIZE) }
 
-        private fun getBuffer(): ByteBuffer = buffer.get().apply {
+        private fun getBuffer(recordSize: Int = LEGACY_ENTRY_SIZE): ByteBuffer = buffer.get().apply {
+            require(recordSize == LEGACY_ENTRY_SIZE || recordSize == PACKED_ENTRY_SIZE) {
+                "Unsupported B-tree entry record width $recordSize"
+            }
             clear()
-            limit(ENTRY_SIZE)
+            limit(recordSize)
+        }
+
+        private fun ByteBuffer.putRecord(record: Long, recordSize: Int) = when (recordSize) {
+            PACKED_ENTRY_SIZE -> putUnsignedLong48(record)
+            LEGACY_ENTRY_SIZE -> putLong(record)
+            else -> error("Unsupported B-tree entry record width $recordSize")
+        }
+
+        private fun ByteBuffer.readRecord(recordSize: Int): Long = when (recordSize) {
+            PACKED_ENTRY_SIZE -> unsignedLong48
+            LEGACY_ENTRY_SIZE -> long
+            else -> error("Unsupported B-tree entry record width $recordSize")
         }
     }
 }

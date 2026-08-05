@@ -75,7 +75,13 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                 context.transactionInteractor.writeSave(entity)
             }
 
-            entity.saveIndexes(context, if (putResult.isInsert) 0L else putResult.recordId, putResult.recordId, descriptor)
+            entity.saveIndexes(
+                context,
+                if (putResult.isInsert) 0L else putResult.recordId,
+                putResult.recordId,
+                descriptor,
+                putResult.previousValue as? IManagedEntity
+            )
             entity.saveRelationships(context, descriptor = descriptor)
 
             // Update Cached queries
@@ -137,10 +143,13 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
         val previousReferenceId = entity.referenceId(context, descriptor)
 
         if (previousReferenceId > 0) {
+            val persistedEntity = requireNotNull(
+                entity.recordInteractor(context, descriptor).getWithReferenceId(previousReferenceId)
+            ) { "Record $previousReferenceId disappeared before its indexes could be deleted" }
             journal {
                 context.transactionInteractor.writeDelete(entity)
             }
-            entity.deleteAllIndexes(context, previousReferenceId, descriptor)
+            persistedEntity.deleteAllIndexes(context, previousReferenceId, descriptor)
             entity.deleteRelationships(context)
             entity.recordInteractor(context, descriptor).delete(entity)
         }

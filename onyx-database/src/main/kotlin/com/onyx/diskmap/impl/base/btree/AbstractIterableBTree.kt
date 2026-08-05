@@ -173,7 +173,7 @@ abstract class AbstractIterableBTree<K, V>(
         override fun setValue(newValue: V): V {
             val previous = value
             this@AbstractIterableBTree[key] = newValue
-            recordPointer = BTreeEntry.readRecord(fileStore, recordId)
+            recordPointer = BTreeEntry.readRecord(fileStore, recordId, root.entryRecordSize)
             return previous
         }
     }

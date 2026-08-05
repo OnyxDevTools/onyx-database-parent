@@ -3,6 +3,10 @@ package btree
 import com.onyx.diskmap.data.BTreeEntry
 import com.onyx.diskmap.data.BTreePage
 import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.data.MAX_UNSIGNED_40_BIT
+import com.onyx.diskmap.data.MAX_UNSIGNED_48_BIT
+import com.onyx.diskmap.data.putBigInt
+import com.onyx.diskmap.data.putUnsignedLong48
 import com.onyx.diskmap.impl.DiskBTreeMap
 import com.onyx.diskmap.store.impl.InMemoryStore
 import org.junit.Test
@@ -10,6 +14,7 @@ import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
 import java.util.ArrayDeque
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -29,6 +34,36 @@ class BTreeStorageTest {
     }
 
     @Test
+    fun packedEntryRoundTripsSixByteRecordPointer() {
+        val store = createStore()
+        val entry = BTreeEntry.create(
+            store,
+            record = MAX_UNSIGNED_48_BIT,
+            recordSize = BTreeEntry.PACKED_ENTRY_SIZE
+        )
+
+        assertEquals(
+            MAX_UNSIGNED_48_BIT,
+            BTreeEntry.get(store, entry.position, BTreeEntry.PACKED_ENTRY_SIZE).record
+        )
+        entry.setRecord(store, 0x010203040506L)
+        assertEquals(
+            0x010203040506L,
+            BTreeEntry.get(store, entry.position, BTreeEntry.PACKED_ENTRY_SIZE).record
+        )
+    }
+
+    @Test
+    fun packedPointerWritersRejectOverflowInsteadOfTruncating() {
+        assertFailsWith<IllegalArgumentException> {
+            ByteBuffer.allocate(5).putBigInt(MAX_UNSIGNED_40_BIT + 1L)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ByteBuffer.allocate(6).putUnsignedLong48(MAX_UNSIGNED_48_BIT + 1L)
+        }
+    }
+
+    @Test
     fun leafPageRoundTrips() {
         val store = createStore()
         val page = BTreePage.create(store, leaf = true)
@@ -43,6 +78,8 @@ class BTreeStorageTest {
         val persisted = BTreePage.get(store, page.position)
         assertTrue(persisted.leaf)
         assertTrue(persisted.packedPointers)
+        assertTrue(persisted.packedEntryRecords)
+        assertEquals(BTreeEntry.PACKED_ENTRY_SIZE, persisted.entryRecordSize)
         assertEquals(BTreePage.MAX_KEYS, persisted.capacity)
         assertEquals(listOf(11L, 22L, 33L), persisted.keys.take(persisted.keyCount))
         assertEquals(listOf(0xfedcba9876L, 202L, 303L), persisted.pointers.take(persisted.keyCount))
@@ -129,6 +166,67 @@ class BTreeStorageTest {
         while (pending.isNotEmpty()) {
             val page = BTreePage.get(store, pending.removeFirst())
             assertFalse(page.packedPointers)
+            assertFalse(page.packedEntryRecords)
+            if (!page.leaf) {
+                repeat(page.keyCount + 1) { pending.add(page.pointers[it]) }
+            }
+        }
+    }
+
+    @Test
+    fun versionThreeTreeKeepsEightByteEntriesAcrossSplits() {
+        val store = createStore()
+        val records = InMemoryStore(null, "btree-storage-v3-records")
+        val headerPosition = store.allocate(Header.HEADER_SIZE)
+        val root = BTreePage.create(
+            store,
+            leaf = true,
+            compact = true,
+            packedPointers = true,
+            packedEntryRecords = false
+        )
+        root.write(store)
+        val header = Header().apply {
+            firstNode = root.position
+            position = headerPosition
+        }
+        val map = DiskBTreeMap<Int, Int>(WeakReference(store), WeakReference(records), header, Int::class.java)
+
+        repeat(2_000) { map[it] = it }
+        map.clearCache()
+        val lastReference = map.getRecID(1_999)
+        assertEquals(1_999, map.getWithRecID(lastReference))
+
+        val pending = ArrayDeque<Long>().apply { add(map.reference.firstNode) }
+        while (pending.isNotEmpty()) {
+            val page = BTreePage.get(store, pending.removeFirst())
+            assertTrue(page.packedPointers)
+            assertFalse(page.packedEntryRecords)
+            assertEquals(BTreeEntry.LEGACY_ENTRY_SIZE, page.entryRecordSize)
+            if (!page.leaf) {
+                repeat(page.keyCount + 1) { pending.add(page.pointers[it]) }
+            }
+        }
+    }
+
+    @Test
+    fun newTreeUsesSixByteEntriesAcrossSplitsAndDirectReferenceReads() {
+        val store = createStore()
+        val records = InMemoryStore(null, "btree-storage-v4-records")
+        val header = Header().apply { position = store.allocate(Header.HEADER_SIZE) }
+        val map = DiskBTreeMap<Int, Int>(WeakReference(store), WeakReference(records), header, Int::class.java)
+
+        repeat(2_000) { map[it] = it }
+        map.clearCache()
+        val lastReference = map.getRecID(1_999)
+        assertEquals(1_999, map.getWithRecID(lastReference))
+
+        val pending = ArrayDeque<Long>().apply { add(map.reference.firstNode) }
+        while (pending.isNotEmpty()) {
+            val page = BTreePage.get(store, pending.removeFirst())
+            assertTrue(page.packedPointers)
+            assertTrue(page.packedEntryRecords)
+            assertEquals(BTreeEntry.PACKED_ENTRY_SIZE, page.entryRecordSize)
             if (!page.leaf) {
                 repeat(page.keyCount + 1) { pending.add(page.pointers[it]) }
             }
