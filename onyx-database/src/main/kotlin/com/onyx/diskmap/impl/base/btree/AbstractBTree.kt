@@ -63,7 +63,7 @@ abstract class AbstractBTree<K, V>(
         if (position <= 0L) null else findPageAtPosition(position)
 
     protected fun findEntryAtPosition(position: Long): BTreeEntry? =
-        if (position <= 0L) null else BTreeEntry.get(fileStore, position, root.entryRecordSize)
+        if (position <= 0L) null else BTreeEntry.get(fileStore, position)
 
     protected fun updatePageCache(page: BTreePage?) {
         if (page != null) pageCache[page.position] = page
@@ -130,7 +130,7 @@ abstract class AbstractBTree<K, V>(
             val valueLocation = if (value == null) BTreeEntry.NULL_RECORD else records.writeObject(value)
             if (found) {
                 val entryPosition = leaf.pointers[index]
-                BTreeEntry.writeRecord(fileStore, entryPosition, valueLocation, leaf.entryRecordSize)
+                BTreeEntry.writeRecord(fileStore, entryPosition, valueLocation)
                 leaf.recordPointers[index] = valueLocation
                 result?.recordId = entryPosition
                 result?.isInsert = false
@@ -139,7 +139,7 @@ abstract class AbstractBTree<K, V>(
             }
 
             val storedKey = if (storeKeyWithinNode) token else records.writeObject(key)
-            val entryPosition = BTreeEntry.createPosition(fileStore, valueLocation, leaf.entryRecordSize)
+            val entryPosition = BTreeEntry.createPosition(fileStore, valueLocation)
             leaf.insertLeaf(index, storedKey, entryPosition, valueLocation)
             if (!storeKeyWithinNode) leaf.decodedKeys[index] = key
             if (index == 0) propagateFirstKey(path, path.depth - 1, storedKey, leaf.decodedKeys[index])
@@ -164,9 +164,8 @@ abstract class AbstractBTree<K, V>(
 
     private fun promoteCompactRoot(compactRoot: BTreePage) {
         check(compactRoot.position == root.position && compactRoot.leaf)
-        val promoted = BTreePage.createLike(
+        val promoted = BTreePage.create(
             fileStore,
-            compactRoot,
             leaf = true,
             cacheDecodedKeys = !storeKeyWithinNode
         )
@@ -187,9 +186,8 @@ abstract class AbstractBTree<K, V>(
             leaf.previousLeaf == 0L && insertedIndex == 0 -> EDGE_RETAINED_KEYS
             else -> leaf.keyCount / 2
         }
-        val right = BTreePage.createLike(
+        val right = BTreePage.create(
             fileStore,
-            leaf,
             leaf = true,
             cacheDecodedKeys = !storeKeyWithinNode
         )
@@ -224,9 +222,8 @@ abstract class AbstractBTree<K, V>(
         parentLevel: Int
     ) {
         if (parentLevel < 0) {
-            val newRoot = BTreePage.createLike(
+            val newRoot = BTreePage.create(
                 fileStore,
-                left,
                 leaf = false,
                 cacheDecodedKeys = !storeKeyWithinNode
             )
@@ -258,9 +255,8 @@ abstract class AbstractBTree<K, V>(
         val median = page.keyCount / 2
         val promotedKey = page.keys[median]
         val promotedDecoded = page.decodedKeys[median]
-        val right = BTreePage.createLike(
+        val right = BTreePage.create(
             fileStore,
-            page,
             leaf = false,
             cacheDecodedKeys = !storeKeyWithinNode
         )
@@ -532,7 +528,7 @@ abstract class AbstractBTree<K, V>(
         val leaf = findLeaf(key, token)
         val index = lowerBound(leaf, key, token)
         if (index >= leaf.keyCount || compareStoredToKey(leaf, index, key, token) != 0) return null
-        return BTreeEntry(leaf.pointers[index], recordPointerAt(leaf, index), leaf.entryRecordSize)
+        return BTreeEntry(leaf.pointers[index], recordPointerAt(leaf, index))
     }
 
     protected fun findEntryId(key: K): Long {
@@ -599,13 +595,13 @@ abstract class AbstractBTree<K, V>(
     protected fun recordPointerAt(page: BTreePage, index: Int): Long {
         val cached = page.recordPointers[index]
         if (cached != BTreePage.UNLOADED_RECORD) return cached
-        val loaded = BTreeEntry.readRecord(fileStore, page.pointers[index], page.entryRecordSize)
+        val loaded = BTreeEntry.readRecord(fileStore, page.pointers[index])
         page.recordPointers[index] = loaded
         return loaded
     }
 
     protected fun entryAt(page: BTreePage, index: Int): BTreeEntry =
-        BTreeEntry(page.pointers[index], recordPointerAt(page, index), page.entryRecordSize)
+        BTreeEntry(page.pointers[index], recordPointerAt(page, index))
 
     protected fun entryIdAt(page: BTreePage, index: Int): Long = page.pointers[index]
 

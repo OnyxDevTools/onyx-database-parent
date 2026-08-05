@@ -8,27 +8,17 @@ import java.nio.ByteBuffer
  *
  * A compact root avoids wasting 4 KiB for the many tiny maps used by indexes.
  * Once promoted, pages use 64-bit keys, 40-bit page/entry pointers, and 4 KiB blocks.
- * Version-four pages pair those node-store pointers with 48-bit value-store
- * pointers in their stable [BTreeEntry] records.
+ * Stable [BTreeEntry] records use 48-bit value-store pointers.
  * Parents are deliberately not persisted; mutations retain their descent path.
  */
 class BTreePage private constructor(
     var position: Long,
     var leaf: Boolean,
     val compact: Boolean,
-    val packedPointers: Boolean,
-    val packedEntryRecords: Boolean,
     cacheDecodedKeys: Boolean
 ) {
-    val entryRecordSize: Int =
-        if (packedEntryRecords) BTreeEntry.PACKED_ENTRY_SIZE else BTreeEntry.LEGACY_ENTRY_SIZE
-    val capacity: Int = when {
-        compact -> COMPACT_MAX_KEYS
-        packedPointers -> MAX_KEYS
-        else -> LEGACY_MAX_KEYS
-    }
+    val capacity: Int = if (compact) COMPACT_MAX_KEYS else MAX_KEYS
     private val pageSize: Int = if (compact) COMPACT_PAGE_SIZE else PAGE_SIZE
-    private val slotSize: Int = if (packedPointers) PACKED_SLOT_SIZE else LEGACY_SLOT_SIZE
     var keyCount: Int = 0
     var previousLeaf: Long = 0L
     var nextLeaf: Long = 0L
@@ -133,14 +123,14 @@ class BTreePage private constructor(
         require(fromIndex in 0..keyCount)
         require(toIndexExclusive in fromIndex..keyCount)
         if (fromIndex == toIndexExclusive) return
-        val length = (toIndexExclusive - fromIndex) * slotSize
+        val length = (toIndexExclusive - fromIndex) * SLOT_SIZE
         val buffer = getPageBuffer(length)
         for (index in fromIndex until toIndexExclusive) {
             buffer.putLong(keys[index])
             buffer.putPointer(leafPointer(index))
         }
         buffer.flip()
-        store.write(buffer, position + HEADER_SIZE + fromIndex.toLong() * slotSize)
+        store.write(buffer, position + HEADER_SIZE + fromIndex.toLong() * SLOT_SIZE)
     }
 
     fun writeCount(store: Store) {
@@ -154,7 +144,7 @@ class BTreePage private constructor(
         val buffer = getSmallBuffer()
         buffer.putLong(keys[index])
         buffer.flip()
-        store.write(buffer, position + HEADER_SIZE + index.toLong() * slotSize)
+        store.write(buffer, position + HEADER_SIZE + index.toLong() * SLOT_SIZE)
     }
 
     fun writePreviousLeaf(store: Store) = writeHeaderLong(store, PREVIOUS_OFFSET, previousLeaf)
@@ -170,13 +160,7 @@ class BTreePage private constructor(
 
     private fun writeHeader(buffer: ByteBuffer) {
         buffer.putInt(MAGIC)
-        buffer.put(
-            when {
-                packedEntryRecords -> FORMAT_VERSION
-                packedPointers -> PACKED_POINTER_FORMAT_VERSION
-                else -> LEGACY_FORMAT_VERSION
-            }
-        )
+        buffer.put(FORMAT_VERSION)
         var flags = if (leaf) LEAF_FLAG else 0
         if (compact) flags = flags or COMPACT_FLAG
         buffer.put(flags.toByte())
@@ -187,27 +171,21 @@ class BTreePage private constructor(
         while (buffer.position() < HEADER_SIZE) buffer.put(0)
     }
 
-    private fun ByteBuffer.putPointer(value: Long) {
-        if (packedPointers) putBigInt(value) else putLong(value)
-    }
+    private fun ByteBuffer.putPointer(value: Long) = putBigInt(value)
 
     companion object {
         const val MAX_KEYS = 312
-        const val LEGACY_MAX_KEYS = 254
         const val COMPACT_MAX_KEYS = 4
         const val PAGE_SIZE = 4096
         const val COMPACT_PAGE_SIZE = 96
         const val MAGIC = 0x4f425452 // "OBTR"
         const val UNLOADED_RECORD = Long.MIN_VALUE
 
-        private const val LEGACY_FORMAT_VERSION: Byte = 2
-        private const val PACKED_POINTER_FORMAT_VERSION: Byte = 3
-        private const val FORMAT_VERSION: Byte = 4
+        private const val FORMAT_VERSION: Byte = 3
         private const val LEAF_FLAG = 1
         private const val COMPACT_FLAG = 2
         private const val HEADER_SIZE = 32
-        private const val LEGACY_SLOT_SIZE = 16
-        private const val PACKED_SLOT_SIZE = 13
+        private const val SLOT_SIZE = 13
         private const val KEY_COUNT_OFFSET = 6L
         private const val PREVIOUS_OFFSET = 8
         private val EMPTY_RECORD_POINTERS = LongArray(0)
@@ -216,39 +194,17 @@ class BTreePage private constructor(
             store: Store,
             leaf: Boolean,
             compact: Boolean = false,
-            packedPointers: Boolean = true,
-            packedEntryRecords: Boolean = packedPointers,
             cacheDecodedKeys: Boolean = true
         ): BTreePage {
-            require(packedPointers || !packedEntryRecords) {
-                "Packed B-tree entry records require packed page pointers"
-            }
             val size = if (compact) COMPACT_PAGE_SIZE else PAGE_SIZE
             val position = if (compact) store.allocate(size) else store.allocateAligned(size, PAGE_SIZE)
             return BTreePage(
                 position,
                 leaf,
                 compact,
-                packedPointers,
-                packedEntryRecords,
                 cacheDecodedKeys
             )
         }
-
-        fun createLike(
-            store: Store,
-            source: BTreePage,
-            leaf: Boolean,
-            compact: Boolean = false,
-            cacheDecodedKeys: Boolean = source.decodedKeys.enabled
-        ): BTreePage = create(
-            store,
-            leaf,
-            compact,
-            source.packedPointers,
-            source.packedEntryRecords,
-            cacheDecodedKeys
-        )
 
         fun get(store: Store, position: Long, cacheDecodedKeys: Boolean = true): BTreePage {
             val header = getPageBuffer(HEADER_SIZE)
@@ -256,26 +212,18 @@ class BTreePage private constructor(
             header.flip()
             require(header.int == MAGIC) { "Invalid B-tree page at position $position" }
             val formatVersion = header.get()
-            require(
-                formatVersion == LEGACY_FORMAT_VERSION ||
-                    formatVersion == PACKED_POINTER_FORMAT_VERSION ||
-                    formatVersion == FORMAT_VERSION
-            ) {
+            require(formatVersion == FORMAT_VERSION) {
                 "Unsupported B-tree page version $formatVersion at position $position"
             }
-            val packedPointers = formatVersion >= PACKED_POINTER_FORMAT_VERSION
-            val packedEntryRecords = formatVersion >= FORMAT_VERSION
             val flags = header.get().toInt()
             val count = header.short.toInt() and 0xffff
-            val previous = if (packedPointers) header.bigInt else header.long
-            val next = if (packedPointers) header.bigInt else header.long
-            val firstPointer = if (packedPointers) header.bigInt else header.long
+            val previous = header.bigInt
+            val next = header.bigInt
+            val firstPointer = header.bigInt
             val page = BTreePage(
                 position = position,
                 leaf = flags and LEAF_FLAG != 0,
                 compact = flags and COMPACT_FLAG != 0,
-                packedPointers = packedPointers,
-                packedEntryRecords = packedEntryRecords,
                 cacheDecodedKeys = cacheDecodedKeys
             )
             require(count <= page.capacity) { "Invalid B-tree key count $count at position $position" }
@@ -284,13 +232,13 @@ class BTreePage private constructor(
             page.nextLeaf = next
             if (!page.leaf) page.pointers[0] = firstPointer
 
-            val slotsLength = page.capacity * page.slotSize
+            val slotsLength = page.capacity * SLOT_SIZE
             val slots = getPageBuffer(slotsLength)
             store.read(slots, position + HEADER_SIZE)
             slots.flip()
             repeat(page.capacity) { index ->
                 val key = slots.long
-                val pointer = if (packedPointers) slots.bigInt else slots.long
+                val pointer = slots.bigInt
                 if (index < count) {
                     page.keys[index] = key
                     page.pointers[if (page.leaf) index else index + 1] = pointer
@@ -300,7 +248,7 @@ class BTreePage private constructor(
         }
 
         private val pageBuffer = ThreadLocal.withInitial { ByteBuffer.allocate(PAGE_SIZE) }
-        private val smallBuffer = ThreadLocal.withInitial { ByteBuffer.allocate(LEGACY_SLOT_SIZE) }
+        private val smallBuffer = ThreadLocal.withInitial { ByteBuffer.allocate(SLOT_SIZE) }
 
         private fun getPageBuffer(size: Int): ByteBuffer = pageBuffer.get().apply {
             clear()
