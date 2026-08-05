@@ -2,6 +2,7 @@ package com.onyx.buffer
 
 import java.nio.Buffer
 import java.nio.ByteBuffer
+import kotlin.math.max
 
 /**
  * Created by Tim Osborn on 8/2/16.
@@ -53,15 +54,29 @@ class ExpandableByteBuffer {
      * @param needs How many more bytes to allocate if the buffer does not have enough
      */
     fun ensureSize(needs: Int) {
-        if (buffer.limit() < needs + buffer.position() && buffer.capacity() >= needs + buffer.position()) {
-            buffer.limit(buffer.capacity())
-        } else if (buffer.limit() < needs + buffer.position()) {
-            val tempBuffer = BufferPool.allocate(buffer.limit() + needs + BUFFER_ALLOCATION)
-            buffer.flip()
-            tempBuffer.put(buffer)
-            BufferPool.recycle(buffer)
-            buffer = tempBuffer
+        require(needs >= 0) { "Required buffer size must not be negative: $needs" }
+
+        val requiredCapacity = Math.addExact(buffer.position(), needs)
+        if (buffer.limit() >= requiredCapacity) {
+            return
         }
+
+        if (buffer.capacity() >= requiredCapacity) {
+            buffer.limit(buffer.capacity())
+            return
+        }
+
+        val currentCapacity = buffer.capacity()
+        val geometricCapacity = if (currentCapacity <= Int.MAX_VALUE / 2) {
+            currentCapacity * 2
+        } else {
+            Int.MAX_VALUE
+        }
+        val tempBuffer = BufferPool.allocate(max(requiredCapacity, geometricCapacity))
+        buffer.flip()
+        tempBuffer.put(buffer)
+        BufferPool.recycle(buffer)
+        buffer = tempBuffer
     }
 
     /**
@@ -70,7 +85,7 @@ class ExpandableByteBuffer {
      * @since 2.0.0
      */
     fun put(other: ByteBuffer) {
-        ensureSize(other.limit())
+        ensureSize(other.remaining())
         buffer.put(other)
     }
 
@@ -80,7 +95,7 @@ class ExpandableByteBuffer {
     fun flip(): Buffer = buffer.flip()
 
     companion object {
-        const val BUFFER_ALLOCATION = BufferPool.MEDIUM_BUFFER_SIZE // Initial Buffer allocation size 6KB
+        const val BUFFER_ALLOCATION = BufferPool.SMALL_BUFFER_SIZE
     }
 
 }

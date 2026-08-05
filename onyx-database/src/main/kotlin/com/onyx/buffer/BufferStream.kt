@@ -52,7 +52,7 @@ open class BufferStream(buffer: ByteBuffer) {
     private var references: HashMap<Class<*>, HashMap<Any, Int>>? = null
 
     // References by index number ordered by first used
-    private var referencesByIndex: HashMap<Int, Any>? = null
+    private var referencesByIndex: ArrayList<Any?>? = null
 
     /**
      * Getter for underlying byte buffer
@@ -96,19 +96,43 @@ open class BufferStream(buffer: ByteBuffer) {
         // If we are pulling from the expandableByteBuffer there is no reason to maintain a hash structure of the value references
         // especially since they are not fully hydrated and may not have valid hashes yet.
         if (isComingFromBuffer) {
-            referenceCount++
-            if (referencesByIndex == null) referencesByIndex = HashMap()
-            referencesByIndex!![referenceCount] = reference
+            val referenceIndex = reserveReference()
+            if (referenceIndex > 0)
+                referencesByIndex!![referenceIndex - 1] = reference
         } else {
             if (references == null) references = HashMap()
-            if (referencesByIndex == null) referencesByIndex = HashMap()
             references!!.getOrPut(reference.javaClass) { HashMap() }
                     .getOrPut(reference) {
-                        referenceCount++
-                        referencesByIndex!![referenceCount] = reference
-                        referenceCount
+                        if (referenceCount == Short.MAX_VALUE.toInt())
+                            return
+                        ++referenceCount
                     }
         }
+    }
+
+    /**
+     * Reserve the next reader-side reference slot before reading nested values.
+     * The writer registers pairs before their elements, so the reader must do the same.
+     */
+    private fun reserveReference(): Int {
+        if (referenceCount == Short.MAX_VALUE.toInt())
+            return -1
+
+        if (referencesByIndex == null) referencesByIndex = ArrayList()
+        referencesByIndex!!.add(null)
+        return ++referenceCount
+    }
+
+    /**
+     * The public ByteBuffer constructor supports both reading and writing. Switch to the
+     * reader reference representation when the first typed value is read.
+     */
+    private fun beginReading() {
+        if (isComingFromBuffer)
+            return
+
+        clearReferences()
+        isComingFromBuffer = true
     }
 
     /**
@@ -129,7 +153,7 @@ open class BufferStream(buffer: ByteBuffer) {
      * @param index Index to seek to
      * @return The actual value referenced
      */
-    private fun referenceOf(index: Int): Any = referencesByIndex?.get(index)!!
+    private fun referenceOf(index: Int): Any = referencesByIndex?.getOrNull(index - 1)!!
 
     //endregion
 
@@ -151,6 +175,7 @@ open class BufferStream(buffer: ByteBuffer) {
     fun clear() {
         this.expandableByteBuffer!!.buffer.clear()
         clearReferences()
+        isComingFromBuffer = false
         cachedMetadata = null
     }
 
@@ -162,7 +187,10 @@ open class BufferStream(buffer: ByteBuffer) {
      */
     private fun clearReferences() {
         references?.clear()
-        referencesByIndex?.clear()
+        if ((referencesByIndex?.size ?: 0) > MAX_RETAINED_REFERENCE_CAPACITY)
+            referencesByIndex = null
+        else
+            referencesByIndex?.clear()
         referenceCount = 0
     }
 
@@ -314,6 +342,7 @@ open class BufferStream(buffer: ByteBuffer) {
     val value: Any?
         @Throws(BufferingException::class)
         get() {
+            beginReading()
             expandableByteBuffer!!.ensureRequiredSize(java.lang.Byte.BYTES)
 
             when (val bufferObjectType = BufferObjectType.enumValues[expandableByteBuffer!!.buffer.get().toInt()]) {
@@ -393,6 +422,7 @@ open class BufferStream(buffer: ByteBuffer) {
     val objectClass: Class<*>
         @Throws(BufferingException::class)
         get() {
+            beginReading()
             val stringSize = expandableByteBuffer!!.buffer.int
             val stringBytes = ByteArray(stringSize)
             expandableByteBuffer!!.buffer.get(stringBytes)
@@ -460,10 +490,13 @@ open class BufferStream(buffer: ByteBuffer) {
     val pair: Pair<Any?, Any?>
         @Throws(BufferingException::class)
         get() {
+            beginReading()
+            val referenceIndex = reserveReference()
             val first = value
             val second = value
             val pair = Pair(first, second)
-            addReference(pair)
+            if (referenceIndex > 0)
+                referencesByIndex!![referenceIndex - 1] = pair
             return pair
         }
 
@@ -482,14 +515,20 @@ open class BufferStream(buffer: ByteBuffer) {
 
             val collectionClass = value as Class<*>?
             val size = expandableByteBuffer!!.buffer.int
+            val initialCapacity = size.coerceAtLeast(0)
 
             val collection = try {
-                if(collectionClass == ArrayList::class.java || collectionClass == SortedList::class.java || Modifier.isPrivate(collectionClass!!.modifiers))
-                    ArrayList()
-                else
-                    collectionClass.instance<MutableCollection<Any?>>(context?.contextId ?: "")
+                when {
+                    collectionClass == ArrayList::class.java || collectionClass == SortedList::class.java || Modifier.isPrivate(collectionClass!!.modifiers) ->
+                        ArrayList(initialCapacity)
+                    collectionClass == HashSet::class.java ->
+                        HashSet(collectionCapacity(initialCapacity))
+                    collectionClass == LinkedHashSet::class.java ->
+                        LinkedHashSet(collectionCapacity(initialCapacity))
+                    else -> collectionClass.instance<MutableCollection<Any?>>(context?.contextId ?: "")
+                }
             } catch (e: Exception) {
-                ArrayList()
+                ArrayList(initialCapacity)
             }
 
             for (i in 0 until size)
@@ -511,15 +550,19 @@ open class BufferStream(buffer: ByteBuffer) {
         @Throws(BufferingException::class)
         get() {
             val mapClass = value as Class<*>
+            val mapSize = expandableByteBuffer!!.buffer.int
+            val initialCapacity = collectionCapacity(mapSize.coerceAtLeast(0))
             val map:MutableMap<Any,Any?> = try {
-                mapClass.instance(context?.contextId ?: "")
+                when (mapClass) {
+                    HashMap::class.java -> HashMap(initialCapacity)
+                    LinkedHashMap::class.java -> LinkedHashMap(initialCapacity)
+                    else -> mapClass.instance(context?.contextId ?: "")
+                }
             } catch (e: InstantiationException) {
                 throw BufferingException(BufferingException.CANNOT_INSTANTIATE, mapClass)
             } catch (e: IllegalAccessException) {
                 throw BufferingException(BufferingException.CANNOT_INSTANTIATE, mapClass)
             }
-
-            val mapSize = expandableByteBuffer!!.buffer.int
 
             for (i in 0 until mapSize)
                 map[value!!] = value
@@ -617,9 +660,8 @@ open class BufferStream(buffer: ByteBuffer) {
             type === BufferObjectType.BYTE_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = ByteArray(expandableByteBuffer!!.buffer.int)
-                expandableByteBuffer!!.ensureRequiredSize(java.lang.Byte.BYTES * arr.size)
-                for (i in arr.indices)
-                    arr[i] = expandableByteBuffer!!.buffer.get()
+                expandableByteBuffer!!.ensureRequiredSize(arr.size)
+                expandableByteBuffer!!.buffer.get(arr)
                 return arr
             }
             type === BufferObjectType.CHAR_ARRAY -> {
@@ -700,7 +742,8 @@ open class BufferStream(buffer: ByteBuffer) {
      * @throws BufferingException Generic Buffer Exception
      */
     @Throws(BufferingException::class)
-    fun putArray(array: Any?) = when {
+    fun putArray(array: Any?) {
+        when {
         array!!.javaClass == ClassMetadata.LONG_ARRAY-> {
             val arr = array as LongArray
             putInt(arr.size)
@@ -722,8 +765,8 @@ open class BufferStream(buffer: ByteBuffer) {
         array.javaClass == ClassMetadata.BYTE_ARRAY -> {
             val arr = array as ByteArray
             putInt(arr.size)
-            expandableByteBuffer!!.ensureSize(java.lang.Byte.BYTES * arr.size)
-            for (anArr in arr) expandableByteBuffer!!.buffer.put(anArr)
+            expandableByteBuffer!!.ensureSize(arr.size)
+            expandableByteBuffer!!.buffer.put(arr)
         }
         array.javaClass == ClassMetadata.CHAR_ARRAY -> {
             val arr = array as CharArray
@@ -747,7 +790,7 @@ open class BufferStream(buffer: ByteBuffer) {
             val arr = array as DoubleArray
             putInt(arr.size)
             expandableByteBuffer!!.ensureSize(java.lang.Double.BYTES * arr.size)
-            for (anArr in arr) putDouble(anArr)
+            for (anArr in arr) expandableByteBuffer!!.buffer.putDouble(anArr)
         }
         array.javaClass == kotlin.Array<Any?>::class.java -> {
             @Suppress("UNCHECKED_CAST")
@@ -761,6 +804,7 @@ open class BufferStream(buffer: ByteBuffer) {
             val arr = array as kotlin.Array<Any?>
             putInt(arr.size)
             for (anArr in arr) putObject(anArr)
+        }
         }
     }
 
@@ -1156,6 +1200,14 @@ open class BufferStream(buffer: ByteBuffer) {
 
     companion object {
 
+        private const val MAX_RETAINED_REFERENCE_CAPACITY = 1024
+
+        private fun collectionCapacity(expectedSize: Int): Int = when {
+            expectedSize < 3 -> expectedSize + 1
+            expectedSize < 1 shl 30 -> (expectedSize / 0.75f + 1.0f).toInt()
+            else -> Int.MAX_VALUE
+        }
+
         /**
          * Convert an value to the byte buffer representation
          *
@@ -1192,14 +1244,13 @@ open class BufferStream(buffer: ByteBuffer) {
         @JvmOverloads
         @JvmStatic
         fun fromBuffer(buffer: ByteBuffer, context: SchemaContext? = null): Any? {
-
-            val bufferStream = BufferStream(context)
-            BufferPool.recycle(bufferStream.byteBuffer)
-
             val bufferStartingPosition = buffer.position()
             val maxBufferSize = buffer.int
 
-            bufferStream.expandableByteBuffer = ExpandableByteBuffer(buffer, bufferStartingPosition, maxBufferSize)
+            val bufferStream = BufferStream(buffer)
+            bufferStream.context = context
+
+            bufferStream.expandableByteBuffer = ExpandableByteBuffer(buffer, maxBufferSize, bufferStartingPosition)
             bufferStream.isComingFromBuffer = true
 
             val returnValue: Any? = try {

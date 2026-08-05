@@ -43,6 +43,7 @@ class CompositeIndexKeyBTreeTest {
         DefaultDiskMapFactory(databasePath.toString()).let { factory ->
             try {
                 val map = postingMap(factory, Long::class.java, LONG_MAP_NAME)
+                factory.commit()
                 val dataBytesBeforePostings = logicalStoreSize(databasePath)
 
                 postings.forEach { map.add(it.value, it.recordId) }
@@ -109,6 +110,7 @@ class CompositeIndexKeyBTreeTest {
         DefaultDiskMapFactory(databasePath.toString()).let { factory ->
             try {
                 val map = postingMap(factory, Date::class.java, DATE_MAP_NAME)
+                factory.commit()
                 val dataBytesBeforePostings = logicalStoreSize(databasePath)
 
                 dates.shuffled(Random(31)).forEachIndexed { index, value ->
@@ -242,6 +244,7 @@ class CompositeIndexKeyBTreeTest {
         DefaultDiskMapFactory(databasePath.toString()).let { factory ->
             try {
                 val map = postingMap(factory, Long::class.java, RANDOM_MAP_NAME)
+                factory.commit()
                 val dataBytesBeforePostings = logicalStoreSize(databasePath)
 
                 postings.shuffled(Random(41)).forEach { assertTrue(map.add(it.value, it.recordId)) }
@@ -301,6 +304,7 @@ class CompositeIndexKeyBTreeTest {
             try {
                 val doubleMap = postingMap(factory, Double::class.java, DOUBLE_MAP_NAME)
                 val floatMap = postingMap(factory, Float::class.java, FLOAT_MAP_NAME)
+                factory.commit()
                 val dataBytesBeforePostings = logicalStoreSize(databasePath)
 
                 doubleValues.forEachIndexed { index, value -> doubleMap.add(value, index.toLong() + 1L) }

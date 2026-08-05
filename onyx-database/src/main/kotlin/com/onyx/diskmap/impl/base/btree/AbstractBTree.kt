@@ -127,6 +127,7 @@ abstract class AbstractBTree<K, V>(
                 result?.previousValue = if (capturePreviousValue && found) valueAt(leaf, index) else null
             }
 
+            val previousValueLocation = if (found) recordPointerAt(leaf, index) else BTreeEntry.NULL_RECORD
             val valueLocation = if (value == null) BTreeEntry.NULL_RECORD else records.writeObject(value)
             if (found) {
                 val entryPosition = leaf.pointers[index]
@@ -135,6 +136,11 @@ abstract class AbstractBTree<K, V>(
                 result?.recordId = entryPosition
                 result?.isInsert = false
                 mutationVersion++
+                if (previousValueLocation != BTreeEntry.NULL_RECORD) {
+                    // This slot cannot be reused until a factory commit has forced
+                    // both the new value and this updated entry pointer.
+                    records.retireObject(previousValueLocation)
+                }
                 return entryPosition
             }
 

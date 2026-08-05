@@ -33,6 +33,7 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      */
     open protected lateinit var store: Store
     open protected lateinit var nodeStore: Store
+    private val commitLock = Any()
 
     // Contains all initialized maps
     open protected val maps = OptimisticLockingMap<String, Map<*, *>>(WeakHashMap())
@@ -170,9 +171,11 @@ open class DefaultDiskMapFactory : DiskMapFactory {
     /**
      * Force the storage to persist
      */
-    override fun commit() {
+    override fun commit() = synchronized(commitLock) {
+        store.prepareRetiredObjects()
         store.commit()
         nodeStore.commit()
+        store.publishRetiredObjects()
     }
 
     /**

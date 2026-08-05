@@ -1,6 +1,7 @@
 package diskmap
 
 import com.onyx.diskmap.DiskMap
+import com.onyx.diskmap.data.BTreeEntry
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import database.base.DatabaseBaseTest
 import org.junit.Before
@@ -8,6 +9,7 @@ import org.junit.Test
 import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -48,6 +50,53 @@ class BTreeMapTest {
         assertEquals(stable, result.recordId)
         assertEquals("before", result.previousValue)
         assertEquals("after", map.getWithRecID(stable))
+        store.close()
+    }
+
+    @Test
+    fun committedUpdatesReclaimRetiredValueFramesWithoutOverwritingTheLiveValue() {
+        var store = DefaultDiskMapFactory(TEST_DATABASE)
+        var map = store.getHashMap<DiskMap<Int, String>>(Int::class.java, "tree")
+        val initialValue = "before".repeat(128)
+        val smallerValue = "after".repeat(32)
+
+        map[10] = initialValue
+        val stableRecordId = map.getRecID(10)
+        val initialValuePosition = BTreeEntry.get(map.fileStore, stableRecordId).record
+        map[10] = smallerValue
+        val secondValuePosition = BTreeEntry.get(map.fileStore, stableRecordId).record
+        assertNotEquals(initialValuePosition, secondValuePosition)
+
+        // Retired frames remain unavailable until both stores reach a durable commit boundary.
+        map[10] = "pending".repeat(32)
+        val thirdValuePosition = BTreeEntry.get(map.fileStore, stableRecordId).record
+        val sizeWithThreeFrames = map.records.getFileSize()
+        assertNotEquals(initialValuePosition, thirdValuePosition)
+        assertNotEquals(secondValuePosition, thirdValuePosition)
+
+        repeat(100) { update ->
+            store.commit()
+            map[10] = if (update and 1 == 0) "even".repeat(32) else smallerValue
+            assertEquals(sizeWithThreeFrames, map.records.getFileSize())
+        }
+
+        assertEquals(stableRecordId, map.getRecID(10))
+        assertEquals(smallerValue, map[10])
+
+        val largerValue = "larger".repeat(512)
+        map[10] = largerValue
+        val appendedValuePosition = BTreeEntry.get(map.fileStore, stableRecordId).record
+        assertTrue(appendedValuePosition >= sizeWithThreeFrames)
+        assertTrue(map.records.getFileSize() > sizeWithThreeFrames)
+        assertEquals(largerValue, map[10])
+        store.commit()
+        store.close()
+
+        store = DefaultDiskMapFactory(TEST_DATABASE)
+        map = store.getHashMap(Int::class.java, "tree")
+        assertEquals(stableRecordId, map.getRecID(10))
+        assertEquals(appendedValuePosition, BTreeEntry.get(map.fileStore, stableRecordId).record)
+        assertEquals(largerValue, map[10])
         store.close()
     }
 

@@ -104,6 +104,21 @@ interface Store {
     /** Allocates serialized object bytes; stores may serve these from an extent. */
     fun allocateObject(size: Int): Long = allocate(size)
 
+    /**
+     * Mark a length-prefixed object frame as unreachable. Implementations may
+     * defer or ignore reclamation; the default is deliberately safe and inert.
+     */
+    fun retireObject(position: Long) = Unit
+
+    /** Freeze the current retirement generation before durability barriers begin. */
+    fun prepareRetiredObjects() = Unit
+
+    /**
+     * Publish retired frames after every store containing references to them
+     * has crossed its durability barrier. The default performs no reclamation.
+     */
+    fun publishRetiredObjects() = Unit
+
     /** Allocates a block at an alignment boundary when the store supports it. */
     fun allocateAligned(size: Int, alignment: Int): Long = allocate(size)
 

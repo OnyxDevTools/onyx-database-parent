@@ -87,6 +87,8 @@ enum class BufferObjectType constructor(private val type: Class<*>?) {
             else if (value is IManagedEntity && context == null)
                 return OTHER
 
+            resolvedTypes[type]?.let { return it }
+
             return resolvedTypes.computeIfAbsent(type) { resolvedType ->
                 enumValues
                     .firstOrNull { it.type != null && it.type.isAssignableFrom(resolvedType) }

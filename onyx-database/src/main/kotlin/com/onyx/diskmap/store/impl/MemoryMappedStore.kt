@@ -23,6 +23,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * Unique identifier for this file instance.
      */
     private var fileId: Int = 0
+    private var physicalEndBeforeWarmMapping: Long? = null
 
     /**
      * Default constructor.
@@ -61,6 +62,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
             if (!super.open(filePath)) {
                 return false
             }
+            physicalEndBeforeWarmMapping = channel?.size()
             // Warm the first slice to preserve the previous open-time mapping behavior.
             getBuffer(0)
             return true
@@ -86,6 +88,12 @@ open class MemoryMappedStore : FileChannelStore, Store {
         }
         return (current - position).toInt()
     }
+
+    override fun recoverLogicalEnd(persistedReservationEnd: Long, physicalEnd: Long): Long =
+        super.recoverLogicalEnd(
+            persistedReservationEnd,
+            physicalEndBeforeWarmMapping ?: physicalEnd
+        )
 
     /**
      * Reads data from the store at the specified position into the destination buffer.
@@ -140,14 +148,33 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @return True if the store was closed successfully, false otherwise.
      */
     override fun close(): Boolean {
+        // Persist the exact allocated end while the header mapping is still live,
+        // then evict mappings before truncating their physical reservation.
+        var strictlyForced = true
+        if (!deleteOnClose && channel?.isOpen == true) {
+            try {
+                finishAllocationReservations()
+                forceMappedFileSegments(fileId)
+            } catch (_: Throwable) {
+                // Still evict mappings and close the channel, but do not
+                // truncate after a failed strict force.
+                strictlyForced = false
+            }
+        }
         mappedFileSegmentCache.removeFile(fileId)
-        val truncated = deleteOnClose || channel?.isOpen != true || try {
+        val truncated = deleteOnClose || channel?.isOpen != true || strictlyForced && try {
             channel?.truncate(getFileSize())
             true
         } catch (_: IOException) {
             false
         }
-        return super.close() && truncated
+        val closed = try {
+            super.close()
+        } catch (_: Throwable) {
+            runCatching { channel?.close() }
+            false
+        }
+        return strictlyForced && truncated && closed
     }
 
     /**
@@ -156,9 +183,13 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     override fun commit() {
         if (!deleteOnClose) {
-            forceMappedFileSegments(fileId)
             super.commit()
         }
+    }
+
+    override fun forceWrites() {
+        forceMappedFileSegments(fileId)
+        super.forceWrites()
     }
 
     /**

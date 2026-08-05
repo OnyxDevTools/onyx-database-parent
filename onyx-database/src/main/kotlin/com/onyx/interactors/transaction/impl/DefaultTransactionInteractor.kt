@@ -32,21 +32,25 @@ import java.nio.channels.FileChannel
 open class DefaultTransactionInteractor(private val transactionStore: TransactionStore, private val persistenceManager: PersistenceManager) : TransactionInteractor {
 
     private val transactionWriteLock = Any()
+    private val transactionMetadataBuffer = ByteBuffer.allocate(TRANSACTION_METADATA_SIZE)
+    private val transactionWriteBuffers = arrayOf(transactionMetadataBuffer, transactionMetadataBuffer)
 
     private fun writeTransaction(transactionType:Byte, buffer: ByteBuffer) {
         withBuffer(buffer) { transBuffer ->
             try {
-                BufferPool.allocateAndLimit(transBuffer.limit() + TRANSACTION_METADATA_SIZE) { transactionBuffer ->
-                    transactionBuffer.put(transactionType)
-                    transactionBuffer.putInt(transBuffer.limit())
-                    transactionBuffer.put(transBuffer)
-                    transactionBuffer.flip()
+                synchronized(transactionWriteLock) {
+                    transactionMetadataBuffer.clear()
+                    transactionMetadataBuffer.put(transactionType)
+                    transactionMetadataBuffer.putInt(transBuffer.limit())
+                    transactionMetadataBuffer.flip()
 
-                    synchronized(transactionWriteLock) {
+                    transactionWriteBuffers[1] = transBuffer
+                    try {
                         val file = transactionStore.getTransactionFile()
-                        while (transactionBuffer.hasRemaining()) {
-                            file.write(transactionBuffer)
-                        }
+                        file.writeFully(transactionWriteBuffers)
+                    } finally {
+                        // Do not retain a large, non-pooled serialization buffer between transactions.
+                        transactionWriteBuffers[1] = transactionMetadataBuffer
                     }
                 }
             } catch (e: TransactionException) {
@@ -273,6 +277,12 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
         private const val UPDATE_QUERY: Byte = 4
         private const val TRANSACTION_METADATA_SIZE = 5
         private val TRANSACTION_TYPES = setOf(SAVE, DELETE, DELETE_QUERY, UPDATE_QUERY)
+    }
+}
+
+private fun FileChannel.writeFully(buffers: Array<ByteBuffer>) {
+    while (buffers[0].hasRemaining() || buffers[1].hasRemaining()) {
+        write(buffers)
     }
 }
 

@@ -13,9 +13,7 @@ internal data class MappedFileSegmentKey(val fileId: Int, val idx: Int)
 internal class MappedFileSegment(
     val buffer: ByteBuffer,
     private val forceAction: () -> Unit = {
-        runCatching {
-            (buffer as? MappedByteBuffer)?.force()
-        }
+        (buffer as? MappedByteBuffer)?.force()
     },
     private val closeAction: () -> Unit
 ) {
@@ -26,9 +24,7 @@ internal class MappedFileSegment(
         if (closed) {
             return
         }
-        runCatching {
-            forceAction.invoke()
-        }
+        forceAction.invoke()
     }
 
     @Synchronized
@@ -36,7 +32,9 @@ internal class MappedFileSegment(
         if (closed) {
             return
         }
-        force()
+        // Eviction and close remain best effort. Explicit Store.commit() calls
+        // force() directly through the cache and therefore observes failures.
+        runCatching { force() }
         closed = true
         runCatching {
             closeAction.invoke()
@@ -247,9 +245,7 @@ private class ForeignMemorySegmentMapper(
             return MappedFileSegment(
                 buffer = buffer,
                 forceAction = {
-                    runCatching {
-                        segmentForceMethod?.invoke(segment)
-                    }
+                    segmentForceMethod?.invoke(segment)
                 },
                 closeAction = {
                     arenaCloseMethod.invoke(arena)
