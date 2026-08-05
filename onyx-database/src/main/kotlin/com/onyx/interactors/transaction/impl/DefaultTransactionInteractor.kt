@@ -251,9 +251,9 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
                             transactionBuffer.clear()
                         }
                     } catch (cause: TransactionException) {
-                        throw cause
+                        println("Failure to apply transaction")
                     } catch (cause: Exception) {
-                        throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_EXECUTE, transaction, cause)
+                        println("Failure to apply transaction")
                     }
                 }
             } catch (_: IOException) {
