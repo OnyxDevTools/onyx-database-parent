@@ -23,6 +23,108 @@ import kotlin.test.assertTrue
 class StoreAllocationRecoveryTest {
 
     @Test
+    fun embeddedBatchRangeStaysDenseAcrossAlignedPagesAndCommit() {
+        withTempDirectory("onyx-aligned-slot-density") { directory ->
+            val path = directory.resolve("records.db")
+            var store = FileChannelStore(path.toString(), null, false)
+            val slotSize = 6
+            val pageSize = 4 * 1024
+            val reusedSlotCount = 500
+            val firstSlotBytes = ByteArray(slotSize) { (it + 1).toByte() }
+            val lastSlotBytes = ByteArray(slotSize) { (it + 11).toByte() }
+            var lastSlot = 0L
+
+            try {
+                val firstSlot = store.allocateSlot(slotSize)
+                assertEquals(java.lang.Long.BYTES.toLong(), firstSlot)
+                store.write(ByteBuffer.wrap(firstSlotBytes), firstSlot)
+
+                val firstPage = store.allocateAligned(pageSize, pageSize)
+                assertEquals(0L, firstPage % pageSize)
+                store.write(ByteBuffer.wrap(ByteArray(pageSize) { 3 }), firstPage)
+                val firstPageEnd = firstPage + pageSize
+                assertEquals(firstPageEnd, store.getFileSize())
+
+                store.commit()
+                repeat(reusedSlotCount) { index ->
+                    lastSlot = store.allocateSlot(slotSize)
+                    assertEquals(firstSlot + slotSize.toLong() * (index + 1L), lastSlot)
+                    val bytes = if (index == reusedSlotCount - 1) lastSlotBytes else ByteArray(slotSize) { 7 }
+                    store.write(ByteBuffer.wrap(bytes), lastSlot)
+                }
+                assertEquals(firstPageEnd, store.getFileSize())
+
+                val secondPage = store.allocateAligned(pageSize, pageSize)
+                assertEquals(firstPageEnd, secondPage)
+                store.write(ByteBuffer.wrap(ByteArray(pageSize) { 9 }), secondPage)
+                val finalEnd = secondPage + pageSize
+                assertEquals(finalEnd, store.getFileSize())
+                store.commit()
+                assertTrue(store.close())
+
+                store = FileChannelStore(path.toString(), null, false)
+                assertEquals(finalEnd, store.getFileSize())
+                assertContentEquals(firstSlotBytes, readBytes(store, firstSlot, slotSize))
+                assertContentEquals(lastSlotBytes, readBytes(store, lastSlot, slotSize))
+            } finally {
+                if (isChannelOpen(store)) store.close()
+            }
+        }
+    }
+
+    @Test
+    fun crashRecoveryDoesNotReuseLostEmbeddedBatchRange() {
+        withTempDirectory("onyx-embedded-range-crash") { directory ->
+            val path = directory.resolve("records.db")
+            var store = FileChannelStore(path.toString(), null, false)
+            val slotSize = 6
+            val pageSize = 4 * 1024
+            val firstBytes = ByteArray(slotSize) { 1 }
+            val secondBytes = ByteArray(slotSize) { 2 }
+
+            try {
+                val firstSlot = store.allocateSlot(slotSize)
+                store.write(ByteBuffer.wrap(firstBytes), firstSlot)
+                val page = store.allocateAligned(pageSize, pageSize)
+                store.write(ByteBuffer.wrap(ByteArray(pageSize) { 3 }), page)
+
+                val secondSlot = store.allocateSlot(slotSize)
+                assertEquals(firstSlot + slotSize, secondSlot)
+                store.write(ByteBuffer.wrap(secondBytes), secondSlot)
+                val pageEnd = page + pageSize
+                assertEquals(pageEnd, store.getFileSize())
+                crashClose(store)
+
+                store = FileChannelStore(path.toString(), null, false)
+                assertEquals(pageEnd, store.getFileSize())
+                assertContentEquals(firstBytes, readBytes(store, firstSlot, slotSize))
+                assertContentEquals(secondBytes, readBytes(store, secondSlot, slotSize))
+                assertEquals(pageEnd, store.allocateSlot(slotSize))
+            } finally {
+                if (isChannelOpen(store)) store.close()
+            }
+        }
+    }
+
+    @Test
+    fun unalignedAllocationReclaimsTrailingBatchReservation() {
+        withTempDirectory("onyx-unaligned-after-slot") { directory ->
+            val store = FileChannelStore(directory.resolve("records.db").toString(), null, false)
+            try {
+                val slot = store.allocateSlot(6)
+                assertEquals(java.lang.Long.BYTES.toLong(), slot)
+
+                val direct = store.allocate(96)
+                assertEquals(slot + 6, direct)
+                assertEquals(direct + 96, store.getFileSize())
+                assertEquals(direct + 96, store.allocateSlot(6))
+            } finally {
+                store.close()
+            }
+        }
+    }
+
+    @Test
     fun interleavedObjectsAndSlotsShareOneRangeAndSurviveRepeatedCommits() {
         withTempDirectory("onyx-file-ranges") { directory ->
             val path = directory.resolve("records.db")
@@ -348,6 +450,13 @@ class StoreAllocationRecoveryTest {
         while (buffer.hasRemaining()) channel.read(buffer)
         buffer.flip()
         buffer.long
+    }
+
+    private fun readBytes(store: Store, position: Long, size: Int): ByteArray {
+        val buffer = ByteBuffer.allocate(size)
+        store.read(buffer, position)
+        buffer.flip()
+        return ByteArray(size).also(buffer::get)
     }
 
     private fun crashClose(store: FileChannelStore) {

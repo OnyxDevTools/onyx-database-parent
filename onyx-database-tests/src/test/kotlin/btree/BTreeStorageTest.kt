@@ -129,6 +129,47 @@ class BTreeStorageTest {
     }
 
     @Test
+    fun btreeIndexAllocationOverheadStaysBelowTenPercent() {
+        val store = createStore()
+        val records = InMemoryStore(null, "btree-storage-density-records")
+        try {
+            val header = Header().apply { position = store.allocate(Header.HEADER_SIZE) }
+            val map = DiskBTreeMap<Int, Int>(WeakReference(store), WeakReference(records), header, Int::class.java)
+            val entryCount = 20_000
+
+            repeat(entryCount) { map[it] = it }
+
+            var fullPageCount = 0L
+            val visited = HashSet<Long>()
+            val pending = ArrayDeque<Long>().apply { add(map.reference.firstNode) }
+            while (pending.isNotEmpty()) {
+                val position = pending.removeFirst()
+                assertTrue(visited.add(position), "B-tree page $position was visited more than once")
+                val page = BTreePage.get(store, position)
+                if (!page.compact) fullPageCount++
+                if (!page.leaf) {
+                    repeat(page.keyCount + 1) { pending.add(page.pointers[it]) }
+                }
+            }
+
+            val knownPayload = java.lang.Long.BYTES.toLong() +
+                Header.HEADER_SIZE +
+                BTreePage.COMPACT_PAGE_SIZE +
+                entryCount.toLong() * BTreeEntry.ENTRY_SIZE +
+                fullPageCount * BTreePage.PAGE_SIZE
+            val maximumSize = knownPayload + knownPayload / 10L
+
+            assertTrue(
+                store.getFileSize() <= maximumSize,
+                "B-tree node store used ${store.getFileSize()} bytes for $knownPayload bytes of known payload"
+            )
+        } finally {
+            store.close()
+            records.close()
+        }
+    }
+
+    @Test
     fun rejectsPagesFromAnotherFormatVersion() {
         val store = createStore()
         val position = store.allocate(BTreePage.COMPACT_PAGE_SIZE)

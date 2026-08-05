@@ -443,16 +443,23 @@ open class FileChannelStore() : Store {
         }
         val position = range.next
         range.next = Math.addExact(position, size.toLong())
-        logicalSizeCounter.set(range.next)
+        logicalSizeCounter.set(maxOf(logicalSizeCounter.get(), range.next))
         return position
     }
 
     private fun allocateLocked(size: Int, alignment: Int): Long {
         require(size >= 0) { "Allocation size must not be negative: $size" }
-        // Direct/aligned allocations close the shared range so its unused tail
-        // is immediately available instead of becoming a hole before the page.
-        allocationRange = null
-        val current = logicalSizeCounter.get()
+        val logicalEnd = logicalSizeCounter.get()
+        val current = if (alignment == 1) {
+            // An unaligned allocation can reclaim a trailing reservation. Keep
+            // only ranges already embedded below the logical high-water mark.
+            if ((allocationRange?.end ?: 0L) > logicalEnd) allocationRange = null
+            logicalEnd
+        } else {
+            // Aligned pages sit after the live reservation so later slots can
+            // fill that extent without repeatedly padding every page boundary.
+            maxOf(logicalEnd, allocationRange?.end ?: 0L)
+        }
         val position = if (alignment == 1) current else (current + alignment - 1) and -alignment.toLong()
         val newFileSize = Math.addExact(position, size.toLong())
         logicalSizeCounter.set(newFileSize)
@@ -481,7 +488,11 @@ open class FileChannelStore() : Store {
      */
     protected fun finishAllocationReservations() = synchronized(allocationLock) {
         val committedEnd = maxOf(STORE_HEADER_SIZE.toLong(), logicalSizeCounter.get())
-        allocationRange = null
+        allocationRange?.let { range ->
+            if (range.next >= range.end || range.end > committedEnd) {
+                allocationRange = null
+            }
+        }
         ensurePhysicalEndLocked(committedEnd)
         if (reservationEnd != committedEnd) {
             persistReservationEndLocked(committedEnd)
