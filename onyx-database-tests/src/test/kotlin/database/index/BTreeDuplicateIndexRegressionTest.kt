@@ -338,8 +338,8 @@ class BTreeDuplicateIndexRegressionTest {
     )
 
     private companion object {
-        // BTreePage.MAX_KEYS is 254; 300 equal keys force the duplicate run across a leaf split.
-        const val DUPLICATE_COUNT = 300
+        // Int posting leaves hold 451 keys in v2; 500 equal keys force the duplicate run across a split.
+        const val DUPLICATE_COUNT = 500
         const val LOWER_COUNT = 3
         const val UPPER_COUNT = 4
         const val LOWER_VALUE = 10

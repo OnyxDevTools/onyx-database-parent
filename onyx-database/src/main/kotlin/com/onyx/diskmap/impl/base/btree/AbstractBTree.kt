@@ -42,7 +42,12 @@ abstract class AbstractBTree<K, V>(
     }
 
     private fun createRootPage(): BTreePage =
-        BTreePage.create(fileStore, leaf = true, compact = true).also {
+        BTreePage.create(
+            fileStore,
+            leaf = true,
+            compact = true,
+            cacheDecodedKeys = !storeKeyWithinNode
+        ).also {
             writePage(it)
             updateHeaderFirstNode(reference, it.position)
         }
@@ -50,7 +55,7 @@ abstract class AbstractBTree<K, V>(
     protected fun findPageAtPosition(position: Long): BTreePage {
         require(position > 0L) { "Invalid B-tree page position $position" }
         pageCache[position]?.let { return it }
-        val loaded = BTreePage.get(fileStore, position)
+        val loaded = BTreePage.get(fileStore, position, cacheDecodedKeys = !storeKeyWithinNode)
         return pageCache.putIfAbsent(position, loaded) ?: loaded
     }
 
@@ -146,11 +151,16 @@ abstract class AbstractBTree<K, V>(
 
     private fun promoteCompactRoot(compactRoot: BTreePage) {
         check(compactRoot.position == root.position && compactRoot.leaf)
-        val promoted = BTreePage.create(fileStore, leaf = true)
+        val promoted = BTreePage.create(
+            fileStore,
+            leaf = true,
+            packedPointers = compactRoot.packedPointers,
+            cacheDecodedKeys = !storeKeyWithinNode
+        )
         promoted.keyCount = compactRoot.keyCount
         System.arraycopy(compactRoot.keys, 0, promoted.keys, 0, compactRoot.keyCount)
         System.arraycopy(compactRoot.pointers, 0, promoted.pointers, 0, compactRoot.keyCount)
-        System.arraycopy(compactRoot.decodedKeys, 0, promoted.decodedKeys, 0, compactRoot.keyCount)
+        compactRoot.decodedKeys.copyTo(promoted.decodedKeys, 0, 0, compactRoot.keyCount)
         System.arraycopy(compactRoot.recordPointers, 0, promoted.recordPointers, 0, compactRoot.keyCount)
         writePage(promoted)
         pageCache.remove(compactRoot.position)
@@ -160,16 +170,21 @@ abstract class AbstractBTree<K, V>(
 
     private fun splitLeaf(leaf: BTreePage, path: SearchPath, insertedIndex: Int) {
         val splitIndex = when {
-            leaf.nextLeaf == 0L && insertedIndex == leaf.keyCount - 1 -> EDGE_SPLIT_KEYS
-            leaf.previousLeaf == 0L && insertedIndex == 0 -> leaf.keyCount - EDGE_SPLIT_KEYS
+            leaf.nextLeaf == 0L && insertedIndex == leaf.keyCount - 1 -> leaf.keyCount - EDGE_RETAINED_KEYS
+            leaf.previousLeaf == 0L && insertedIndex == 0 -> EDGE_RETAINED_KEYS
             else -> leaf.keyCount / 2
         }
-        val right = BTreePage.create(fileStore, leaf = true)
+        val right = BTreePage.create(
+            fileStore,
+            leaf = true,
+            packedPointers = leaf.packedPointers,
+            cacheDecodedKeys = !storeKeyWithinNode
+        )
         val rightCount = leaf.keyCount - splitIndex
         right.keyCount = rightCount
         System.arraycopy(leaf.keys, splitIndex, right.keys, 0, rightCount)
         System.arraycopy(leaf.pointers, splitIndex, right.pointers, 0, rightCount)
-        System.arraycopy(leaf.decodedKeys, splitIndex, right.decodedKeys, 0, rightCount)
+        leaf.decodedKeys.copyTo(right.decodedKeys, splitIndex, 0, rightCount)
         System.arraycopy(leaf.recordPointers, splitIndex, right.recordPointers, 0, rightCount)
         leaf.keyCount = splitIndex
 
@@ -196,7 +211,12 @@ abstract class AbstractBTree<K, V>(
         parentLevel: Int
     ) {
         if (parentLevel < 0) {
-            val newRoot = BTreePage.create(fileStore, leaf = false)
+            val newRoot = BTreePage.create(
+                fileStore,
+                leaf = false,
+                packedPointers = left.packedPointers,
+                cacheDecodedKeys = !storeKeyWithinNode
+            )
             newRoot.pointers[0] = left.position
             newRoot.insertInternal(0, separator, right.position)
             newRoot.decodedKeys[0] = separatorDecoded
@@ -225,14 +245,19 @@ abstract class AbstractBTree<K, V>(
         val median = page.keyCount / 2
         val promotedKey = page.keys[median]
         val promotedDecoded = page.decodedKeys[median]
-        val right = BTreePage.create(fileStore, leaf = false)
+        val right = BTreePage.create(
+            fileStore,
+            leaf = false,
+            packedPointers = page.packedPointers,
+            cacheDecodedKeys = !storeKeyWithinNode
+        )
         val rightCount = page.keyCount - median - 1
         right.keyCount = rightCount
         right.pointers[0] = page.pointers[median + 1]
         if (rightCount > 0) {
             System.arraycopy(page.keys, median + 1, right.keys, 0, rightCount)
             System.arraycopy(page.pointers, median + 2, right.pointers, 1, rightCount)
-            System.arraycopy(page.decodedKeys, median + 1, right.decodedKeys, 0, rightCount)
+            page.decodedKeys.copyTo(right.decodedKeys, median + 1, 0, rightCount)
         }
         page.keyCount = median
         writePage(page)
@@ -263,7 +288,7 @@ abstract class AbstractBTree<K, V>(
                     leaf.writeSlots(fileStore, index)
                     leaf.writeCount(fileStore)
                 }
-                leaf.keyCount >= MIN_KEYS || leaf.keyCount > 0 &&
+                leaf.keyCount >= minimumKeys(leaf) || leaf.keyCount > 0 &&
                     (leaf.previousLeaf == 0L || leaf.nextLeaf == 0L) -> {
                     leaf.writeSlots(fileStore, index)
                     leaf.writeCount(fileStore)
@@ -290,20 +315,20 @@ abstract class AbstractBTree<K, V>(
         val left = if (childIndex > 0) findPageAtPosition(parent.pointers[childIndex - 1]) else null
         val right = if (childIndex < parent.keyCount) findPageAtPosition(parent.pointers[childIndex + 1]) else null
 
-        if (left != null && left.keyCount > MIN_KEYS) {
+        if (left != null && left.keyCount > minimumKeys(left)) {
             val source = left.keyCount - 1
             leaf.insertLeaf(0, left.keys[source], left.pointers[source], left.recordPointers[source])
             leaf.decodedKeys[0] = left.decodedKeys[source]
             left.removeLeaf(source)
             parent.keys[childIndex - 1] = leaf.keys[0]
             parent.decodedKeys[childIndex - 1] = leaf.decodedKeys[0]
-            writePage(left)
+            left.writeCount(fileStore)
             writePage(leaf)
-            writePage(parent)
+            parent.writeKey(fileStore, childIndex - 1)
             return
         }
 
-        if (right != null && right.keyCount > MIN_KEYS) {
+        if (right != null && right.keyCount > minimumKeys(right)) {
             val appendAt = leaf.keyCount
             leaf.insertLeaf(appendAt, right.keys[0], right.pointers[0], right.recordPointers[0])
             leaf.decodedKeys[appendAt] = right.decodedKeys[0]
@@ -316,7 +341,11 @@ abstract class AbstractBTree<K, V>(
             }
             writePage(right)
             writePage(leaf)
-            writePage(parent)
+            if (firstChanged && childIndex > 0) {
+                parent.writeSlots(fileStore, childIndex - 1, childIndex + 1)
+            } else {
+                parent.writeKey(fileStore, childIndex)
+            }
             if (firstChanged && childIndex == 0) {
                 propagateFirstKey(path, parentLevel - 1, leaf.keys[0], leaf.decodedKeys[0])
             }
@@ -362,7 +391,7 @@ abstract class AbstractBTree<K, V>(
         val offset = destination.keyCount
         System.arraycopy(source.keys, 0, destination.keys, offset, source.keyCount)
         System.arraycopy(source.pointers, 0, destination.pointers, offset, source.keyCount)
-        System.arraycopy(source.decodedKeys, 0, destination.decodedKeys, offset, source.keyCount)
+        source.decodedKeys.copyTo(destination.decodedKeys, 0, offset, source.keyCount)
         System.arraycopy(source.recordPointers, 0, destination.recordPointers, offset, source.keyCount)
         destination.keyCount += source.keyCount
     }
@@ -380,7 +409,7 @@ abstract class AbstractBTree<K, V>(
             return
         }
 
-        if (page.keyCount >= MIN_KEYS) {
+        if (page.keyCount >= minimumKeys(page)) {
             writePage(page)
             return
         }
@@ -392,9 +421,9 @@ abstract class AbstractBTree<K, V>(
         val left = if (childIndex > 0) findPageAtPosition(parent.pointers[childIndex - 1]) else null
         val right = if (childIndex < parent.keyCount) findPageAtPosition(parent.pointers[childIndex + 1]) else null
 
-        if (left != null && left.keyCount > MIN_KEYS) {
+        if (left != null && left.keyCount > minimumKeys(left)) {
             System.arraycopy(page.keys, 0, page.keys, 1, page.keyCount)
-            System.arraycopy(page.decodedKeys, 0, page.decodedKeys, 1, page.keyCount)
+            page.decodedKeys.move(0, 1, page.keyCount)
             System.arraycopy(page.pointers, 0, page.pointers, 1, page.keyCount + 1)
             page.keys[0] = parent.keys[childIndex - 1]
             page.decodedKeys[0] = parent.decodedKeys[childIndex - 1]
@@ -404,13 +433,13 @@ abstract class AbstractBTree<K, V>(
             parent.keys[childIndex - 1] = left.keys[left.keyCount - 1]
             parent.decodedKeys[childIndex - 1] = left.decodedKeys[left.keyCount - 1]
             left.keyCount--
-            writePage(left)
+            left.writeCount(fileStore)
             writePage(page)
-            writePage(parent)
+            parent.writeKey(fileStore, childIndex - 1)
             return
         }
 
-        if (right != null && right.keyCount > MIN_KEYS) {
+        if (right != null && right.keyCount > minimumKeys(right)) {
             val oldRightFirst = right.keys[0]
             val oldRightDecoded = right.decodedKeys[0]
             page.keys[page.keyCount] = parent.keys[childIndex]
@@ -419,14 +448,14 @@ abstract class AbstractBTree<K, V>(
             page.keyCount++
 
             System.arraycopy(right.keys, 1, right.keys, 0, right.keyCount - 1)
-            System.arraycopy(right.decodedKeys, 1, right.decodedKeys, 0, right.keyCount - 1)
+            right.decodedKeys.move(1, 0, right.keyCount - 1)
             System.arraycopy(right.pointers, 1, right.pointers, 0, right.keyCount)
             right.keyCount--
             parent.keys[childIndex] = oldRightFirst
             parent.decodedKeys[childIndex] = oldRightDecoded
             writePage(right)
             writePage(page)
-            writePage(parent)
+            parent.writeKey(fileStore, childIndex)
             return
         }
 
@@ -455,7 +484,7 @@ abstract class AbstractBTree<K, V>(
         destination.pointers[offset + 1] = source.pointers[0]
         if (source.keyCount > 0) {
             System.arraycopy(source.keys, 0, destination.keys, offset + 1, source.keyCount)
-            System.arraycopy(source.decodedKeys, 0, destination.decodedKeys, offset + 1, source.keyCount)
+            source.decodedKeys.copyTo(destination.decodedKeys, 0, offset + 1, source.keyCount)
             System.arraycopy(source.pointers, 1, destination.pointers, offset + 2, source.keyCount)
         }
         destination.keyCount += source.keyCount + 1
@@ -645,7 +674,7 @@ abstract class AbstractBTree<K, V>(
     override fun clearCache() {
         val rootPosition = root.position
         pageCache.clear()
-        root = BTreePage.get(fileStore, rootPosition)
+        root = BTreePage.get(fileStore, rootPosition, cacheDecodedKeys = !storeKeyWithinNode)
         updatePageCache(root)
     }
 
@@ -663,6 +692,8 @@ abstract class AbstractBTree<K, V>(
         path.clear()
         pathPool.get().offerFirst(path)
     }
+
+    private fun minimumKeys(page: BTreePage): Int = page.capacity / 2
 
     private class SearchPath {
         val pages: Array<BTreePage?> = arrayOfNulls(MAX_HEIGHT)
@@ -706,8 +737,7 @@ abstract class AbstractBTree<K, V>(
     }
 
     companion object {
-        private const val MIN_KEYS = BTreePage.MAX_KEYS / 2
-        private const val EDGE_SPLIT_KEYS = 224
+        private const val EDGE_RETAINED_KEYS = 15
         private const val MAX_HEIGHT = 16
     }
 }

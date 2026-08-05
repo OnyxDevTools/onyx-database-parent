@@ -44,6 +44,8 @@ class DiskIndexPostingMap(
         get() = requireNotNull(dataStoreReference.get()) { "Index data store is no longer available" }
 
     private val valueKind = valueKindFor(valueType)
+    private val valueTokenWidth = valueTokenWidthFor(valueType)
+    private val signedValueToken = signedValueTokenFor(valueType)
     private val reference = Header().also {
         it.firstNode = header.firstNode
         it.position = header.position
@@ -139,7 +141,7 @@ class DiskIndexPostingMap(
         pageCache.clear()
         objectTokensByValue.clear()
         objectValuesByToken.clear()
-        root = IndexPostingPage.get(nodeStore, rootPosition, valueKind)
+        root = IndexPostingPage.get(nodeStore, rootPosition, valueKind, valueTokenWidth, signedValueToken)
         pageCache[root.position] = root
     }
 
@@ -213,7 +215,7 @@ class DiskIndexPostingMap(
                             path.depth - 1,
                             leaf.valueTokens[0],
                             leaf.recordIds[0],
-                            leaf.decodedValues[0]
+                            leaf.decodedValue(0)
                         )
                     }
                 }
@@ -228,7 +230,14 @@ class DiskIndexPostingMap(
     }
 
     private fun createRootPage(): IndexPostingPage =
-        IndexPostingPage.create(nodeStore, leaf = true, compact = true, valueKind = valueKind).also {
+        IndexPostingPage.create(
+            nodeStore,
+            leaf = true,
+            compact = true,
+            valueKind = valueKind,
+            valueTokenWidth = valueTokenWidth,
+            signedValueToken = signedValueToken
+        ).also {
             writePage(it)
             updateHeaderFirstNode(it.position)
         }
@@ -236,7 +245,13 @@ class DiskIndexPostingMap(
     private fun findPage(position: Long): IndexPostingPage {
         require(position > 0L) { "Invalid index posting page position $position" }
         pageCache[position]?.let { return it }
-        val loaded = IndexPostingPage.get(nodeStore, position, valueKind)
+        val loaded = IndexPostingPage.get(
+            nodeStore,
+            position,
+            valueKind,
+            valueTokenWidth,
+            signedValueToken
+        )
         return pageCache.putIfAbsent(position, loaded) ?: loaded
     }
 
@@ -250,11 +265,11 @@ class DiskIndexPostingMap(
 
     private fun promoteCompactRoot(compactRoot: IndexPostingPage) {
         check(compactRoot.position == root.position && compactRoot.leaf)
-        val promoted = IndexPostingPage.create(nodeStore, leaf = true, valueKind = valueKind)
+        val promoted = IndexPostingPage.createLike(nodeStore, compactRoot, leaf = true)
         promoted.keyCount = compactRoot.keyCount
         System.arraycopy(compactRoot.valueTokens, 0, promoted.valueTokens, 0, compactRoot.keyCount)
         System.arraycopy(compactRoot.recordIds, 0, promoted.recordIds, 0, compactRoot.keyCount)
-        System.arraycopy(compactRoot.decodedValues, 0, promoted.decodedValues, 0, compactRoot.keyCount)
+        compactRoot.copyDecodedValues(0, promoted, 0, compactRoot.keyCount)
         writePage(promoted)
         pageCache.remove(compactRoot.position)
         root = promoted
@@ -263,16 +278,17 @@ class DiskIndexPostingMap(
 
     private fun splitLeaf(leaf: IndexPostingPage, path: SearchPath, insertedIndex: Int) {
         val splitIndex = when {
-            leaf.nextLeaf == 0L && insertedIndex == leaf.keyCount - 1 -> EDGE_SPLIT_KEYS
-            leaf.previousLeaf == 0L && insertedIndex == 0 -> leaf.keyCount - EDGE_SPLIT_KEYS
+            leaf.nextLeaf == 0L && insertedIndex == leaf.keyCount - 1 ->
+                leaf.keyCount - EDGE_KEYS_TO_RETAIN
+            leaf.previousLeaf == 0L && insertedIndex == 0 -> EDGE_KEYS_TO_RETAIN
             else -> leaf.keyCount / 2
         }
-        val right = IndexPostingPage.create(nodeStore, leaf = true, valueKind = valueKind)
+        val right = IndexPostingPage.createLike(nodeStore, leaf, leaf = true)
         val rightCount = leaf.keyCount - splitIndex
         right.keyCount = rightCount
         System.arraycopy(leaf.valueTokens, splitIndex, right.valueTokens, 0, rightCount)
         System.arraycopy(leaf.recordIds, splitIndex, right.recordIds, 0, rightCount)
-        System.arraycopy(leaf.decodedValues, splitIndex, right.decodedValues, 0, rightCount)
+        leaf.copyDecodedValues(splitIndex, right, 0, rightCount)
         clearKeyTail(leaf, splitIndex, leaf.keyCount)
         leaf.keyCount = splitIndex
 
@@ -291,7 +307,7 @@ class DiskIndexPostingMap(
             leaf,
             right.valueTokens[0],
             right.recordIds[0],
-            right.decodedValues[0],
+            right.decodedValue(0),
             right,
             path,
             path.depth - 1
@@ -308,7 +324,7 @@ class DiskIndexPostingMap(
         parentLevel: Int
     ) {
         if (parentLevel < 0) {
-            val newRoot = IndexPostingPage.create(nodeStore, leaf = false, valueKind = valueKind)
+            val newRoot = IndexPostingPage.createLike(nodeStore, left, leaf = false)
             newRoot.children[0] = left.position
             newRoot.insertInternal(
                 0,
@@ -347,15 +363,15 @@ class DiskIndexPostingMap(
         val median = page.keyCount / 2
         val promotedToken = page.valueTokens[median]
         val promotedRecordId = page.recordIds[median]
-        val promotedDecoded = page.decodedValues[median]
-        val right = IndexPostingPage.create(nodeStore, leaf = false, valueKind = valueKind)
+        val promotedDecoded = page.decodedValue(median)
+        val right = IndexPostingPage.createLike(nodeStore, page, leaf = false)
         val rightCount = page.keyCount - median - 1
         right.keyCount = rightCount
         right.children[0] = page.children[median + 1]
         if (rightCount > 0) {
             System.arraycopy(page.valueTokens, median + 1, right.valueTokens, 0, rightCount)
             System.arraycopy(page.recordIds, median + 1, right.recordIds, 0, rightCount)
-            System.arraycopy(page.decodedValues, median + 1, right.decodedValues, 0, rightCount)
+            page.copyDecodedValues(median + 1, right, 0, rightCount)
             System.arraycopy(page.children, median + 2, right.children, 1, rightCount)
         }
         clearKeyTail(page, median, page.keyCount)
@@ -387,36 +403,38 @@ class DiskIndexPostingMap(
                 0,
                 left.valueTokens[source],
                 left.recordIds[source],
-                left.decodedValues[source]
+                left.decodedValue(source)
             )
             left.removeLeaf(source)
             copyKey(leaf, 0, parent, childIndex - 1)
-            writePage(left)
+            left.writeCount(nodeStore)
             writePage(leaf)
-            writePage(parent)
+            parent.writeKey(nodeStore, childIndex - 1)
             return
         }
 
         if (right != null && right.keyCount > minimumKeys(right)) {
+            val destinationIndex = leaf.keyCount
             leaf.insertLeaf(
-                leaf.keyCount,
+                destinationIndex,
                 right.valueTokens[0],
                 right.recordIds[0],
-                right.decodedValues[0]
+                right.decodedValue(0)
             )
             right.removeLeaf(0)
             copyKey(right, 0, parent, childIndex)
             if (firstChanged && childIndex > 0) copyKey(leaf, 0, parent, childIndex - 1)
             writePage(right)
             writePage(leaf)
-            writePage(parent)
+            parent.writeKey(nodeStore, childIndex)
+            if (firstChanged && childIndex > 0) parent.writeKey(nodeStore, childIndex - 1)
             if (firstChanged && childIndex == 0) {
                 propagateFirstKey(
                     path,
                     parentLevel - 1,
                     leaf.valueTokens[0],
                     leaf.recordIds[0],
-                    leaf.decodedValues[0]
+                    leaf.decodedValue(0)
                 )
             }
             return
@@ -459,7 +477,7 @@ class DiskIndexPostingMap(
                     parentLevel - 1,
                     leaf.valueTokens[0],
                     leaf.recordIds[0],
-                    leaf.decodedValues[0]
+                    leaf.decodedValue(0)
                 )
             }
         }
@@ -471,7 +489,7 @@ class DiskIndexPostingMap(
         val offset = destination.keyCount
         System.arraycopy(source.valueTokens, 0, destination.valueTokens, offset, source.keyCount)
         System.arraycopy(source.recordIds, 0, destination.recordIds, offset, source.keyCount)
-        System.arraycopy(source.decodedValues, 0, destination.decodedValues, offset, source.keyCount)
+        source.copyDecodedValues(0, destination, offset, source.keyCount)
         destination.keyCount += source.keyCount
     }
 
@@ -503,48 +521,49 @@ class DiskIndexPostingMap(
         if (left != null && left.keyCount > minimumKeys(left)) {
             System.arraycopy(page.valueTokens, 0, page.valueTokens, 1, page.keyCount)
             System.arraycopy(page.recordIds, 0, page.recordIds, 1, page.keyCount)
-            System.arraycopy(page.decodedValues, 0, page.decodedValues, 1, page.keyCount)
+            page.copyDecodedValues(0, page, 1, page.keyCount)
             System.arraycopy(page.children, 0, page.children, 1, page.keyCount + 1)
             page.valueTokens[0] = parent.valueTokens[childIndex - 1]
             page.recordIds[0] = parent.recordIds[childIndex - 1]
-            page.decodedValues[0] = parent.decodedValues[childIndex - 1]
+            page.setDecodedValue(0, parent.decodedValue(childIndex - 1))
             page.children[0] = left.children[left.keyCount]
             page.keyCount++
 
             parent.valueTokens[childIndex - 1] = left.valueTokens[left.keyCount - 1]
             parent.recordIds[childIndex - 1] = left.recordIds[left.keyCount - 1]
-            parent.decodedValues[childIndex - 1] = left.decodedValues[left.keyCount - 1]
+            parent.setDecodedValue(childIndex - 1, left.decodedValue(left.keyCount - 1))
             left.keyCount--
             clearKeyTail(left, left.keyCount, left.keyCount + 1)
-            writePage(left)
+            left.writeCount(nodeStore)
             writePage(page)
-            writePage(parent)
+            parent.writeKey(nodeStore, childIndex - 1)
             return
         }
 
         if (right != null && right.keyCount > minimumKeys(right)) {
             val oldRightToken = right.valueTokens[0]
             val oldRightRecordId = right.recordIds[0]
-            val oldRightDecoded = right.decodedValues[0]
-            page.valueTokens[page.keyCount] = parent.valueTokens[childIndex]
-            page.recordIds[page.keyCount] = parent.recordIds[childIndex]
-            page.decodedValues[page.keyCount] = parent.decodedValues[childIndex]
-            page.children[page.keyCount + 1] = right.children[0]
+            val oldRightDecoded = right.decodedValue(0)
+            val destinationIndex = page.keyCount
+            page.valueTokens[destinationIndex] = parent.valueTokens[childIndex]
+            page.recordIds[destinationIndex] = parent.recordIds[childIndex]
+            page.setDecodedValue(destinationIndex, parent.decodedValue(childIndex))
+            page.children[destinationIndex + 1] = right.children[0]
             page.keyCount++
 
             System.arraycopy(right.valueTokens, 1, right.valueTokens, 0, right.keyCount - 1)
             System.arraycopy(right.recordIds, 1, right.recordIds, 0, right.keyCount - 1)
-            System.arraycopy(right.decodedValues, 1, right.decodedValues, 0, right.keyCount - 1)
+            right.copyDecodedValues(1, right, 0, right.keyCount - 1)
             System.arraycopy(right.children, 1, right.children, 0, right.keyCount)
             right.keyCount--
             clearKeyTail(right, right.keyCount, right.keyCount + 1)
             right.children[right.keyCount + 1] = 0L
             parent.valueTokens[childIndex] = oldRightToken
             parent.recordIds[childIndex] = oldRightRecordId
-            parent.decodedValues[childIndex] = oldRightDecoded
+            parent.setDecodedValue(childIndex, oldRightDecoded)
             writePage(right)
             writePage(page)
-            writePage(parent)
+            parent.writeKey(nodeStore, childIndex)
             return
         }
 
@@ -553,7 +572,7 @@ class DiskIndexPostingMap(
                 left,
                 parent.valueTokens[childIndex - 1],
                 parent.recordIds[childIndex - 1],
-                parent.decodedValues[childIndex - 1],
+                parent.decodedValue(childIndex - 1),
                 page
             )
             writePage(left)
@@ -568,7 +587,7 @@ class DiskIndexPostingMap(
             page,
             parent.valueTokens[childIndex],
             parent.recordIds[childIndex],
-            parent.decodedValues[childIndex],
+            parent.decodedValue(childIndex),
             right
         )
         writePage(page)
@@ -588,12 +607,12 @@ class DiskIndexPostingMap(
         val offset = destination.keyCount
         destination.valueTokens[offset] = separatorToken
         destination.recordIds[offset] = separatorRecordId
-        destination.decodedValues[offset] = separatorDecoded
+        destination.setDecodedValue(offset, separatorDecoded)
         destination.children[offset + 1] = source.children[0]
         if (source.keyCount > 0) {
             System.arraycopy(source.valueTokens, 0, destination.valueTokens, offset + 1, source.keyCount)
             System.arraycopy(source.recordIds, 0, destination.recordIds, offset + 1, source.keyCount)
-            System.arraycopy(source.decodedValues, 0, destination.decodedValues, offset + 1, source.keyCount)
+            source.copyDecodedValues(0, destination, offset + 1, source.keyCount)
             System.arraycopy(source.children, 1, destination.children, offset + 2, source.keyCount)
         }
         destination.keyCount += source.keyCount + 1
@@ -615,7 +634,7 @@ class DiskIndexPostingMap(
             if (parent.valueTokens[separatorIndex] != valueToken || parent.recordIds[separatorIndex] != recordId) {
                 parent.valueTokens[separatorIndex] = valueToken
                 parent.recordIds[separatorIndex] = recordId
-                parent.decodedValues[separatorIndex] = decodedValue
+                parent.setDecodedValue(separatorIndex, decodedValue)
                 parent.writeKey(nodeStore, separatorIndex)
             }
             return
@@ -743,16 +762,16 @@ class DiskIndexPostingMap(
 
     private fun valueAt(page: IndexPostingPage, index: Int): Any {
         if (valueKind != ValueKind.OBJECT) return inlineValue(page.valueTokens[index])
-        page.decodedValues[index]?.let { return it }
+        page.decodedValue(index)?.let { return it }
 
         val token = page.valueTokens[index]
         objectValuesByToken[token]?.let { cached ->
-            page.decodedValues[index] = cached
+            page.setDecodedValue(index, cached)
             return cached
         }
 
         val decoded = dataStore.getObject<Any>(token)
-        page.decodedValues[index] = decoded
+        page.setDecodedValue(index, decoded)
         return decoded
     }
 
@@ -831,14 +850,14 @@ class DiskIndexPostingMap(
     ) {
         destination.valueTokens[destinationIndex] = source.valueTokens[sourceIndex]
         destination.recordIds[destinationIndex] = source.recordIds[sourceIndex]
-        destination.decodedValues[destinationIndex] = source.decodedValues[sourceIndex]
+        destination.setDecodedValue(destinationIndex, source.decodedValue(sourceIndex))
     }
 
     private fun clearKeyTail(page: IndexPostingPage, fromIndex: Int, toIndex: Int) {
         for (index in fromIndex until toIndex) {
             page.valueTokens[index] = 0L
             page.recordIds[index] = 0L
-            page.decodedValues[index] = null
+            page.setDecodedValue(index, null)
         }
     }
 
@@ -899,7 +918,7 @@ class DiskIndexPostingMap(
 
     private companion object {
         const val HEADER_RECORD_COUNT_OFFSET = 5L
-        const val EDGE_SPLIT_KEYS = 224
+        const val EDGE_KEYS_TO_RETAIN = 15
         const val MAX_HEIGHT = 16
 
         fun valueKindFor(type: Class<*>): ValueKind = when (type) {
@@ -907,6 +926,29 @@ class DiskIndexPostingMap(
             ClassMetadata.DOUBLE_TYPE, ClassMetadata.DOUBLE_PRIMITIVE_TYPE -> ValueKind.DOUBLE
             Date::class.java -> ValueKind.DATE
             else -> if (type.canBeCastToPrimitive()) ValueKind.INTEGRAL else ValueKind.OBJECT
+        }
+
+        fun valueTokenWidthFor(type: Class<*>): Int = when (type) {
+            ClassMetadata.BOOLEAN_TYPE, ClassMetadata.BOOLEAN_PRIMITIVE_TYPE,
+            ClassMetadata.BYTE_TYPE, ClassMetadata.BYTE_PRIMITIVE_TYPE -> Byte.SIZE_BYTES
+
+            ClassMetadata.CHAR_TYPE, ClassMetadata.CHAR_PRIMITIVE_TYPE,
+            ClassMetadata.SHORT_TYPE, ClassMetadata.SHORT_PRIMITIVE_TYPE -> Short.SIZE_BYTES
+
+            ClassMetadata.INT_TYPE, ClassMetadata.INT_PRIMITIVE_TYPE,
+            ClassMetadata.FLOAT_TYPE, ClassMetadata.FLOAT_PRIMITIVE_TYPE -> Int.SIZE_BYTES
+
+            else -> Long.SIZE_BYTES
+        }
+
+        fun signedValueTokenFor(type: Class<*>): Boolean = when (type) {
+            ClassMetadata.BYTE_TYPE, ClassMetadata.BYTE_PRIMITIVE_TYPE,
+            ClassMetadata.SHORT_TYPE, ClassMetadata.SHORT_PRIMITIVE_TYPE,
+            ClassMetadata.INT_TYPE, ClassMetadata.INT_PRIMITIVE_TYPE,
+            ClassMetadata.LONG_TYPE, ClassMetadata.LONG_PRIMITIVE_TYPE,
+            Date::class.java -> true
+
+            else -> false
         }
     }
 }

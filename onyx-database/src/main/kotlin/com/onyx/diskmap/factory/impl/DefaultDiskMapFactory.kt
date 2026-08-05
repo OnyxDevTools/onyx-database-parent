@@ -252,13 +252,12 @@ open class DefaultDiskMapFactory : DiskMapFactory {
         }
     }
 
-    override fun getIndexMap(valueType: Class<*>, name: String): IndexPostingMap =
-        requireNotNull(indexMaps.compute(name) { _, existing ->
+    override fun getIndexMap(valueType: Class<*>, name: String): IndexPostingMap {
+        indexMaps[name]?.let { return validateIndexMapType(it, valueType, name) }
+
+        return requireNotNull(indexMaps.compute(name) { _, existing ->
             if (existing != null) {
-                require(existing.valueType.kotlin == valueType.kotlin) {
-                    "Index posting map '$name' uses ${existing.valueType.name}, not ${valueType.name}"
-                }
-                existing
+                validateIndexMapType(existing, valueType, name)
             } else {
                 DiskIndexPostingMap(
                     WeakReference(nodeStore),
@@ -268,6 +267,18 @@ open class DefaultDiskMapFactory : DiskMapFactory {
                 )
             }
         })
+    }
+
+    private fun validateIndexMapType(
+        indexMap: IndexPostingMap,
+        valueType: Class<*>,
+        name: String
+    ): IndexPostingMap {
+        require(indexMap.valueType.kotlin == valueType.kotlin) {
+            "Index posting map '$name' uses ${indexMap.valueType.name}, not ${valueType.name}"
+        }
+        return indexMap
+    }
 
     /**
      * Default Map factory.  This creates or gets a map based on the name and puts it into a map

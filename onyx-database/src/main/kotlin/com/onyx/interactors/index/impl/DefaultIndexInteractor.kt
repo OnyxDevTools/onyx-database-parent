@@ -6,12 +6,18 @@ import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.IndexPostingMap
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.exception.OnyxException
+import com.onyx.extension.common.ClassMetadata
+import com.onyx.extension.common.canBeCastToPrimitive
 import com.onyx.extension.common.castTo
+import com.onyx.extension.common.forceCompare
+import com.onyx.extension.common.long
 import com.onyx.extension.get
 import com.onyx.interactors.index.IndexInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
+import com.onyx.persistence.query.QueryCriteriaOperator
 import java.lang.ref.WeakReference
+import java.util.Date
 import java.util.HashMap
 import java.util.HashSet
 
@@ -54,12 +60,43 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(
     }
 
     private fun saveIndexValue(indexValue: Any?, oldReferenceId: Long, newReferenceId: Long) {
+        if (oldReferenceId > 0L && oldReferenceId == newReferenceId) {
+            updateIndexValue(indexValue, newReferenceId)
+            return
+        }
+
         if (oldReferenceId > 0L) deleteIndexValue(oldReferenceId)
         if (indexValue == null || newReferenceId <= 0L) return
 
         val normalizedValue = normalize(indexValue)
         references.add(normalizedValue, newReferenceId)
         indexValues[newReferenceId] = normalizedValue
+    }
+
+    /** Update a stable entity reference without deleting and recreating its reverse-map entry. */
+    private fun updateIndexValue(indexValue: Any?, reference: Long) {
+        val persistedValue = indexValues[reference]?.let(::normalize)
+        val normalizedValue = indexValue?.let(::normalize)
+
+        if (persistedValue == null) {
+            if (normalizedValue != null) {
+                references.add(normalizedValue, reference)
+                indexValues[reference] = normalizedValue
+            }
+            return
+        }
+
+        if (normalizedValue == null) {
+            indexValues.remove(reference)
+            references.remove(persistedValue, reference)
+            return
+        }
+
+        if (valuesHaveSameIndexOrder(persistedValue, normalizedValue)) return
+
+        references.remove(persistedValue, reference)
+        references.add(normalizedValue, reference)
+        indexValues[reference] = normalizedValue
     }
 
     /** Delete an index posting using the persisted old value from the reverse lookup. */
@@ -164,6 +201,29 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(
     /** Preserve the declared index type before encoding the native posting key. */
     private fun normalize(indexValue: Any): Any =
         indexValue.castTo(indexDescriptor.type) ?: indexValue
+
+    /** Match the posting tree's value comparison, including compareTo-equivalent object values. */
+    @Suppress("UNCHECKED_CAST")
+    private fun valuesHaveSameIndexOrder(first: Any, second: Any): Boolean = when (indexDescriptor.type) {
+        ClassMetadata.FLOAT_TYPE, ClassMetadata.FLOAT_PRIMITIVE_TYPE ->
+            java.lang.Float.compare(first as Float, second as Float) == 0
+        ClassMetadata.DOUBLE_TYPE, ClassMetadata.DOUBLE_PRIMITIVE_TYPE ->
+            java.lang.Double.compare(first as Double, second as Double) == 0
+        Date::class.java -> (first as Date).time == (second as Date).time
+        else -> if (indexDescriptor.type.canBeCastToPrimitive()) {
+            first.long() == second.long()
+        } else {
+            if (first === second || first == second) {
+                true
+            } else {
+                try {
+                    (first as Comparable<Any?>).compareTo(second) == 0
+                } catch (_: Exception) {
+                    first.forceCompare(second, QueryCriteriaOperator.EQUAL)
+                }
+            }
+        }
+    }
 
     /** Rebuild the flat and reverse mappings from authoritative entity records. */
     @Throws(OnyxException::class)

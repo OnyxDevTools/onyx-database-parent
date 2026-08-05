@@ -3,6 +3,7 @@ package diskmap
 import com.onyx.diskmap.IndexPostingMap
 import com.onyx.diskmap.data.BTreePage
 import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.data.IndexPostingPage
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import com.onyx.diskmap.impl.DiskIndexPostingMap
 import com.onyx.diskmap.store.Store
@@ -421,6 +422,8 @@ class CompositeIndexKeyBTreeTest {
         values.forEachIndexed { index, value -> assertTrue(map.add(value, index.toLong() + 1L)) }
         assertEquals(values.size.toLong(), map.longSize())
         assertEquals(values.toSet(), distinctValues(map).toSet())
+        map.clearCache()
+        assertEquals(values.toSet(), distinctValues(map).toSet())
     }
 
     private fun exactRecordIds(map: IndexPostingMap, value: Any): List<Long> =
@@ -502,8 +505,23 @@ class CompositeIndexKeyBTreeTest {
         const val RANDOM_VALUE_MIN = -500L
         const val RANDOM_VALUE_MAX_EXCLUSIVE = 501L
 
-        const val RIGHT_MERGE_POSTING_COUNT = 40_000
-        const val RIGHT_MERGE_REMOVE_START = 19_265L
-        const val RIGHT_MERGE_REMOVE_END = 19_459L
+        // A sequential Long leaf leaves 15 keys on the new right edge, so each completed leaf is dense.
+        const val POSTING_HEADER_BYTES = 32
+        const val BIG_INT_BYTES = 5
+        const val EDGE_KEYS_TO_RETAIN = 15
+        const val LONG_LEAF_CAPACITY =
+            (IndexPostingPage.PAGE_SIZE - POSTING_HEADER_BYTES) / (Long.SIZE_BYTES + BIG_INT_BYTES)
+        const val LONG_INTERNAL_CAPACITY =
+            (IndexPostingPage.PAGE_SIZE - POSTING_HEADER_BYTES) / (Long.SIZE_BYTES + 2 * BIG_INT_BYTES)
+        const val DENSE_LONG_LEAF_KEYS = LONG_LEAF_CAPACITY + 1 - EDGE_KEYS_TO_RETAIN
+        const val LONG_INTERNAL_SPLIT_MEDIAN = (LONG_INTERNAL_CAPACITY + 1) / 2
+
+        // Force an internal split, then empty enough of the right subtree's first leaf to merge it right.
+        const val RIGHT_MERGE_POSTING_COUNT =
+            DENSE_LONG_LEAF_KEYS * (LONG_INTERNAL_CAPACITY + 1) + EDGE_KEYS_TO_RETAIN
+        const val RIGHT_MERGE_REMOVE_START =
+            (LONG_INTERNAL_SPLIT_MEDIAN + 1L) * DENSE_LONG_LEAF_KEYS + 1L
+        const val RIGHT_MERGE_REMOVE_COUNT = 2 * (DENSE_LONG_LEAF_KEYS - LONG_LEAF_CAPACITY / 2) + 1
+        const val RIGHT_MERGE_REMOVE_END = RIGHT_MERGE_REMOVE_START + RIGHT_MERGE_REMOVE_COUNT - 1L
     }
 }
