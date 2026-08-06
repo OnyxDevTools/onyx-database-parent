@@ -14,15 +14,16 @@ import kotlin.test.assertTrue
 class BufferStreamOptimizationTest {
 
     @Test
-    fun defaultStreamUsesSmallBuffer() {
+    fun defaultStreamUsesTwoKilobyteBuffer() {
         val stream = BufferStream()
-        assertEquals(BufferPool.SMALL_BUFFER_SIZE, stream.byteBuffer.capacity())
+        assertEquals(2 * 1024, BufferPool.SMALL_BUFFER_SIZE)
+        assertEquals(2 * 1024, stream.byteBuffer.capacity())
         stream.recycle()
     }
 
     @Test
     fun expandableBufferGrowsThroughPoolBucketsThenGeometrically() {
-        val expandable = ExpandableByteBuffer(ByteBuffer.allocate(512))
+        val expandable = ExpandableByteBuffer(ByteBuffer.allocate(BufferPool.SMALL_BUFFER_SIZE))
         expandable.buffer.position(expandable.buffer.capacity())
 
         expandable.ensureSize(1)

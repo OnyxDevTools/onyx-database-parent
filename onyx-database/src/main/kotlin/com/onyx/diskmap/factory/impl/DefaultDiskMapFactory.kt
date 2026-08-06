@@ -56,7 +56,7 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      * @param filePath Where the file is located to store the maps
      * @since 1.0.0
      */
-    constructor(filePath: String) : this(filePath, StoreType.FILE, null)
+    constructor(filePath: String) : this(filePath, StoreType.MEMORY_MAPPED_FILE, null)
 
     /**
      * Constructor

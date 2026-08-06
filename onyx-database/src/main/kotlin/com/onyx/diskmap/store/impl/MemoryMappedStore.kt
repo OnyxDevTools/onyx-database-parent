@@ -244,6 +244,13 @@ open class MemoryMappedStore : FileChannelStore, Store {
             mappedFileSegmentCache.removeFile(fileId)
         }
 
+        internal fun detachMappedFileSegments(fileId: Int): List<MappedFileSegment> =
+            mappedFileSegmentCache.detachFile(fileId)
+
+        internal fun forceAndCloseMappedFileSegments(segments: List<MappedFileSegment>) {
+            segments.forceAndCloseAll()
+        }
+
         internal fun forceMappedFileSegments(fileId: Int) {
             mappedFileSegmentCache.forceFile(fileId)
         }

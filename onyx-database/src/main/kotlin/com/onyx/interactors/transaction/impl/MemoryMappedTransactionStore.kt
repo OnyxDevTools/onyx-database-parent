@@ -8,7 +8,6 @@ import com.onyx.diskmap.store.impl.MappedFileSegmentKey
 import com.onyx.diskmap.store.impl.MemoryMappedStore
 import com.onyx.exception.TransactionException
 import com.onyx.extension.common.Block
-import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.openFileChannel
 import com.onyx.interactors.transaction.TransactionStore
 import java.io.File
@@ -21,7 +20,10 @@ import java.nio.channels.FileLock
 import java.nio.channels.ReadableByteChannel
 import java.nio.channels.WritableByteChannel
 import java.util.Arrays
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.min
 
 /**
@@ -32,12 +34,24 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
     private val journalFileIndex = AtomicLong(0L)
     private var lastWalFileChannel: FileChannel? = null
     private val transactionFileLock = Block()
+    private val asynchronousFlushFailure = AtomicReference<Throwable?>()
+    private val flushExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "onyx-wal-flush-${flushThreadIndex.incrementAndGet()}").apply {
+            isDaemon = true
+        }
+    }
+    private var isClosing = false
 
     private val walDirectory: String
         get() = this.location + File.separator + "wal" + File.separator
 
     @Throws(TransactionException::class)
     override fun getTransactionFile(): FileChannel = synchronized(transactionFileLock) {
+        if (isClosing) {
+            throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_OPEN_FILE)
+        }
+        throwIfAsynchronousFlushFailed()
+
         try {
             if (lastWalFileChannel == null) {
                 val directory = walDirectory
@@ -59,12 +73,15 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
                 lastWalFileChannel = openMappedWalFile(directory + journalFileIndex.get() + ".wal")
             }
 
-            if (lastWalFileChannel!!.size() > MAX_JOURNAL_SIZE) {
-                lastWalFileChannel!!.force(true)
-                lastWalFileChannel!!.close()
-
+            if (lastWalFileChannel!!.size() > maxJournalSize) {
+                val rotatedWalFile = lastWalFileChannel!!
                 val directory = walDirectory
-                lastWalFileChannel = openMappedWalFile(directory + journalFileIndex.addAndGet(1) + ".wal")
+                val nextJournalFileIndex = journalFileIndex.get() + 1L
+                val nextWalFile = openMappedWalFile(directory + nextJournalFileIndex + ".wal")
+                (rotatedWalFile as MemoryMappedTransactionFileChannel).retire()
+                journalFileIndex.set(nextJournalFileIndex)
+                lastWalFileChannel = nextWalFile
+                finalizeWalFileAsynchronously(rotatedWalFile)
             }
 
             return lastWalFileChannel!!
@@ -74,13 +91,24 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
     }
 
     override fun close() {
-        if (lastWalFileChannel != null) {
-            catchAll {
-                lastWalFileChannel!!.force(true)
-                lastWalFileChannel!!.close()
+        synchronized(transactionFileLock) {
+            if (!isClosing) {
+                isClosing = true
+                lastWalFileChannel?.let {
+                    (it as MemoryMappedTransactionFileChannel).retire()
+                    finalizeWalFileAsynchronously(it)
+                    lastWalFileChannel = null
+                }
+                flushExecutor.shutdown()
             }
         }
+
+        awaitAsynchronousFlushes()
+        throwIfAsynchronousFlushFailed()
     }
+
+    protected open val maxJournalSize: Long
+        get() = MAX_JOURNAL_SIZE
 
     private fun openMappedWalFile(filePath: String): FileChannel {
         val file = File(filePath)
@@ -95,8 +123,51 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
         return MemoryMappedTransactionFileChannel(channel)
     }
 
+    /**
+     * Finalizes a WAL file after it has been removed from the transaction write path.
+     * Closing the mapped channel forces its mapped data, truncates the mapped reservation
+     * to the logical WAL length, forces that length metadata, and then closes the file.
+     */
+    protected open fun finalizeWalFile(walFile: FileChannel) {
+        walFile.close()
+    }
+
+    private fun finalizeWalFileAsynchronously(walFile: FileChannel) {
+        flushExecutor.execute {
+            try {
+                finalizeWalFile(walFile)
+            } catch (failure: Throwable) {
+                asynchronousFlushFailure.compareAndSet(null, failure)
+            }
+        }
+    }
+
+    private fun throwIfAsynchronousFlushFailed() {
+        val failure = asynchronousFlushFailure.get() ?: return
+        throw TransactionException(
+            TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE,
+            null,
+            failure
+        )
+    }
+
+    private fun awaitAsynchronousFlushes() {
+        var interrupted = false
+        while (!flushExecutor.isTerminated) {
+            try {
+                flushExecutor.awaitTermination(1, TimeUnit.SECONDS)
+            } catch (_: InterruptedException) {
+                interrupted = true
+            }
+        }
+        if (interrupted) {
+            Thread.currentThread().interrupt()
+        }
+    }
+
     companion object {
-        private const val MAX_JOURNAL_SIZE = 1024 * 1024 * 20
+        private const val MAX_JOURNAL_SIZE = 1024L * 1024L * 20L
+        private val flushThreadIndex = AtomicLong()
     }
 }
 
@@ -114,6 +185,8 @@ private class MemoryMappedTransactionFileChannel(
 
     private var currentPosition = channel.position()
     private var logicalSize = channel.size()
+    private var acceptsWrites = true
+    private var detachedSegments: List<MappedFileSegment>? = null
 
     override fun read(dst: ByteBuffer): Int = synchronized(lock) {
         val bytesRead = read(dst, currentPosition)
@@ -173,6 +246,7 @@ private class MemoryMappedTransactionFileChannel(
 
     override fun truncate(size: Long): FileChannel = synchronized(lock) {
         ensureOpen()
+        ensureWritable()
         require(size >= 0) { "Size must not be negative" }
         MemoryMappedStore.removeMappedFileSegments(fileId)
         channel.truncate(size)
@@ -183,7 +257,12 @@ private class MemoryMappedTransactionFileChannel(
 
     override fun force(metaData: Boolean) = synchronized(lock) {
         ensureOpen()
-        MemoryMappedStore.forceMappedFileSegments(fileId)
+        val retiredSegments = detachedSegments
+        if (retiredSegments == null) {
+            MemoryMappedStore.forceMappedFileSegments(fileId)
+        } else {
+            retiredSegments.forEach { it.force() }
+        }
         channel.force(metaData)
     }
 
@@ -198,6 +277,7 @@ private class MemoryMappedTransactionFileChannel(
 
     override fun transferFrom(src: ReadableByteChannel, position: Long, count: Long): Long = synchronized(lock) {
         ensureOpen()
+        ensureWritable()
         require(position >= 0) { "Position must not be negative" }
         if (count <= 0) {
             return@synchronized 0L
@@ -242,13 +322,17 @@ private class MemoryMappedTransactionFileChannel(
 
     override fun write(src: ByteBuffer, position: Long): Int = synchronized(lock) {
         ensureOpen()
+        ensureWritable()
         require(position >= 0) { "Position must not be negative" }
         writeMapped(src, position)
     }
 
-    override fun map(mode: MapMode, position: Long, size: Long): MappedByteBuffer {
+    override fun map(mode: MapMode, position: Long, size: Long): MappedByteBuffer = synchronized(lock) {
         ensureOpen()
-        return channel.map(mode, position, size)
+        if (mode != MapMode.READ_ONLY) {
+            ensureWritable()
+        }
+        channel.map(mode, position, size)
     }
 
     override fun lock(position: Long, size: Long, shared: Boolean): FileLock {
@@ -264,11 +348,18 @@ private class MemoryMappedTransactionFileChannel(
     override fun implCloseChannel() {
         synchronized(lock) {
             var failure: IOException? = null
-
-            MemoryMappedStore.removeMappedFileSegments(fileId)
+            val mappedSegments = detachedSegments
+                ?: MemoryMappedStore.detachMappedFileSegments(fileId)
+            detachedSegments = null
 
             try {
-                if (channel.isOpen) {
+                MemoryMappedStore.forceAndCloseMappedFileSegments(mappedSegments)
+            } catch (exception: Throwable) {
+                failure = exception as? IOException ?: IOException("Unable to force mapped WAL data", exception)
+            }
+
+            try {
+                if (failure == null && channel.isOpen) {
                     channel.truncate(logicalSize)
                     channel.force(true)
                 }
@@ -281,6 +372,8 @@ private class MemoryMappedTransactionFileChannel(
             } catch (exception: IOException) {
                 if (failure == null) {
                     failure = exception
+                } else {
+                    failure.addSuppressed(exception)
                 }
             }
 
@@ -290,6 +383,7 @@ private class MemoryMappedTransactionFileChannel(
 
     private fun writeMapped(src: ByteBuffer, position: Long): Int {
         ensureOpen()
+        ensureWritable()
         val initialRemaining = src.remaining()
         var current = position
         while (src.hasRemaining()) {
@@ -327,6 +421,18 @@ private class MemoryMappedTransactionFileChannel(
             throw ClosedChannelException()
         }
         if (!channel.isOpen) {
+            throw ClosedChannelException()
+        }
+    }
+
+    fun retire() = synchronized(lock) {
+        ensureOpen()
+        acceptsWrites = false
+        detachedSegments = MemoryMappedStore.detachMappedFileSegments(fileId)
+    }
+
+    private fun ensureWritable() {
+        if (!acceptsWrites) {
             throw ClosedChannelException()
         }
     }
