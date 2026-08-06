@@ -22,7 +22,10 @@ import com.onyx.interactors.transaction.TransactionStore
 import java.io.File
 import java.io.IOException
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.nio.channels.FileChannel
+import java.util.concurrent.ArrayBlockingQueue
+import kotlin.math.min
 
 /**
  * Created by Tim Osborn on 3/25/16.
@@ -152,49 +155,58 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
     @Throws(TransactionException::class)
     override fun applyTransactionLog(walTransactionFile: String, executeTransaction:  (Transaction) -> Boolean): Boolean {
         val channel = walTransactionFile.openFileChannel()
-
         if (channel == null || !channel.isOpen) {
             throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_READ_FILE)
         }
 
         var transaction: Transaction? = null
-        BufferPool.allocateAndLimit(TRANSACTION_METADATA_SIZE) { metadataBuffer ->
-            try {
-                channel.position(0)
-                val logSize = channel.size()
-                while (channel.position() < logSize) {
-
+        try {
+            channel.position(0)
+            val logSize = channel.size()
+            WalReadBuffer(channel, logSize, WAL_READ_BUFFER_SIZE).use { wal ->
+                while (true) {
                     try {
                         transaction = null
-                        metadataBuffer.clear()
-                        metadataBuffer.limit(TRANSACTION_METADATA_SIZE)
-                        val metadataBytesRead = channel.readFully(metadataBuffer)
-                        if (metadataBytesRead == 0) {
+                        val metadataBytesAvailable = wal.ensureAvailable(TRANSACTION_METADATA_SIZE)
+                        if (metadataBytesAvailable == 0) {
                             break
                         }
-                        metadataBuffer.flip()
-                        if (metadataBytesRead < TRANSACTION_METADATA_SIZE) {
-                            if (metadataBuffer.isZeroFilled()) {
+                        if (metadataBytesAvailable < TRANSACTION_METADATA_SIZE) {
+                            if (wal.isZeroFilled()) {
                                 break
                             }
                             throw IllegalStateException("WAL transaction header is incomplete")
                         }
 
-                        val transactionType = metadataBuffer.get()
-                        val transactionDataLength = metadataBuffer.int
+                        val transactionType = wal.byte
+                        val transactionDataLength = wal.int
+
                         if (transactionType == PADDING && transactionDataLength == 0) {
                             break
                         }
                         if (transactionType !in TRANSACTION_TYPES || transactionDataLength <= 0) {
                             throw IllegalStateException("WAL transaction header is invalid")
                         }
+                        if (transactionDataLength.toLong() > wal.bytesRemaining) {
+                            throw IllegalStateException("WAL transaction data is incomplete")
+                        }
 
-                        BufferPool.allocateAndLimit(transactionDataLength) { transactionBuffer ->
-                            val transactionBytesRead = channel.readFully(transactionBuffer)
-                            if (transactionBytesRead < transactionDataLength) {
-                                throw IllegalStateException("WAL transaction data is incomplete")
+                        val pooledTransactionBuffer = transactionDataLength > wal.capacity
+                        val transactionBuffer = if (pooledTransactionBuffer) {
+                            BufferPool.allocateAndLimit(transactionDataLength)
+                        } else {
+                            wal.readSlice(transactionDataLength)
+                                ?: throw IllegalStateException("WAL transaction data is incomplete")
+                        }
+
+                        try {
+                            if (pooledTransactionBuffer) {
+                                val transactionBytesRead = wal.readFully(transactionBuffer)
+                                if (transactionBytesRead < transactionDataLength) {
+                                    throw IllegalStateException("WAL transaction data is incomplete")
+                                }
+                                transactionBuffer.flip()
                             }
-                            transactionBuffer.flip()
 
                             when (transactionType) {
                                 SAVE -> {
@@ -247,8 +259,10 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
                                     }
                                 }
                             }
-
-                            transactionBuffer.clear()
+                        } finally {
+                            if (pooledTransactionBuffer) {
+                                BufferPool.recycle(transactionBuffer)
+                            }
                         }
                     } catch (cause: TransactionException) {
                         throw cause
@@ -256,13 +270,13 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
                         throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_EXECUTE, transaction, cause)
                     }
                 }
+            }
+        } catch (_: IOException) {
+            throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_READ_FILE)
+        } finally {
+            try {
+                channel.close()
             } catch (_: IOException) {
-                throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_READ_FILE)
-            } finally {
-                try {
-                    channel.close()
-                } catch (_: IOException) {
-                }
             }
         }
 
@@ -276,6 +290,7 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
         private const val DELETE_QUERY: Byte = 3
         private const val UPDATE_QUERY: Byte = 4
         private const val TRANSACTION_METADATA_SIZE = 5
+        private const val WAL_READ_BUFFER_SIZE = 256 * 1024
         private val TRANSACTION_TYPES = setOf(SAVE, DELETE, DELETE_QUERY, UPDATE_QUERY)
     }
 }
@@ -286,28 +301,119 @@ private fun FileChannel.writeFully(buffers: Array<ByteBuffer>) {
     }
 }
 
-private fun FileChannel.readFully(buffer: ByteBuffer): Int {
-    var total = 0
-    while (buffer.hasRemaining()) {
-        val bytesRead = read(buffer)
-        if (bytesRead < 0) {
-            break
-        }
-        if (bytesRead == 0) {
-            break
-        }
-        total += bytesRead
-    }
-    return total
-}
+private class WalReadBuffer(
+    private val channel: FileChannel,
+    private var unreadFileBytes: Long,
+    bufferCapacity: Int
+) : AutoCloseable {
+    private val buffer = WAL_READ_BUFFERS.poll()?.apply {
+        clear()
+        order(ByteOrder.BIG_ENDIAN)
+        limit(0)
+    } ?: ByteBuffer.allocateDirect(bufferCapacity)
+        .order(ByteOrder.BIG_ENDIAN)
+        .apply { limit(0) }
 
-private fun ByteBuffer.isZeroFilled(): Boolean {
-    for (index in position() until limit()) {
-        if (get(index) != 0.toByte()) {
-            return false
+    val capacity: Int
+        get() = buffer.capacity()
+
+    val byte: Byte
+        get() = buffer.get()
+
+    val int: Int
+        get() = buffer.int
+
+    val bytesRemaining: Long
+        get() = buffer.remaining().toLong() + unreadFileBytes
+
+    fun ensureAvailable(required: Int): Int {
+        require(required in 0..capacity) { "Requested WAL bytes exceed the read buffer capacity" }
+
+        while (buffer.remaining() < required && unreadFileBytes > 0) {
+            buffer.compact()
+            val originalLimit = buffer.limit()
+            val requested = min(buffer.remaining().toLong(), unreadFileBytes).toInt()
+            buffer.limit(buffer.position() + requested)
+            val bytesRead = try {
+                channel.read(buffer)
+            } finally {
+                buffer.limit(originalLimit)
+            }
+            buffer.flip()
+
+            if (bytesRead <= 0) {
+                if (bytesRead < 0) unreadFileBytes = 0
+                break
+            }
+            unreadFileBytes -= bytesRead
+        }
+
+        return buffer.remaining()
+    }
+
+    fun readSlice(byteCount: Int): ByteBuffer? {
+        if (ensureAvailable(byteCount) < byteCount) return null
+
+        val sliceEnd = buffer.position() + byteCount
+        val originalLimit = buffer.limit()
+        buffer.limit(sliceEnd)
+        return try {
+            buffer.slice().order(ByteOrder.BIG_ENDIAN)
+        } finally {
+            buffer.position(sliceEnd)
+            buffer.limit(originalLimit)
         }
     }
-    return true
+
+    fun readFully(destination: ByteBuffer): Int {
+        var total = copyBufferedBytes(destination)
+        while (destination.hasRemaining() && unreadFileBytes > 0) {
+            val originalLimit = destination.limit()
+            val requested = min(destination.remaining().toLong(), unreadFileBytes).toInt()
+            destination.limit(destination.position() + requested)
+            val bytesRead = try {
+                channel.read(destination)
+            } finally {
+                destination.limit(originalLimit)
+            }
+
+            if (bytesRead <= 0) {
+                if (bytesRead < 0) unreadFileBytes = 0
+                break
+            }
+            unreadFileBytes -= bytesRead
+            total += bytesRead
+        }
+        return total
+    }
+
+    fun isZeroFilled(): Boolean {
+        for (index in buffer.position() until buffer.limit()) {
+            if (buffer.get(index) != 0.toByte()) return false
+        }
+        return true
+    }
+
+    override fun close() {
+        buffer.clear()
+        buffer.limit(0)
+        WAL_READ_BUFFERS.offer(buffer)
+    }
+
+    private fun copyBufferedBytes(destination: ByteBuffer): Int {
+        val byteCount = min(buffer.remaining(), destination.remaining())
+        if (byteCount == 0) return 0
+
+        val originalLimit = buffer.limit()
+        buffer.limit(buffer.position() + byteCount)
+        destination.put(buffer)
+        buffer.limit(originalLimit)
+        return byteCount
+    }
+
+    private companion object {
+        val WAL_READ_BUFFERS = ArrayBlockingQueue<ByteBuffer>(4)
+    }
 }
 
 /**

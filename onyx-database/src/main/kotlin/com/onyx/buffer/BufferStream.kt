@@ -49,7 +49,7 @@ open class BufferStream(buffer: ByteBuffer) {
     private var isComingFromBuffer = false
 
     // References by class and value hash.
-    private var references: HashMap<String, HashMap<Any, Int>>? = null
+    private var references: HashMap<Class<*>, HashMap<Any, Int>>? = null
 
     // References by index number ordered by first used
     private var referencesByIndex: ArrayList<Any?>? = null
@@ -101,7 +101,7 @@ open class BufferStream(buffer: ByteBuffer) {
                 referencesByIndex!![referenceIndex - 1] = reference
         } else {
             if (references == null) references = HashMap()
-            references!!.getOrPut(reference.javaClass.simpleName) { HashMap() }
+            references!!.getOrPut(reference.javaClass) { HashMap() }
                     .getOrPut(reference) {
                         if (referenceCount == Short.MAX_VALUE.toInt())
                             return
@@ -144,7 +144,7 @@ open class BufferStream(buffer: ByteBuffer) {
         if (reference == null)
             return -1
 
-        val classMap = references?.get(reference.javaClass.simpleName) ?: return -1
+        val classMap = references?.get(reference.javaClass) ?: return -1
         return classMap[reference] ?: return -1
     }
 
