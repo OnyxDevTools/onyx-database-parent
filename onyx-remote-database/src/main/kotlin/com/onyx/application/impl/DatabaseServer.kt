@@ -53,7 +53,7 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
     @Suppress("MemberVisibilityCanPrivate")
     protected var authenticationManager: AuthenticationManager? = null
 
-    var storeType: StoreType = StoreType.MEMORY_MAPPED_FILE
+    var storeType: StoreType = StoreType.FILE
 
     /**
      * Start the database socket server
