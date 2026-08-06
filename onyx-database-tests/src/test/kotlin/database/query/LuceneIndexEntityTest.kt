@@ -42,7 +42,7 @@ class LuceneIndexEntityTest(
         @JvmStatic
         @Parameterized.Parameters(name = "{1}")
         fun persistenceManagersToTest(): Collection<Array<Any>> = listOf(
-            arrayOf(EmbeddedPersistenceManagerFactory::class, StoreType.MEMORY_MAPPED_FILE),
+            arrayOf(EmbeddedPersistenceManagerFactory::class, StoreType.FILE),
             arrayOf(EmbeddedPersistenceManagerFactory::class, StoreType.MEMORY_MAPPED_FILE)
         )
     }
