@@ -35,10 +35,18 @@ internal class MappedFileSegment(
         // Eviction and close remain best effort. Explicit Store.commit() calls
         // force() directly through the cache and therefore observes failures.
         runCatching { force() }
-        closed = true
         runCatching {
-            closeAction.invoke()
+            closeWithoutForce()
         }
+    }
+
+    @Synchronized
+    internal fun closeWithoutForce() {
+        if (closed) {
+            return
+        }
+        closed = true
+        closeAction.invoke()
     }
 }
 
@@ -68,19 +76,20 @@ internal class MappedFileSegmentCache(defaultMaxChunks: Int) {
     ): ByteBuffer = getOrMapSegment(key, mapper).buffer.duplicate()
 
     fun removeFile(fileId: Int) {
-        val removed = synchronized(lock) {
-            val removed = ArrayList<MappedFileSegment>()
-            val iterator = entries.iterator()
-            while (iterator.hasNext()) {
-                val entry = iterator.next()
-                if (entry.key.fileId == fileId) {
-                    iterator.remove()
-                    removed.add(entry.value)
-                }
+        detachFile(fileId).closeAll()
+    }
+
+    fun detachFile(fileId: Int): List<MappedFileSegment> = synchronized(lock) {
+        val removed = ArrayList<MappedFileSegment>()
+        val iterator = entries.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            if (entry.key.fileId == fileId) {
+                iterator.remove()
+                removed.add(entry.value)
             }
-            removed
         }
-        removed.closeAll()
+        removed
     }
 
     fun forceFile(fileId: Int) {
@@ -172,6 +181,36 @@ private fun List<MappedFileSegment>.closeAll() {
     forEach {
         it.close()
     }
+}
+
+internal fun List<MappedFileSegment>.forceAndCloseAll() {
+    var failure: Throwable? = null
+
+    forEach { segment ->
+        try {
+            segment.force()
+        } catch (current: Throwable) {
+            if (failure == null) {
+                failure = current
+            } else {
+                failure!!.addSuppressed(current)
+            }
+        }
+    }
+
+    forEach { segment ->
+        try {
+            segment.closeWithoutForce()
+        } catch (current: Throwable) {
+            if (failure == null) {
+                failure = current
+            } else {
+                failure!!.addSuppressed(current)
+            }
+        }
+    }
+
+    failure?.let { throw it }
 }
 
 internal object MappedFileSegmentFactory {

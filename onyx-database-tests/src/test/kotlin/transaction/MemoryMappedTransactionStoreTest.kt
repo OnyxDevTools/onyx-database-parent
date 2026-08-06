@@ -10,11 +10,20 @@ import com.onyx.persistence.context.impl.DefaultSchemaContext
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import entities.AllAttributeEntity
 import org.junit.Test
+import java.io.IOException
 import java.nio.ByteBuffer
+import java.nio.channels.ClosedChannelException
+import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Comparator
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class MemoryMappedTransactionStoreTest {
@@ -28,15 +37,15 @@ class MemoryMappedTransactionStoreTest {
         )
 
         try {
-            assertTrue(context.currentTransactionStore() is DefaultTransactionStore)
-
-            context.storeType = StoreType.MEMORY_MAPPED_FILE
-
             assertTrue(context.currentTransactionStore() is MemoryMappedTransactionStore)
 
             context.storeType = StoreType.FILE
 
             assertTrue(context.currentTransactionStore() is DefaultTransactionStore)
+
+            context.storeType = StoreType.MEMORY_MAPPED_FILE
+
+            assertTrue(context.currentTransactionStore() is MemoryMappedTransactionStore)
         } finally {
             context.shutdown()
             deleteDirectory(tempDirectory)
@@ -81,27 +90,107 @@ class MemoryMappedTransactionStoreTest {
     fun rotatingWalFileUnmapsDiscardedMappings() {
         val previousMax = MemoryMappedStore.maxCachedFileChunks
         val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-transaction-rotation")
-        val transactionStore = MemoryMappedTransactionStore(tempDirectory.toString())
+        val transactionStore = SmallJournalMemoryMappedTransactionStore(tempDirectory.toString())
 
         try {
             MemoryMappedStore.maxCachedFileChunks = 128
 
             val transactionFile = transactionStore.getTransactionFile()
-            val payload = ByteBuffer.wrap(ByteArray(1024 * 1024) { 3 })
-            repeat(21) {
-                payload.rewind()
-                transactionFile.write(payload)
-            }
+            transactionFile.write(ByteBuffer.wrap(ByteArray(256) { 3 }))
 
             assertTrue(MemoryMappedStore.cachedFileChunkCount > 0)
 
             val rotatedTransactionFile = transactionStore.getTransactionFile()
 
             assertTrue(transactionFile !== rotatedTransactionFile)
+            transactionStore.close()
+
+            assertFalse(transactionFile.isOpen)
             assertEquals(0, MemoryMappedStore.cachedFileChunkCount)
+            assertEquals(256L, Files.size(tempDirectory.resolve("wal").resolve("0.wal")))
         } finally {
             transactionStore.close()
             MemoryMappedStore.maxCachedFileChunks = previousMax
+            deleteDirectory(tempDirectory)
+        }
+    }
+
+    @Test
+    fun rotatingWalFileIsSealedAndFinalizedWithoutBlockingTheWriter() {
+        val previousMax = MemoryMappedStore.maxCachedFileChunks
+        val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-transaction-async-rotation")
+        val finalizationStarted = CountDownLatch(1)
+        val allowFinalization = CountDownLatch(1)
+        val rotationExecutor = Executors.newSingleThreadExecutor()
+        val transactionStore = object : SmallJournalMemoryMappedTransactionStore(tempDirectory.toString()) {
+            override fun finalizeWalFile(walFile: FileChannel) {
+                finalizationStarted.countDown()
+                check(allowFinalization.await(5, TimeUnit.SECONDS)) {
+                    "Timed out waiting to finalize the rotated WAL file"
+                }
+                super.finalizeWalFile(walFile)
+            }
+        }
+
+        try {
+            MemoryMappedStore.maxCachedFileChunks = 1
+            val firstWalFile = transactionStore.getTransactionFile()
+            firstWalFile.write(ByteBuffer.wrap(ByteArray(256) { 4 }))
+
+            val rotation = rotationExecutor.submit<FileChannel> {
+                transactionStore.getTransactionFile()
+            }
+            val secondWalFile = rotation.get(5, TimeUnit.SECONDS)
+
+            assertTrue(firstWalFile !== secondWalFile)
+            assertTrue(finalizationStarted.await(5, TimeUnit.SECONDS))
+            assertTrue(firstWalFile.isOpen)
+            assertFailsWith<ClosedChannelException> {
+                firstWalFile.write(ByteBuffer.wrap(byteArrayOf(9)))
+            }
+
+            secondWalFile.write(ByteBuffer.wrap(byteArrayOf(5, 6, 7)))
+            allowFinalization.countDown()
+            transactionStore.close()
+
+            assertFalse(firstWalFile.isOpen)
+            assertFalse(secondWalFile.isOpen)
+            assertEquals(256L, Files.size(tempDirectory.resolve("wal").resolve("0.wal")))
+            assertEquals(3L, Files.size(tempDirectory.resolve("wal").resolve("1.wal")))
+        } finally {
+            allowFinalization.countDown()
+            runCatching { transactionStore.close() }
+            rotationExecutor.shutdownNow()
+            MemoryMappedStore.maxCachedFileChunks = previousMax
+            deleteDirectory(tempDirectory)
+        }
+    }
+
+    @Test
+    fun asynchronousWalFinalizationFailureIsReported() {
+        val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-transaction-async-failure")
+        val finalizationFailed = CountDownLatch(1)
+        val failNextFinalization = AtomicBoolean(true)
+        val transactionStore = object : SmallJournalMemoryMappedTransactionStore(tempDirectory.toString()) {
+            override fun finalizeWalFile(walFile: FileChannel) {
+                super.finalizeWalFile(walFile)
+                if (failNextFinalization.compareAndSet(true, false)) {
+                    finalizationFailed.countDown()
+                    throw IOException("Injected asynchronous WAL finalization failure")
+                }
+            }
+        }
+
+        try {
+            transactionStore.getTransactionFile().write(ByteBuffer.wrap(ByteArray(256) { 8 }))
+            transactionStore.getTransactionFile()
+
+            assertTrue(finalizationFailed.await(5, TimeUnit.SECONDS))
+            assertFailsWith<com.onyx.exception.TransactionException> {
+                transactionStore.close()
+            }
+        } finally {
+            runCatching { transactionStore.close() }
             deleteDirectory(tempDirectory)
         }
     }
@@ -155,6 +244,11 @@ class MemoryMappedTransactionStoreTest {
 
     private class InspectableSchemaContext(contextId: String, location: String) : DefaultSchemaContext(contextId, location) {
         fun currentTransactionStore(): TransactionStore? = transactionStore
+    }
+
+    private open class SmallJournalMemoryMappedTransactionStore(location: String) :
+        MemoryMappedTransactionStore(location) {
+        protected override val maxJournalSize: Long = 128L
     }
 
     companion object {
