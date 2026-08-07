@@ -93,29 +93,21 @@ open class BufferStream(buffer: ByteBuffer) {
      * @param reference Object reference
      */
     private fun addReference(reference: Any) {
-        // Reader-side references are indexed by insertion order because objects may not be fully hydrated
-        // and therefore may not have stable hashCode/equals implementations yet.
+        // If we are pulling from the expandableByteBuffer there is no reason to maintain a hash structure of the value references
+        // especially since they are not fully hydrated and may not have valid hashes yet.
         if (isComingFromBuffer) {
             val referenceIndex = reserveReference()
             if (referenceIndex > 0)
                 referencesByIndex!![referenceIndex - 1] = reference
-            return
+        } else {
+            if (references == null) references = HashMap()
+            references!!.getOrPut(reference.javaClass) { HashMap() }
+                .getOrPut(reference) {
+                    if (referenceCount == Short.MAX_VALUE.toInt())
+                        return
+                    ++referenceCount
+                }
         }
-
-        if (referenceCount >= Short.MAX_VALUE.toInt())
-            return
-
-        val referenceMap = references
-            ?: HashMap<Class<*>, HashMap<Any, Int>>().also { references = it }
-        val referenceClass = reference.javaClass
-        val classMap = referenceMap[referenceClass]
-            ?: HashMap<Any, Int>().also { referenceMap[referenceClass] = it }
-        val nextReference = referenceCount + 1
-
-        // putIfAbsent performs a single hash-table traversal while preserving the existing
-        // class-scoped hashCode/equals reference semantics.
-        if (classMap.putIfAbsent(reference, nextReference) == null)
-            referenceCount = nextReference
     }
 
     /**
@@ -1141,20 +1133,8 @@ open class BufferStream(buffer: ByteBuffer) {
         val position = this.expandableByteBuffer!!.buffer.position()
 
         var bufferObjectType = BufferObjectType.getTypeCodeForClass(value, context)
-        var referenceNumber = -1
-
-        // Only CLASS, PAIR, and OTHER values are registered by the writer. Avoid hashing and
-        // probing the reference maps for every scalar, string, date, array, collection, and map.
-        when (bufferObjectType) {
-            BufferObjectType.CLASS,
-            BufferObjectType.PAIR,
-            BufferObjectType.OTHER -> {
-                referenceNumber = referenceIndex(value)
-                if (referenceNumber >= 0)
-                    bufferObjectType = BufferObjectType.REFERENCE
-            }
-            else -> Unit
-        }
+        val referenceNumber = referenceIndex(value).toShort()
+        if (referenceNumber > -1) bufferObjectType = BufferObjectType.REFERENCE
 
         try {
 
@@ -1163,7 +1143,7 @@ open class BufferStream(buffer: ByteBuffer) {
 
             when (bufferObjectType) {
                 BufferObjectType.NULL -> return this.expandableByteBuffer!!.buffer.position() - position
-                BufferObjectType.REFERENCE -> putShort(referenceNumber.toShort())
+                BufferObjectType.REFERENCE -> putShort(referenceNumber)
                 BufferObjectType.ENTITY -> putEntity(value as ManagedEntity, context)
                 BufferObjectType.ENUM -> putEnum(value as Enum<*>)
                 BufferObjectType.BYTE, BufferObjectType.MUTABLE_BYTE -> putByte(value as Byte)
