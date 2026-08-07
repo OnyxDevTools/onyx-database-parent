@@ -59,14 +59,14 @@ class BufferStreamOptimizationTest {
 
     @Test
     fun optimizedPrimitiveWritesKeepExistingWireBytes() {
-        val intBuffer = BufferStream.toBuffer(1)
+        val intBuffer = BufferStream.toLegacyBuffer(1)
         assertContentEquals(
             byteArrayOf(0, 0, 0, 9, 22, 0, 0, 0, 1),
             intBuffer.copyRemainingBytes()
         )
         BufferPool.recycle(intBuffer)
 
-        val bytesBuffer = BufferStream.toBuffer(byteArrayOf(1, 2, 3, 4))
+        val bytesBuffer = BufferStream.toLegacyBuffer(byteArrayOf(1, 2, 3, 4))
         assertContentEquals(
             byteArrayOf(0, 0, 0, 13, 11, 0, 0, 0, 4, 1, 2, 3, 4),
             bytesBuffer.copyRemainingBytes()
@@ -83,7 +83,7 @@ class BufferStreamOptimizationTest {
 
     @Test
     fun optimizedDoubleArrayWritesKeepExistingWireBytes() {
-        val buffer = BufferStream.toBuffer(doubleArrayOf(1.25, -2.5))
+        val buffer = BufferStream.toLegacyBuffer(doubleArrayOf(1.25, -2.5))
 
         assertContentEquals(
             """
@@ -99,7 +99,7 @@ class BufferStreamOptimizationTest {
 
     @Test
     fun collectionWritesKeepExistingWireBytes() {
-        val buffer = BufferStream.toBuffer(arrayListOf(1, 2))
+        val buffer = BufferStream.toLegacyBuffer(arrayListOf(1, 2))
 
         assertContentEquals(
             """
@@ -135,7 +135,7 @@ class BufferStreamOptimizationTest {
             name = "root"
             next = this
         }
-        val buffer = BufferStream.toBuffer(original)
+        val legacyBuffer = BufferStream.toLegacyBuffer(original)
 
         assertContentEquals(
             """
@@ -145,9 +145,11 @@ class BufferStreamOptimizationTest {
                 1f 00000004 726f6f74
                 01 0002
             """.hexBytes(),
-            buffer.copyRemainingBytes()
+            legacyBuffer.copyRemainingBytes()
         )
+        BufferPool.recycle(legacyBuffer)
 
+        val buffer = BufferStream.toBuffer(original)
         val decoded = BufferStream.fromBuffer(buffer) as ReferenceNode
 
         assertEquals("root", decoded.name)
@@ -158,7 +160,7 @@ class BufferStreamOptimizationTest {
     @Test
     fun pairAliasesKeepWriterReferenceOrder() {
         val pair = Pair(Simple().apply { hiya = 7 }, "value")
-        val buffer = BufferStream.toBuffer(arrayOf(pair, pair))
+        val legacyBuffer = BufferStream.toLegacyBuffer(arrayOf(pair, pair))
 
         assertContentEquals(
             """
@@ -170,9 +172,11 @@ class BufferStreamOptimizationTest {
                 1f 00000005 76616c7565
                 01 0002
             """.hexBytes(),
-            buffer.copyRemainingBytes()
+            legacyBuffer.copyRemainingBytes()
         )
+        BufferPool.recycle(legacyBuffer)
 
+        val buffer = BufferStream.toBuffer(arrayOf(pair, pair))
         val decoded = BufferStream.fromBuffer(buffer) as Array<*>
 
         assertTrue(decoded[0] is Pair<*, *>)
@@ -183,7 +187,8 @@ class BufferStreamOptimizationTest {
 
     @Test
     fun repeatedClassReferencesResolveFromReaderList() {
-        val buffer = BufferStream.toBuffer(arrayOf<Any?>(Simple::class.java, Simple::class.java))
+        val values = arrayOf<Any?>(Simple::class.java, Simple::class.java)
+        val legacyBuffer = BufferStream.toLegacyBuffer(values)
 
         assertContentEquals(
             """
@@ -192,9 +197,11 @@ class BufferStreamOptimizationTest {
                 20 0000000b 706f6a6f2e53696d706c65
                 01 0001
             """.hexBytes(),
-            buffer.copyRemainingBytes()
+            legacyBuffer.copyRemainingBytes()
         )
+        BufferPool.recycle(legacyBuffer)
 
+        val buffer = BufferStream.toBuffer(values)
         val decoded = BufferStream.fromBuffer(buffer) as Array<*>
         assertSame(Simple::class.java, decoded[0])
         assertSame(decoded[0], decoded[1])

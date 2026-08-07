@@ -37,6 +37,10 @@ class MemoryMappedTransactionStoreTest {
         )
 
         try {
+            assertTrue(context.currentTransactionStore() is DefaultTransactionStore)
+
+            context.storeType = StoreType.MEMORY_MAPPED_FILE
+
             assertTrue(context.currentTransactionStore() is MemoryMappedTransactionStore)
 
             context.storeType = StoreType.FILE
@@ -89,6 +93,7 @@ class MemoryMappedTransactionStoreTest {
     @Test
     fun rotatingWalFileUnmapsDiscardedMappings() {
         val previousMax = MemoryMappedStore.maxCachedFileChunks
+        val initialCachedFileChunkCount = MemoryMappedStore.cachedFileChunkCount
         val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-transaction-rotation")
         val transactionStore = SmallJournalMemoryMappedTransactionStore(tempDirectory.toString())
 
@@ -98,7 +103,7 @@ class MemoryMappedTransactionStoreTest {
             val transactionFile = transactionStore.getTransactionFile()
             transactionFile.write(ByteBuffer.wrap(ByteArray(256) { 3 }))
 
-            assertTrue(MemoryMappedStore.cachedFileChunkCount > 0)
+            assertTrue(MemoryMappedStore.cachedFileChunkCount > initialCachedFileChunkCount)
 
             val rotatedTransactionFile = transactionStore.getTransactionFile()
 
@@ -106,7 +111,7 @@ class MemoryMappedTransactionStoreTest {
             transactionStore.close()
 
             assertFalse(transactionFile.isOpen)
-            assertEquals(0, MemoryMappedStore.cachedFileChunkCount)
+            assertEquals(initialCachedFileChunkCount, MemoryMappedStore.cachedFileChunkCount)
             assertEquals(256L, Files.size(tempDirectory.resolve("wal").resolve("0.wal")))
         } finally {
             transactionStore.close()

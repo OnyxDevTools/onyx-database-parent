@@ -101,9 +101,8 @@ class DefaultTransactionInteractorReadTest {
     @Test
     fun bufferedReaderPreservesHeaderAcrossARefillBoundary() {
         val walFile = Files.createTempFile("onyx-buffered-wal-boundary", ".wal")
-        val emptyPartitionRecordSize = deleteQueryRecord(41).size
         val firstRecordSize = READ_AHEAD_BUFFER_SIZE - 3
-        val firstRecord = deleteQueryRecord(41, "x".repeat(firstRecordSize - emptyPartitionRecordSize))
+        val firstRecord = deleteQueryRecordOfSize(41, firstRecordSize)
 
         try {
             assertEquals(firstRecordSize, firstRecord.size)
@@ -223,6 +222,18 @@ class DefaultTransactionInteractorReadTest {
             .putInt(payloadBytes.size)
             .put(payloadBytes)
             .array()
+    }
+
+    private fun deleteQueryRecordOfSize(firstRow: Int, targetSize: Int): ByteArray {
+        var partitionLength = targetSize - deleteQueryRecord(firstRow).size
+        repeat(4) {
+            require(partitionLength >= 0) { "Target WAL record size is too small" }
+            val record = deleteQueryRecord(firstRow, "x".repeat(partitionLength))
+            val sizeDifference = targetSize - record.size
+            if (sizeDifference == 0) return record
+            partitionLength += sizeDifference
+        }
+        error("Unable to create a WAL record of size $targetSize")
     }
 
     private fun concatenate(vararg values: ByteArray): ByteArray {

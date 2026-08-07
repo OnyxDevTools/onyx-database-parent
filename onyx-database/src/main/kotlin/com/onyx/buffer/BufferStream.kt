@@ -20,7 +20,7 @@ import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
 /**
- * Created by Tim Osborn on 7/2/16.
+ * Created by Tim Osborn on 7/2/1 6.
  *
  *
  * The expandableByteBuffer expandableByteBuffer is an value serialization expandableByteBuffer.   It is inspired by the InputStream and and OutputStream
@@ -48,11 +48,18 @@ open class BufferStream(buffer: ByteBuffer) {
     // Indicates whether we are pulling from the expandableByteBuffer or putting into the expandableByteBuffer.
     private var isComingFromBuffer = false
 
-    // References by class and value hash.
-    private var references: HashMap<Class<*>, HashMap<Any, Int>>? = null
+    // True object references use identity, avoiding user equals/hashCode work and recursion.
+    private var references: IdentityHashMap<Any, Int>? = null
 
     // References by index number ordered by first used
     private var referencesByIndex: ArrayList<Any?>? = null
+
+    // Version 2 uses compact structural values while legacy streams remain readable.
+    private var compactFormat = false
+
+    // Strings are immutable, so value-based interning is safe and dramatically reduces repeated values.
+    private var stringWriteReferences: HashMap<String, Int>? = null
+    private var stringReadReferences: ArrayList<String>? = null
 
     /**
      * Getter for underlying byte buffer
@@ -92,21 +99,22 @@ open class BufferStream(buffer: ByteBuffer) {
      *
      * @param reference Object reference
      */
+    private val referenceLimit: Int
+        get() = if (compactFormat) MAX_COMPACT_REFERENCES else Short.MAX_VALUE.toInt()
+
     private fun addReference(reference: Any) {
-        // If we are pulling from the expandableByteBuffer there is no reason to maintain a hash structure of the value references
-        // especially since they are not fully hydrated and may not have valid hashes yet.
         if (isComingFromBuffer) {
             val referenceIndex = reserveReference()
-            if (referenceIndex > 0)
+            if (referenceIndex > 0) {
                 referencesByIndex!![referenceIndex - 1] = reference
-        } else {
-            if (references == null) references = HashMap()
-            references!!.getOrPut(reference.javaClass) { HashMap() }
-                .getOrPut(reference) {
-                    if (referenceCount == Short.MAX_VALUE.toInt())
-                        return
-                    ++referenceCount
-                }
+            }
+            return
+        }
+
+        if (referenceCount >= referenceLimit) return
+        val referenceMap = references ?: IdentityHashMap<Any, Int>().also { references = it }
+        if (!referenceMap.containsKey(reference)) {
+            referenceMap[reference] = ++referenceCount
         }
     }
 
@@ -115,8 +123,7 @@ open class BufferStream(buffer: ByteBuffer) {
      * The writer registers pairs before their elements, so the reader must do the same.
      */
     private fun reserveReference(): Int {
-        if (referenceCount == Short.MAX_VALUE.toInt())
-            return -1
+        if (referenceCount >= referenceLimit) return -1
 
         if (referencesByIndex == null) referencesByIndex = ArrayList()
         referencesByIndex!!.add(null)
@@ -144,8 +151,7 @@ open class BufferStream(buffer: ByteBuffer) {
         if (reference == null)
             return -1
 
-        val classMap = references?.get(reference.javaClass) ?: return -1
-        return classMap[reference] ?: return -1
+        return references?.get(reference) ?: -1
     }
 
     /**
@@ -156,6 +162,195 @@ open class BufferStream(buffer: ByteBuffer) {
     private fun referenceOf(index: Int): Any = referencesByIndex?.getOrNull(index - 1)!!
 
     //endregion
+
+    // region Compact Encoding
+
+    private fun putUnsignedInt(value: Int) {
+        expandableByteBuffer!!.ensureSize(MAX_VAR_INT_BYTES)
+        CompactBinary.putUnsignedInt(expandableByteBuffer!!.buffer, value)
+    }
+
+    private fun readUnsignedInt(): Int = CompactBinary.getUnsignedInt(expandableByteBuffer!!.buffer)
+
+    private fun putDynamicInt(value: Int) {
+        if (compactFormat) {
+            expandableByteBuffer!!.ensureSize(MAX_VAR_INT_BYTES)
+            CompactBinary.putSignedInt(expandableByteBuffer!!.buffer, value)
+        } else {
+            putInt(value)
+        }
+    }
+
+    private fun readDynamicInt(): Int =
+        if (compactFormat) CompactBinary.getSignedInt(expandableByteBuffer!!.buffer) else int
+
+    private fun putDynamicLong(value: Long) {
+        if (compactFormat) {
+            expandableByteBuffer!!.ensureSize(MAX_VAR_LONG_BYTES)
+            CompactBinary.putSignedLong(expandableByteBuffer!!.buffer, value)
+        } else {
+            putLong(value)
+        }
+    }
+
+    private fun readDynamicLong(): Long =
+        if (compactFormat) CompactBinary.getSignedLong(expandableByteBuffer!!.buffer) else long
+
+    private fun putDynamicShort(value: Short) {
+        if (compactFormat) putDynamicInt(value.toInt()) else putShort(value)
+    }
+
+    private fun readDynamicShort(): Short =
+        if (compactFormat) readDynamicInt().toShort() else short
+
+    private fun putDynamicChar(value: Char) {
+        if (compactFormat) {
+            putUnsignedInt(value.code)
+        } else {
+            putChar(value)
+        }
+    }
+
+    private fun readDynamicChar(): Char =
+        if (compactFormat) readUnsignedInt().toChar() else char
+
+    private fun putSize(value: Int) {
+        require(value >= 0) { "Serialized size must not be negative: $value" }
+        if (compactFormat) putUnsignedInt(value) else putInt(value)
+    }
+
+    private fun readSize(): Int {
+        val value = if (compactFormat) readUnsignedInt() else int
+        require(value >= 0) { "Serialized size must not be negative: $value" }
+        return value
+    }
+
+    private fun putReferenceIndex(value: Int) {
+        if (compactFormat) putUnsignedInt(value) else putShort(value.toShort())
+    }
+
+    private fun readReferenceIndex(): Int =
+        if (compactFormat) readUnsignedInt() else short.toInt()
+
+    private fun utf8Length(value: String): Int {
+        var byteCount = 0L
+        var index = 0
+        while (index < value.length) {
+            val char = value[index]
+            when {
+                char.code < 0x80 -> byteCount += 1
+                char.code < 0x800 -> byteCount += 2
+                Character.isHighSurrogate(char) &&
+                        index + 1 < value.length &&
+                        Character.isLowSurrogate(value[index + 1]) -> {
+                    byteCount += 4
+                    index++
+                }
+                Character.isSurrogate(char) -> byteCount += 1 // UTF-8 replacement byte '?'
+                else -> byteCount += 3
+            }
+            if (byteCount > MAX_COMPACT_STRING_BYTES) {
+                throw IllegalArgumentException("String is too large to serialize")
+            }
+            index++
+        }
+        return byteCount.toInt()
+    }
+
+    private fun putUtf8Bytes(value: String, byteCount: Int) {
+        expandableByteBuffer!!.ensureSize(byteCount)
+        val buffer = expandableByteBuffer!!.buffer
+        var index = 0
+        while (index < value.length) {
+            val char = value[index]
+            val code = char.code
+            when {
+                code < 0x80 -> buffer.put(code.toByte())
+                code < 0x800 -> {
+                    buffer.put((0xc0 or (code ushr 6)).toByte())
+                    buffer.put((0x80 or (code and 0x3f)).toByte())
+                }
+                Character.isHighSurrogate(char) &&
+                        index + 1 < value.length &&
+                        Character.isLowSurrogate(value[index + 1]) -> {
+                    val codePoint = Character.toCodePoint(char, value[++index])
+                    buffer.put((0xf0 or (codePoint ushr 18)).toByte())
+                    buffer.put((0x80 or ((codePoint ushr 12) and 0x3f)).toByte())
+                    buffer.put((0x80 or ((codePoint ushr 6) and 0x3f)).toByte())
+                    buffer.put((0x80 or (codePoint and 0x3f)).toByte())
+                }
+                Character.isSurrogate(char) -> buffer.put('?'.code.toByte())
+                else -> {
+                    buffer.put((0xe0 or (code ushr 12)).toByte())
+                    buffer.put((0x80 or ((code ushr 6) and 0x3f)).toByte())
+                    buffer.put((0x80 or (code and 0x3f)).toByte())
+                }
+            }
+            index++
+        }
+    }
+
+    private fun putRawUtf8(value: String) {
+        val byteCount = utf8Length(value)
+        putUnsignedInt(byteCount)
+        putUtf8Bytes(value, byteCount)
+    }
+
+    private fun readRawUtf8(): String {
+        val byteCount = readUnsignedInt()
+        require(byteCount >= 0) { "String size must not be negative: $byteCount" }
+        expandableByteBuffer!!.ensureRequiredSize(byteCount)
+        val bytes = ByteArray(byteCount)
+        expandableByteBuffer!!.buffer.get(bytes)
+        return String(bytes, Charsets.UTF_8)
+    }
+
+    private fun putCompactString(value: String) {
+        val shouldIntern = value.length >= MIN_INTERNED_STRING_LENGTH
+        val existingIndex = if (shouldIntern) stringWriteReferences?.get(value) else null
+        if (existingIndex != null) {
+            putUnsignedInt((existingIndex + 1) shl 1)
+            return
+        }
+
+        val byteCount = utf8Length(value)
+        require(byteCount <= MAX_COMPACT_STRING_BYTES)
+        putUnsignedInt((byteCount shl 1) or 1)
+        putUtf8Bytes(value, byteCount)
+
+        if (shouldIntern) {
+            if (stringWriteReferences == null) stringWriteReferences = HashMap()
+            if (stringWriteReferences!!.size < MAX_INTERNED_STRINGS) {
+                stringWriteReferences!![value] = stringWriteReferences!!.size
+            }
+        }
+    }
+
+    private fun readCompactString(): String {
+        val token = readUnsignedInt()
+        if (token and 1 == 0) {
+            val index = (token ushr 1) - 1
+            require(index >= 0) { "Invalid compact string reference" }
+            return stringReadReferences?.getOrNull(index)
+                ?: throw IllegalArgumentException("Unknown compact string reference: $index")
+        }
+
+        val byteCount = token ushr 1
+        expandableByteBuffer!!.ensureRequiredSize(byteCount)
+        val bytes = ByteArray(byteCount)
+        expandableByteBuffer!!.buffer.get(bytes)
+        val value = String(bytes, Charsets.UTF_8)
+
+        if (value.length >= MIN_INTERNED_STRING_LENGTH) {
+            if (stringReadReferences == null) stringReadReferences = ArrayList()
+            if (stringReadReferences!!.size < MAX_INTERNED_STRINGS) {
+                stringReadReferences!!.add(value)
+            }
+        }
+        return value
+    }
+
+    // endregion
 
     //region Cleanup
 
@@ -186,11 +381,26 @@ open class BufferStream(buffer: ByteBuffer) {
      * @since 2.0.0
      */
     private fun clearReferences() {
-        references?.clear()
+        if ((references?.size ?: 0) > MAX_RETAINED_REFERENCE_CAPACITY)
+            references = null
+        else
+            references?.clear()
+
         if ((referencesByIndex?.size ?: 0) > MAX_RETAINED_REFERENCE_CAPACITY)
             referencesByIndex = null
         else
             referencesByIndex?.clear()
+
+        if ((stringWriteReferences?.size ?: 0) > MAX_RETAINED_STRING_CAPACITY)
+            stringWriteReferences = null
+        else
+            stringWriteReferences?.clear()
+
+        if ((stringReadReferences?.size ?: 0) > MAX_RETAINED_STRING_CAPACITY)
+            stringReadReferences = null
+        else
+            stringReadReferences?.clear()
+
         referenceCount = 0
     }
 
@@ -345,19 +555,23 @@ open class BufferStream(buffer: ByteBuffer) {
             beginReading()
             expandableByteBuffer!!.ensureRequiredSize(java.lang.Byte.BYTES)
 
-            when (val bufferObjectType = BufferObjectType.enumValues[expandableByteBuffer!!.buffer.get().toInt()]) {
+            val typeOrdinal = expandableByteBuffer!!.buffer.get().toInt() and 0xff
+            val bufferObjectType = BufferObjectType.enumValues.getOrNull(typeOrdinal)
+                ?: throw IllegalArgumentException("Unknown serialized object type: $typeOrdinal")
+
+            when (bufferObjectType) {
                 BufferObjectType.NULL -> return null
-                BufferObjectType.REFERENCE -> return referenceOf(short.toInt())
+                BufferObjectType.REFERENCE -> return referenceOf(readReferenceIndex())
                 BufferObjectType.ENTITY -> return entity
                 BufferObjectType.ENUM -> return enum
                 BufferObjectType.BYTE, BufferObjectType.MUTABLE_BYTE -> return byte
-                BufferObjectType.INT, BufferObjectType.MUTABLE_INT -> return int
-                BufferObjectType.LONG, BufferObjectType.MUTABLE_LONG -> return long
-                BufferObjectType.SHORT, BufferObjectType.MUTABLE_SHORT -> return short
+                BufferObjectType.INT, BufferObjectType.MUTABLE_INT -> return readDynamicInt()
+                BufferObjectType.LONG, BufferObjectType.MUTABLE_LONG -> return readDynamicLong()
+                BufferObjectType.SHORT, BufferObjectType.MUTABLE_SHORT -> return readDynamicShort()
                 BufferObjectType.FLOAT, BufferObjectType.MUTABLE_FLOAT -> return float
                 BufferObjectType.DOUBLE, BufferObjectType.MUTABLE_DOUBLE -> return double
                 BufferObjectType.BOOLEAN, BufferObjectType.MUTABLE_BOOLEAN -> return boolean
-                BufferObjectType.CHAR, BufferObjectType.MUTABLE_CHAR -> return char
+                BufferObjectType.CHAR, BufferObjectType.MUTABLE_CHAR -> return readDynamicChar()
                 BufferObjectType.BYTE_ARRAY, BufferObjectType.INT_ARRAY, BufferObjectType.LONG_ARRAY, BufferObjectType.SHORT_ARRAY, BufferObjectType.FLOAT_ARRAY, BufferObjectType.DOUBLE_ARRAY, BufferObjectType.BOOLEAN_ARRAY, BufferObjectType.CHAR_ARRAY, BufferObjectType.OBJECT_ARRAY, BufferObjectType.OTHER_ARRAY -> return getArray(bufferObjectType)
                 BufferObjectType.BUFFERED -> return buffered
                 BufferObjectType.DATE -> return date
@@ -386,17 +600,18 @@ open class BufferStream(buffer: ByteBuffer) {
                 instance = objectType.instance(this.context?.contextId ?: "")
                 addReference(instance)
 
-                instance.getFields(this.context?.contextId ?: "").forEach {
-                    when (it.type) {
-                        ClassMetadata.LONG_PRIMITIVE_TYPE -> instance.setLong(it, long)
-                        ClassMetadata.INT_PRIMITIVE_TYPE -> instance.setInt(it, int)
-                        ClassMetadata.DOUBLE_PRIMITIVE_TYPE -> instance.setDouble(it, double)
-                        ClassMetadata.FLOAT_PRIMITIVE_TYPE -> instance.setFloat(it, float)
-                        ClassMetadata.BYTE_PRIMITIVE_TYPE -> instance.setByte(it, byte)
-                        ClassMetadata.CHAR_PRIMITIVE_TYPE -> instance.setChar(it, char)
-                        ClassMetadata.SHORT_PRIMITIVE_TYPE -> instance.setShort(it, short)
-                        ClassMetadata.BOOLEAN_PRIMITIVE_TYPE -> instance.setBoolean(it, boolean)
-                        else -> instance.setObject(it, value)
+                instance.getSerializationFields(this.context?.contextId ?: "").forEach { serializedField ->
+                    val javaField = serializedField.field
+                    when (serializedField.kind) {
+                        SerializationFieldKind.LONG -> instance.setLong(javaField, readDynamicLong())
+                        SerializationFieldKind.INT -> instance.setInt(javaField, readDynamicInt())
+                        SerializationFieldKind.DOUBLE -> instance.setDouble(javaField, double)
+                        SerializationFieldKind.FLOAT -> instance.setFloat(javaField, float)
+                        SerializationFieldKind.BYTE -> instance.setByte(javaField, byte)
+                        SerializationFieldKind.CHAR -> instance.setChar(javaField, readDynamicChar())
+                        SerializationFieldKind.SHORT -> instance.setShort(javaField, readDynamicShort())
+                        SerializationFieldKind.BOOLEAN -> instance.setBoolean(javaField, boolean)
+                        else -> instance.setObject(javaField, value)
                     }
                 }
 
@@ -423,10 +638,15 @@ open class BufferStream(buffer: ByteBuffer) {
         @Throws(BufferingException::class)
         get() {
             beginReading()
-            val stringSize = expandableByteBuffer!!.buffer.int
-            val stringBytes = ByteArray(stringSize)
-            expandableByteBuffer!!.buffer.get(stringBytes)
-            val className = String(stringBytes)
+            val className = if (compactFormat) {
+                readRawUtf8()
+            } else {
+                val stringSize = expandableByteBuffer!!.buffer.int
+                expandableByteBuffer!!.ensureRequiredSize(stringSize)
+                val stringBytes = ByteArray(stringSize)
+                expandableByteBuffer!!.buffer.get(stringBytes)
+                String(stringBytes)
+            }
             return try {
                 val returnValue = metadata.classForName(className, context)
                 addReference(returnValue)
@@ -460,11 +680,14 @@ open class BufferStream(buffer: ByteBuffer) {
      */
     val string: String
         @Throws(BufferingException::class)
-        get() {
+        get() = if (compactFormat) {
+            readCompactString()
+        } else {
             val stringSize = expandableByteBuffer!!.buffer.int
+            expandableByteBuffer!!.ensureRequiredSize(stringSize)
             val stringBytes = ByteArray(stringSize)
             expandableByteBuffer!!.buffer.get(stringBytes)
-            return String(stringBytes)
+            String(stringBytes)
         }
 
     /**
@@ -476,10 +699,7 @@ open class BufferStream(buffer: ByteBuffer) {
      */
     val date: Date
         @Throws(BufferingException::class)
-        get() {
-            val epoch = expandableByteBuffer!!.buffer.long
-            return Date(epoch)
-        }
+        get() = Date(readDynamicLong())
 
     /**
      * Get Pair from the buffer.
@@ -512,28 +732,38 @@ open class BufferStream(buffer: ByteBuffer) {
     val collection: Collection<*>
         @Throws(BufferingException::class)
         get() {
+            val collectionKind: Int
+            val collectionClass: Class<*>?
+            if (compactFormat) {
+                collectionKind = byte.toInt() and 0xff
+                collectionClass = if (collectionKind == COLLECTION_OTHER) value as Class<*> else null
+            } else {
+                collectionKind = COLLECTION_OTHER
+                collectionClass = value as Class<*>?
+            }
 
-            val collectionClass = value as Class<*>?
-            val size = expandableByteBuffer!!.buffer.int
+            val size = readSize()
+            expandableByteBuffer!!.ensureRequiredSize(size)
             val initialCapacity = size.coerceAtLeast(0)
-
-            val collection = try {
-                when {
-                    collectionClass == ArrayList::class.java || collectionClass == SortedList::class.java || Modifier.isPrivate(collectionClass!!.modifiers) ->
-                        ArrayList(initialCapacity)
-                    collectionClass == HashSet::class.java ->
-                        HashSet(collectionCapacity(initialCapacity))
-                    collectionClass == LinkedHashSet::class.java ->
-                        LinkedHashSet(collectionCapacity(initialCapacity))
-                    else -> collectionClass.instance<MutableCollection<Any?>>(context?.contextId ?: "")
+            val collection: MutableCollection<Any?> = try {
+                when (collectionKind) {
+                    COLLECTION_ARRAY_LIST -> ArrayList(initialCapacity)
+                    COLLECTION_HASH_SET -> HashSet(collectionCapacity(initialCapacity))
+                    COLLECTION_LINKED_HASH_SET -> LinkedHashSet(collectionCapacity(initialCapacity))
+                    else -> when {
+                        collectionClass == ArrayList::class.java ||
+                                collectionClass == SortedList::class.java ||
+                                Modifier.isPrivate(collectionClass!!.modifiers) -> ArrayList(initialCapacity)
+                        collectionClass == HashSet::class.java -> HashSet(collectionCapacity(initialCapacity))
+                        collectionClass == LinkedHashSet::class.java -> LinkedHashSet(collectionCapacity(initialCapacity))
+                        else -> collectionClass.instance(context?.contextId ?: "")
+                    }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 ArrayList(initialCapacity)
             }
 
-            for (i in 0 until size)
-                collection.add(value)
-
+            repeat(size) { collection.add(value) }
             return collection
         }
 
@@ -549,24 +779,36 @@ open class BufferStream(buffer: ByteBuffer) {
     val map: Map<*, *>
         @Throws(BufferingException::class)
         get() {
-            val mapClass = value as Class<*>
-            val mapSize = expandableByteBuffer!!.buffer.int
+            val mapKind: Int
+            val mapClass: Class<*>?
+            if (compactFormat) {
+                mapKind = byte.toInt() and 0xff
+                mapClass = if (mapKind == MAP_OTHER) value as Class<*> else null
+            } else {
+                mapKind = MAP_OTHER
+                mapClass = value as Class<*>
+            }
+
+            val mapSize = readSize()
+            expandableByteBuffer!!.ensureRequiredSize(Math.multiplyExact(2, mapSize))
             val initialCapacity = collectionCapacity(mapSize.coerceAtLeast(0))
-            val map:MutableMap<Any,Any?> = try {
-                when (mapClass) {
-                    HashMap::class.java -> HashMap(initialCapacity)
-                    LinkedHashMap::class.java -> LinkedHashMap(initialCapacity)
-                    else -> mapClass.instance(context?.contextId ?: "")
+            val map: MutableMap<Any?, Any?> = try {
+                when (mapKind) {
+                    MAP_HASH -> HashMap(initialCapacity)
+                    MAP_LINKED_HASH -> LinkedHashMap(initialCapacity)
+                    else -> when (mapClass) {
+                        HashMap::class.java -> HashMap(initialCapacity)
+                        LinkedHashMap::class.java -> LinkedHashMap(initialCapacity)
+                        else -> mapClass!!.instance(context?.contextId ?: "")
+                    }
                 }
-            } catch (e: InstantiationException) {
+            } catch (_: InstantiationException) {
                 throw BufferingException(BufferingException.CANNOT_INSTANTIATE, mapClass)
-            } catch (e: IllegalAccessException) {
+            } catch (_: IllegalAccessException) {
                 throw BufferingException(BufferingException.CANNOT_INSTANTIATE, mapClass)
             }
 
-            for (i in 0 until mapSize)
-                map[value!!] = value
-
+            repeat(mapSize) { map[value] = value }
             return map
         }
 
@@ -583,7 +825,8 @@ open class BufferStream(buffer: ByteBuffer) {
             val enumClass = value as Class<*>?
             expandableByteBuffer!!.ensureRequiredSize(java.lang.Byte.BYTES)
 
-            return enumClass!!.enumConstants[byte.toInt()] as Enum<*>
+            val ordinal = if (compactFormat) readUnsignedInt() else byte.toInt() and 0xff
+            return enumClass!!.enumConstants[ordinal] as Enum<*>
         }
 
     /**
@@ -631,88 +874,92 @@ open class BufferStream(buffer: ByteBuffer) {
      * @throws BufferingException Generic Buffer Exception
      */
     @Throws(BufferingException::class)
-    fun getArray(type: BufferObjectType): Any {
-        when {
-            type === BufferObjectType.LONG_ARRAY -> {
-                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-                val arr = LongArray(expandableByteBuffer!!.buffer.int)
-                expandableByteBuffer!!.ensureRequiredSize(java.lang.Long.BYTES * arr.size)
-                for (i in arr.indices)
-                    arr[i] = expandableByteBuffer!!.buffer.long
-                return arr
-            }
-            type === BufferObjectType.INT_ARRAY -> {
-                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-                val arr = IntArray(expandableByteBuffer!!.buffer.int)
-                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES * arr.size)
-                for (i in arr.indices)
-                    arr[i] = expandableByteBuffer!!.buffer.int
-                return arr
-            }
-            type === BufferObjectType.FLOAT_ARRAY -> {
-                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-                val arr = FloatArray(expandableByteBuffer!!.buffer.int)
-                expandableByteBuffer!!.ensureRequiredSize(java.lang.Float.BYTES * arr.size)
-                for (i in arr.indices)
-                    arr[i] = expandableByteBuffer!!.buffer.float
-                return arr
-            }
-            type === BufferObjectType.BYTE_ARRAY -> {
-                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-                val arr = ByteArray(expandableByteBuffer!!.buffer.int)
-                expandableByteBuffer!!.ensureRequiredSize(arr.size)
-                expandableByteBuffer!!.buffer.get(arr)
-                return arr
-            }
-            type === BufferObjectType.CHAR_ARRAY -> {
-                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-                val arr = CharArray(expandableByteBuffer!!.buffer.int)
-                expandableByteBuffer!!.ensureRequiredSize(Character.BYTES * arr.size)
-                for (i in arr.indices)
-                    arr[i] = expandableByteBuffer!!.buffer.char
-                return arr
-            }
-            type === BufferObjectType.SHORT_ARRAY -> {
-                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-                val arr = ShortArray(expandableByteBuffer!!.buffer.int)
-                expandableByteBuffer!!.ensureRequiredSize(java.lang.Short.BYTES * arr.size)
-                for (i in arr.indices)
-                    arr[i] = expandableByteBuffer!!.buffer.short
-                return arr
-            }
-            type === BufferObjectType.BOOLEAN_ARRAY -> {
-                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-                val arr = BooleanArray(expandableByteBuffer!!.buffer.int)
-                expandableByteBuffer!!.ensureRequiredSize(java.lang.Byte.BYTES * arr.size)
-                for (i in arr.indices)
-                    arr[i] = expandableByteBuffer!!.buffer.get().toInt() == 1
-                return arr
-            }
-            type === BufferObjectType.DOUBLE_ARRAY -> {
-                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-                val arr = DoubleArray(expandableByteBuffer!!.buffer.int)
-                expandableByteBuffer!!.ensureRequiredSize(java.lang.Double.BYTES * arr.size)
-                for (i in arr.indices)
-                    arr[i] = expandableByteBuffer!!.buffer.double
-                return arr
-            }
-            type === BufferObjectType.OTHER_ARRAY -> {
-                val arr = Array.newInstance(objectClass, int)
-                for (i in 0 until Array.getLength(arr)) {
-                    val value = value
-                    Array.set(arr, i, value)
-                }
-                return arr
-            }
-            else -> {
-                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-                val arr = arrayOfNulls<Any>(expandableByteBuffer!!.buffer.int)
-                expandableByteBuffer!!.ensureRequiredSize(3 * arr.size)
-                for (i in arr.indices)
-                    arr[i] = value
-                return arr
-            }
+    fun getArray(type: BufferObjectType): Any = when (type) {
+        BufferObjectType.LONG_ARRAY -> {
+            val size = readSize()
+            expandableByteBuffer!!.ensureRequiredSize(Math.multiplyExact(java.lang.Long.BYTES, size))
+            val arr = LongArray(size)
+            for (index in arr.indices) arr[index] = expandableByteBuffer!!.buffer.long
+            arr
         }
+        BufferObjectType.INT_ARRAY -> {
+            val size = readSize()
+            expandableByteBuffer!!.ensureRequiredSize(Math.multiplyExact(Integer.BYTES, size))
+            val arr = IntArray(size)
+            for (index in arr.indices) arr[index] = expandableByteBuffer!!.buffer.int
+            arr
+        }
+        BufferObjectType.FLOAT_ARRAY -> {
+            val size = readSize()
+            expandableByteBuffer!!.ensureRequiredSize(Math.multiplyExact(java.lang.Float.BYTES, size))
+            val arr = FloatArray(size)
+            for (index in arr.indices) arr[index] = expandableByteBuffer!!.buffer.float
+            arr
+        }
+        BufferObjectType.BYTE_ARRAY -> {
+            val size = readSize()
+            expandableByteBuffer!!.ensureRequiredSize(size)
+            val arr = ByteArray(size)
+            expandableByteBuffer!!.buffer.get(arr)
+            arr
+        }
+        BufferObjectType.CHAR_ARRAY -> {
+            val size = readSize()
+            expandableByteBuffer!!.ensureRequiredSize(Math.multiplyExact(Character.BYTES, size))
+            val arr = CharArray(size)
+            for (index in arr.indices) arr[index] = expandableByteBuffer!!.buffer.char
+            arr
+        }
+        BufferObjectType.SHORT_ARRAY -> {
+            val size = readSize()
+            expandableByteBuffer!!.ensureRequiredSize(Math.multiplyExact(java.lang.Short.BYTES, size))
+            val arr = ShortArray(size)
+            for (index in arr.indices) arr[index] = expandableByteBuffer!!.buffer.short
+            arr
+        }
+        BufferObjectType.BOOLEAN_ARRAY -> {
+            val size = readSize()
+            val payloadSize = if (compactFormat) ((size.toLong() + 7L) ushr 3).toInt() else size
+            expandableByteBuffer!!.ensureRequiredSize(payloadSize)
+            val arr = BooleanArray(size)
+            if (compactFormat) {
+                var index = 0
+                while (index < arr.size) {
+                    val packed = expandableByteBuffer!!.buffer.get().toInt() and 0xff
+                    val valuesInByte = minOf(8, arr.size - index)
+                    for (bit in 0 until valuesInByte) {
+                        arr[index + bit] = packed and (1 shl bit) != 0
+                    }
+                    index += valuesInByte
+                }
+            } else {
+                for (index in arr.indices) arr[index] = expandableByteBuffer!!.buffer.get().toInt() == 1
+            }
+            arr
+        }
+        BufferObjectType.DOUBLE_ARRAY -> {
+            val size = readSize()
+            expandableByteBuffer!!.ensureRequiredSize(Math.multiplyExact(java.lang.Double.BYTES, size))
+            val arr = DoubleArray(size)
+            for (index in arr.indices) arr[index] = expandableByteBuffer!!.buffer.double
+            arr
+        }
+        BufferObjectType.OTHER_ARRAY -> {
+            val componentType = objectClass
+            val size = readSize()
+            expandableByteBuffer!!.ensureRequiredSize(size)
+            val arr = Array.newInstance(componentType, size)
+            for (index in 0 until size) Array.set(arr, index, value)
+            arr
+        }
+        BufferObjectType.OBJECT_ARRAY -> {
+            val size = readSize()
+            expandableByteBuffer!!.ensureRequiredSize(size)
+            val arr = arrayOfNulls<Any>(size)
+            for (index in arr.indices) arr[index] = value
+            arr
+        }
+        else -> throw IllegalArgumentException("$type is not an array type")
     }
 
     // endregion
@@ -730,7 +977,7 @@ open class BufferStream(buffer: ByteBuffer) {
     @Throws(BufferingException::class)
     private fun putEnum(enumVal: Enum<*>) {
         putObject(enumVal.javaClass)
-        putByte(enumVal.ordinal.toByte())
+        if (compactFormat) putUnsignedInt(enumVal.ordinal) else putByte(enumVal.ordinal.toByte())
     }
 
     /**
@@ -743,68 +990,70 @@ open class BufferStream(buffer: ByteBuffer) {
      */
     @Throws(BufferingException::class)
     fun putArray(array: Any?) {
-        when {
-            array!!.javaClass == ClassMetadata.LONG_ARRAY-> {
-                val arr = array as LongArray
-                putInt(arr.size)
-                expandableByteBuffer!!.ensureSize(java.lang.Long.BYTES * arr.size)
-                for (anArr in arr) expandableByteBuffer!!.buffer.putLong(anArr)
+        when (array) {
+            is LongArray -> {
+                putSize(array.size)
+                expandableByteBuffer!!.ensureSize(Math.multiplyExact(java.lang.Long.BYTES, array.size))
+                for (item in array) expandableByteBuffer!!.buffer.putLong(item)
             }
-            array.javaClass == ClassMetadata.INT_ARRAY -> {
-                val arr = array as IntArray
-                putInt(arr.size)
-                expandableByteBuffer!!.ensureSize(Integer.BYTES * arr.size)
-                for (anArr in arr) expandableByteBuffer!!.buffer.putInt(anArr)
+            is IntArray -> {
+                putSize(array.size)
+                expandableByteBuffer!!.ensureSize(Math.multiplyExact(Integer.BYTES, array.size))
+                for (item in array) expandableByteBuffer!!.buffer.putInt(item)
             }
-            array.javaClass == ClassMetadata.FLOAT_ARRAY -> {
-                val arr = array as FloatArray
-                putInt(arr.size)
-                expandableByteBuffer!!.ensureSize(java.lang.Float.BYTES * arr.size)
-                for (anArr in arr) expandableByteBuffer!!.buffer.putFloat(anArr)
+            is FloatArray -> {
+                putSize(array.size)
+                expandableByteBuffer!!.ensureSize(Math.multiplyExact(java.lang.Float.BYTES, array.size))
+                for (item in array) expandableByteBuffer!!.buffer.putFloat(item)
             }
-            array.javaClass == ClassMetadata.BYTE_ARRAY -> {
-                val arr = array as ByteArray
-                putInt(arr.size)
-                expandableByteBuffer!!.ensureSize(arr.size)
-                expandableByteBuffer!!.buffer.put(arr)
+            is ByteArray -> {
+                putSize(array.size)
+                expandableByteBuffer!!.ensureSize(array.size)
+                expandableByteBuffer!!.buffer.put(array)
             }
-            array.javaClass == ClassMetadata.CHAR_ARRAY -> {
-                val arr = array as CharArray
-                putInt(arr.size)
-                expandableByteBuffer!!.ensureSize(Character.BYTES * arr.size)
-                for (anArr in arr) expandableByteBuffer!!.buffer.putChar(anArr)
+            is CharArray -> {
+                putSize(array.size)
+                expandableByteBuffer!!.ensureSize(Math.multiplyExact(Character.BYTES, array.size))
+                for (item in array) expandableByteBuffer!!.buffer.putChar(item)
             }
-            array.javaClass == ClassMetadata.SHORT_ARRAY -> {
-                val arr = array as ShortArray
-                putInt(arr.size)
-                expandableByteBuffer!!.ensureSize(java.lang.Short.BYTES * arr.size)
-                for (anArr in arr) expandableByteBuffer!!.buffer.putShort(anArr)
+            is ShortArray -> {
+                putSize(array.size)
+                expandableByteBuffer!!.ensureSize(Math.multiplyExact(java.lang.Short.BYTES, array.size))
+                for (item in array) expandableByteBuffer!!.buffer.putShort(item)
             }
-            array.javaClass == ClassMetadata.BOOLEAN_ARRAY -> {
-                val arr = array as BooleanArray
-                putInt(arr.size)
-                expandableByteBuffer!!.ensureSize(java.lang.Byte.BYTES * arr.size)
-                for (anArr in arr) expandableByteBuffer!!.buffer.put((if (anArr) 1 else 0).toByte())
+            is BooleanArray -> {
+                putSize(array.size)
+                if (compactFormat) {
+                    val packedByteCount = ((array.size.toLong() + 7L) ushr 3).toInt()
+                    expandableByteBuffer!!.ensureSize(packedByteCount)
+                    var index = 0
+                    while (index < array.size) {
+                        var packed = 0
+                        val valuesInByte = minOf(8, array.size - index)
+                        for (bit in 0 until valuesInByte) {
+                            if (array[index + bit]) packed = packed or (1 shl bit)
+                        }
+                        expandableByteBuffer!!.buffer.put(packed.toByte())
+                        index += valuesInByte
+                    }
+                } else {
+                    expandableByteBuffer!!.ensureSize(array.size)
+                    for (item in array) expandableByteBuffer!!.buffer.put(if (item) 1 else 0)
+                }
             }
-            array.javaClass == ClassMetadata.DOUBLE_ARRAY -> {
-                val arr = array as DoubleArray
-                putInt(arr.size)
-                expandableByteBuffer!!.ensureSize(java.lang.Double.BYTES * arr.size)
-                for (anArr in arr) expandableByteBuffer!!.buffer.putDouble(anArr)
+            is DoubleArray -> {
+                putSize(array.size)
+                expandableByteBuffer!!.ensureSize(Math.multiplyExact(java.lang.Double.BYTES, array.size))
+                for (item in array) expandableByteBuffer!!.buffer.putDouble(item)
             }
-            array.javaClass == kotlin.Array<Any?>::class.java -> {
-                @Suppress("UNCHECKED_CAST")
-                val arr = array as kotlin.Array<Any?>
-                putInt(arr.size)
-                for (anArr in arr) putObject(anArr)
+            is kotlin.Array<*> -> {
+                if (array.javaClass.componentType != Any::class.java) {
+                    putObjectClass(array.javaClass.componentType)
+                }
+                putSize(array.size)
+                for (item in array) putObject(item)
             }
-            else -> {
-                putObjectClass(array.javaClass.componentType)
-                @Suppress("UNCHECKED_CAST")
-                val arr = array as kotlin.Array<Any?>
-                putInt(arr.size)
-                for (anArr in arr) putObject(anArr)
-            }
+            else -> throw IllegalArgumentException("Value is not an array: ${array?.javaClass?.name}")
         }
     }
 
@@ -818,11 +1067,14 @@ open class BufferStream(buffer: ByteBuffer) {
      */
     @Throws(BufferingException::class)
     fun putString(value: String) {
-        val stringBytes = value.toByteArray()
-
-        putInt(stringBytes.size)
-        expandableByteBuffer!!.ensureSize(stringBytes.size)
-        expandableByteBuffer!!.buffer.put(stringBytes)
+        if (compactFormat) {
+            putCompactString(value)
+        } else {
+            val stringBytes = value.toByteArray()
+            putInt(stringBytes.size)
+            expandableByteBuffer!!.ensureSize(stringBytes.size)
+            expandableByteBuffer!!.buffer.put(stringBytes)
+        }
     }
 
     /**
@@ -835,7 +1087,7 @@ open class BufferStream(buffer: ByteBuffer) {
      */
     @Suppress("MemberVisibilityCanPrivate")
     @Throws(BufferingException::class)
-    fun putDate(value: Date) = putLong(value.time)
+    fun putDate(value: Date) = putDynamicLong(value.time)
 
     /**
      * Put a Class to the buffer
@@ -851,12 +1103,14 @@ open class BufferStream(buffer: ByteBuffer) {
         addReference(type)
 
         val className = type.name
-        val stringBytes = className.toByteArray()
-
-        putInt(stringBytes.size)
-
-        expandableByteBuffer!!.ensureSize(stringBytes.size)
-        expandableByteBuffer!!.buffer.put(stringBytes)
+        if (compactFormat) {
+            putRawUtf8(className)
+        } else {
+            val stringBytes = className.toByteArray()
+            putInt(stringBytes.size)
+            expandableByteBuffer!!.ensureSize(stringBytes.size)
+            expandableByteBuffer!!.buffer.put(stringBytes)
+        }
     }
 
     /**
@@ -879,16 +1133,31 @@ open class BufferStream(buffer: ByteBuffer) {
      */
     @Throws(BufferingException::class)
     fun putCollection(collection: Collection<*>) {
-
-        try {
-            val clazz = metadata.classForName(collection.javaClass.name, context)
-            putObject(clazz)
-        } catch (e: ClassNotFoundException) {
-            putObject(ArrayList::class.java)
+        if (compactFormat) {
+            val clazz = collection.javaClass
+            val kind = when {
+                clazz == ArrayList::class.java || clazz == SortedList::class.java || Modifier.isPrivate(clazz.modifiers) -> COLLECTION_ARRAY_LIST
+                clazz == HashSet::class.java -> COLLECTION_HASH_SET
+                clazz == LinkedHashSet::class.java -> COLLECTION_LINKED_HASH_SET
+                else -> COLLECTION_OTHER
+            }
+            putByte(kind.toByte())
+            if (kind == COLLECTION_OTHER) {
+                try {
+                    putObject(metadata.classForName(clazz.name, context))
+                } catch (_: ClassNotFoundException) {
+                    putObject(ArrayList::class.java)
+                }
+            }
+        } else {
+            try {
+                putObject(metadata.classForName(collection.javaClass.name, context))
+            } catch (_: ClassNotFoundException) {
+                putObject(ArrayList::class.java)
+            }
         }
 
-        putInt(collection.size)
-
+        putSize(collection.size)
         collection.forEach { putObject(it) }
     }
 
@@ -903,19 +1172,33 @@ open class BufferStream(buffer: ByteBuffer) {
     @Suppress("MemberVisibilityCanPrivate")
     @Throws(BufferingException::class)
     fun putMap(map: Map<*, *>) {
-
-        try {
-            val clazz = metadata.classForName(map.javaClass.name, context)
-            putObject(clazz)
-        } catch (e: ClassNotFoundException) {
-            putObject(HashMap::class.java)
+        if (compactFormat) {
+            val clazz = map.javaClass
+            val kind = when {
+                clazz == HashMap::class.java || Modifier.isPrivate(clazz.modifiers) -> MAP_HASH
+                clazz == LinkedHashMap::class.java -> MAP_LINKED_HASH
+                else -> MAP_OTHER
+            }
+            putByte(kind.toByte())
+            if (kind == MAP_OTHER) {
+                try {
+                    putObject(metadata.classForName(clazz.name, context))
+                } catch (_: ClassNotFoundException) {
+                    putObject(HashMap::class.java)
+                }
+            }
+        } else {
+            try {
+                putObject(metadata.classForName(map.javaClass.name, context))
+            } catch (_: ClassNotFoundException) {
+                putObject(HashMap::class.java)
+            }
         }
 
-        putInt(map.size)
-
-        map.forEach {
-            putObject(it.key)
-            putObject(it.value)
+        putSize(map.size)
+        map.forEach { (key, value) ->
+            putObject(key)
+            putObject(value)
         }
     }
 
@@ -965,24 +1248,24 @@ open class BufferStream(buffer: ByteBuffer) {
         if(value != null)
             addReference(value)
 
-        // Iterate through the fields and put them on the expandableByteBuffer
-        value?.getFields(context?.contextId ?: "")?.forEach {
+        // Primitive/object field kinds are cached with the Field metadata once per class.
+        value?.getSerializationFields(context?.contextId ?: "")?.forEach { serializedField ->
+            val javaField = serializedField.field
             try {
-                when (it.type) {
-                    ClassMetadata.INT_PRIMITIVE_TYPE -> putInt(value.getInt(it))
-                    ClassMetadata.LONG_PRIMITIVE_TYPE -> putLong(value.getLong(it))
-                    ClassMetadata.BYTE_PRIMITIVE_TYPE -> putByte(value.getByte(it))
-                    ClassMetadata.FLOAT_PRIMITIVE_TYPE -> putFloat(value.getFloat(it))
-                    ClassMetadata.DOUBLE_PRIMITIVE_TYPE -> putDouble(value.getDouble(it))
-                    ClassMetadata.BOOLEAN_PRIMITIVE_TYPE -> putBoolean(value.getBoolean(it))
-                    ClassMetadata.SHORT_PRIMITIVE_TYPE -> putShort(value.getShort(it))
-                    ClassMetadata.CHAR_PRIMITIVE_TYPE -> putChar(value.getChar(it))
-                    else -> putObject(value.getObject(it))
+                when (serializedField.kind) {
+                    SerializationFieldKind.INT -> putDynamicInt(value.getInt(javaField))
+                    SerializationFieldKind.LONG -> putDynamicLong(value.getLong(javaField))
+                    SerializationFieldKind.BYTE -> putByte(value.getByte(javaField))
+                    SerializationFieldKind.FLOAT -> putFloat(value.getFloat(javaField))
+                    SerializationFieldKind.DOUBLE -> putDouble(value.getDouble(javaField))
+                    SerializationFieldKind.BOOLEAN -> putBoolean(value.getBoolean(javaField))
+                    SerializationFieldKind.SHORT -> putDynamicShort(value.getShort(javaField))
+                    SerializationFieldKind.CHAR -> putDynamicChar(value.getChar(javaField))
+                    else -> putObject(value.getObject(javaField))
                 }
-            } catch (e: IllegalAccessException) {
-                throw BufferingException(BufferingException.ILLEGAL_ACCESS_EXCEPTION + it.name)
+            } catch (_: IllegalAccessException) {
+                throw BufferingException(BufferingException.ILLEGAL_ACCESS_EXCEPTION + javaField.name)
             }
-
         }
     }
 
@@ -1133,7 +1416,10 @@ open class BufferStream(buffer: ByteBuffer) {
         val position = this.expandableByteBuffer!!.buffer.position()
 
         var bufferObjectType = BufferObjectType.getTypeCodeForClass(value, context)
-        val referenceNumber = referenceIndex(value).toShort()
+        val referenceNumber = when (bufferObjectType) {
+            BufferObjectType.CLASS, BufferObjectType.PAIR, BufferObjectType.OTHER -> referenceIndex(value)
+            else -> -1
+        }
         if (referenceNumber > -1) bufferObjectType = BufferObjectType.REFERENCE
 
         try {
@@ -1143,17 +1429,17 @@ open class BufferStream(buffer: ByteBuffer) {
 
             when (bufferObjectType) {
                 BufferObjectType.NULL -> return this.expandableByteBuffer!!.buffer.position() - position
-                BufferObjectType.REFERENCE -> putShort(referenceNumber)
+                BufferObjectType.REFERENCE -> putReferenceIndex(referenceNumber)
                 BufferObjectType.ENTITY -> putEntity(value as ManagedEntity, context)
                 BufferObjectType.ENUM -> putEnum(value as Enum<*>)
                 BufferObjectType.BYTE, BufferObjectType.MUTABLE_BYTE -> putByte(value as Byte)
-                BufferObjectType.INT, BufferObjectType.MUTABLE_INT -> putInt(value as Int)
-                BufferObjectType.LONG, BufferObjectType.MUTABLE_LONG -> putLong(value as Long)
-                BufferObjectType.SHORT, BufferObjectType.MUTABLE_SHORT -> putShort(value as Short)
+                BufferObjectType.INT, BufferObjectType.MUTABLE_INT -> putDynamicInt(value as Int)
+                BufferObjectType.LONG, BufferObjectType.MUTABLE_LONG -> putDynamicLong(value as Long)
+                BufferObjectType.SHORT, BufferObjectType.MUTABLE_SHORT -> putDynamicShort(value as Short)
                 BufferObjectType.FLOAT, BufferObjectType.MUTABLE_FLOAT -> putFloat(value as Float)
                 BufferObjectType.DOUBLE, BufferObjectType.MUTABLE_DOUBLE -> putDouble(value as Double)
                 BufferObjectType.BOOLEAN, BufferObjectType.MUTABLE_BOOLEAN -> putBoolean(value as Boolean)
-                BufferObjectType.CHAR, BufferObjectType.MUTABLE_CHAR -> putChar(value as Char)
+                BufferObjectType.CHAR, BufferObjectType.MUTABLE_CHAR -> putDynamicChar(value as Char)
                 BufferObjectType.BYTE_ARRAY, BufferObjectType.INT_ARRAY, BufferObjectType.LONG_ARRAY, BufferObjectType.SHORT_ARRAY, BufferObjectType.FLOAT_ARRAY, BufferObjectType.DOUBLE_ARRAY, BufferObjectType.BOOLEAN_ARRAY, BufferObjectType.CHAR_ARRAY, BufferObjectType.OBJECT_ARRAY, BufferObjectType.OTHER_ARRAY -> putArray(value)
                 BufferObjectType.BUFFERED -> putBuffered(value as BufferStreamable)
                 BufferObjectType.DATE -> putDate(value as Date)
@@ -1200,7 +1486,28 @@ open class BufferStream(buffer: ByteBuffer) {
 
     companion object {
 
+        private const val COMPACT_FORMAT_VERSION = 2
+        private const val COMPACT_HEADER_SIZE = Integer.BYTES + 1
+        private const val COMPACT_LENGTH_FLAG = Int.MIN_VALUE
+
+        private const val MAX_VAR_INT_BYTES = 5
+        private const val MAX_VAR_LONG_BYTES = 10
+        private const val MAX_COMPACT_REFERENCES = Int.MAX_VALUE - 8
+        private const val MAX_COMPACT_STRING_BYTES = Int.MAX_VALUE ushr 1
+        private const val MIN_INTERNED_STRING_LENGTH = 4
+        private const val MAX_INTERNED_STRINGS = 4096
+
         private const val MAX_RETAINED_REFERENCE_CAPACITY = 1024
+        private const val MAX_RETAINED_STRING_CAPACITY = 1024
+
+        private const val COLLECTION_ARRAY_LIST = 0
+        private const val COLLECTION_HASH_SET = 1
+        private const val COLLECTION_LINKED_HASH_SET = 2
+        private const val COLLECTION_OTHER = 3
+
+        private const val MAP_HASH = 0
+        private const val MAP_LINKED_HASH = 1
+        private const val MAP_OTHER = 2
 
         private fun collectionCapacity(expectedSize: Int): Int = when {
             expectedSize < 3 -> expectedSize + 1
@@ -1220,16 +1527,37 @@ open class BufferStream(buffer: ByteBuffer) {
         @Throws(BufferingException::class)
         @JvmOverloads
         @JvmStatic
-        fun toBuffer(any: Any, context: SchemaContext? = null): ByteBuffer {
+        fun toBuffer(any: Any, context: SchemaContext? = null): ByteBuffer =
+            serializeFramed(any, context, compact = true)
 
+        /** Writes the original version-1 format for migration tests or rolling upgrades. */
+        @Throws(BufferingException::class)
+        @JvmOverloads
+        @JvmStatic
+        fun toLegacyBuffer(any: Any, context: SchemaContext? = null): ByteBuffer =
+            serializeFramed(any, context, compact = false)
+
+        private fun serializeFramed(any: Any, context: SchemaContext?, compact: Boolean): ByteBuffer {
             val bufferStream = BufferStream(context)
-            bufferStream.expandableByteBuffer!!.buffer.position(Integer.BYTES)
+            bufferStream.compactFormat = compact
+            bufferStream.expandableByteBuffer!!.buffer.position(
+                if (compact) COMPACT_HEADER_SIZE else Integer.BYTES
+            )
             bufferStream.putObject(any)
-            bufferStream.expandableByteBuffer!!.buffer.flip()
-            bufferStream.expandableByteBuffer!!.buffer.putInt(bufferStream.expandableByteBuffer!!.buffer.limit())
-            bufferStream.expandableByteBuffer!!.buffer.rewind()
 
-            return bufferStream.byteBuffer
+            // Re-acquire the buffer because ExpandableByteBuffer may have replaced it while growing.
+            val result = bufferStream.byteBuffer
+            val serializedSize = result.position()
+            require(serializedSize > 0) { "Serialized buffer must not be empty" }
+
+            if (compact) {
+                result.putInt(0, serializedSize or COMPACT_LENGTH_FLAG)
+                result.put(Integer.BYTES, COMPACT_FORMAT_VERSION.toByte())
+            } else {
+                result.putInt(0, serializedSize)
+            }
+            result.flip()
+            return result
         }
 
         /**
@@ -1245,37 +1573,63 @@ open class BufferStream(buffer: ByteBuffer) {
         @JvmStatic
         fun fromBuffer(buffer: ByteBuffer, context: SchemaContext? = null): Any? {
             val bufferStartingPosition = buffer.position()
-            val maxBufferSize = buffer.int
-
-            val bufferStream = BufferStream(buffer)
-            bufferStream.context = context
-
-            bufferStream.expandableByteBuffer = ExpandableByteBuffer(buffer, maxBufferSize, bufferStartingPosition)
-            bufferStream.isComingFromBuffer = true
-
-            val returnValue: Any? = try {
-                bufferStream.value
-            } catch (e: BufferingException) {
-                buffer.position(maxBufferSize + bufferStartingPosition)
-                throw e
-            } catch (e: Exception) {
-                buffer.position(maxBufferSize + bufferStartingPosition)
-                if (e is BufferUnderflowException)
-                    throw com.onyx.exception.BufferUnderflowException(com.onyx.exception.BufferUnderflowException.BUFFER_UNDERFLOW)
-                else
-                    throw BufferingException(BufferingException.UNKNOWN_DESERIALIZE, null, e)
+            val originalLimit = buffer.limit()
+            if (buffer.remaining() < Integer.BYTES) {
+                throw com.onyx.exception.BufferUnderflowException(
+                    com.onyx.exception.BufferUnderflowException.BUFFER_UNDERFLOW
+                )
             }
 
-            if (buffer.position() - bufferStartingPosition != maxBufferSize) {
-                // Roll the expandableByteBuffer forward so that the next process does not get hung up at the previous position.
-                buffer.position(maxBufferSize + bufferStartingPosition)
-
-                // Serialization did not go right, that means we have a serious problem and we do not want it to lead to a corruption
-                // therefore we are going to throw an exception
+            val framedSize = buffer.int
+            val compact = framedSize < 0
+            val maxBufferSize = if (compact) framedSize and Int.MAX_VALUE else framedSize
+            val minimumSize = if (compact) COMPACT_HEADER_SIZE else Integer.BYTES
+            if (maxBufferSize < minimumSize || maxBufferSize > originalLimit - bufferStartingPosition) {
                 throw BufferingException(BufferingException.UNKNOWN_DESERIALIZE)
             }
 
-            return returnValue
+            val recordEnd = bufferStartingPosition + maxBufferSize
+            buffer.limit(recordEnd)
+            try {
+                if (compact) {
+                    val version = buffer.get().toInt() and 0xff
+                    if (version != COMPACT_FORMAT_VERSION) {
+                        buffer.position(recordEnd)
+                        throw BufferingException(BufferingException.UNKNOWN_DESERIALIZE)
+                    }
+                }
+
+                val bufferStream = BufferStream(buffer)
+                bufferStream.context = context
+                bufferStream.compactFormat = compact
+                bufferStream.expandableByteBuffer = ExpandableByteBuffer(buffer, maxBufferSize, bufferStartingPosition)
+                bufferStream.isComingFromBuffer = true
+
+                val returnValue: Any? = try {
+                    bufferStream.value
+                } catch (e: BufferingException) {
+                    buffer.position(recordEnd)
+                    throw e
+                } catch (e: Exception) {
+                    buffer.position(recordEnd)
+                    if (e is BufferUnderflowException) {
+                        throw com.onyx.exception.BufferUnderflowException(
+                            com.onyx.exception.BufferUnderflowException.BUFFER_UNDERFLOW
+                        )
+                    }
+                    throw BufferingException(BufferingException.UNKNOWN_DESERIALIZE, null, e)
+                }
+
+                if (buffer.position() != recordEnd) {
+                    buffer.position(recordEnd)
+                    throw BufferingException(BufferingException.UNKNOWN_DESERIALIZE)
+                }
+                return returnValue
+            } finally {
+                val finalPosition = minOf(buffer.position(), recordEnd)
+                buffer.limit(originalLimit)
+                buffer.position(finalPosition)
+            }
         }
     }
 }
