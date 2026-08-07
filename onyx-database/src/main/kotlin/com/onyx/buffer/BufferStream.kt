@@ -1,3 +1,269 @@
+ChatGPT Pro
+
+
+
+
+Today 8:33 PM
+
+Pasted markdown(2).md
+File
+the most expensive part of my app is managing references.  Is there any way to optimize this while maintaining intent
+
+
+Worked for 10m 30s
+Yes. There is a large, low-risk optimization hiding in plain sight
+Every call to putObject currently probes this nested structure:
+
+HashMap<Class<*>, HashMap<Any, Int>>
+That happens regardless of whether the value’s type is ever reference-tracked.
+
+
+But on the writer side, only these values are ever added to the reference table:
+
+CLASS
+
+PAIR
+
+OTHER
+
+Classes and pairs register themselves here, while reflected OTHER objects register before their fields are written.
+
+
+Everything else is paying a toll at a reference booth it can never pass through.
+
+Safest optimization: only check referenceable types
+Replace this:
+
+var bufferObjectType = BufferObjectType.getTypeCodeForClass(value, context)
+val referenceNumber = referenceIndex(value).toShort()
+if (referenceNumber > -1)
+bufferObjectType = BufferObjectType.REFERENCE
+With this:
+
+var bufferObjectType = BufferObjectType.getTypeCodeForClass(value, context)
+var referenceNumber = -1
+
+if (
+value != null &&
+when (bufferObjectType) {
+    BufferObjectType.CLASS,
+    BufferObjectType.PAIR,
+    BufferObjectType.OTHER -> true
+
+    else -> false
+}
+) {
+    referenceNumber = referenceIndex(value)
+
+    if (referenceNumber >= 0)
+        bufferObjectType = BufferObjectType.REFERENCE
+}
+Then change the reference branch from:
+
+BufferObjectType.REFERENCE -> putShort(referenceNumber)
+To:
+
+BufferObjectType.REFERENCE -> putShort(referenceNumber.toShort())
+This eliminates reference-map activity for:
+
+Primitive wrappers
+
+Strings
+
+Dates
+
+Enums
+
+Entities
+
+Buffered values
+
+Arrays
+
+Collections
+
+Maps
+
+Nulls
+
+The registration order, reference numbers, and serialized format remain unchanged. Only lookups that could never succeed are removed.
+
+If 90 percent of your putObject calls are attributes such as strings, numbers, booleans, arrays, or collection elements, this removes roughly 90 percent of the calls into referenceIndex.
+
+Also replace getOrPut during registration
+Your current registration performs nested getOrPut operations:
+
+references!!.getOrPut(reference.javaClass) { HashMap() }
+.getOrPut(reference) {
+    if (referenceCount == Short.MAX_VALUE.toInt())
+        return
+
+    ++referenceCount
+}
+A more direct replacement is:
+
+private fun addReference(reference: Any) {
+    if (isComingFromBuffer) {
+        val referenceIndex = reserveReference()
+
+        if (referenceIndex > 0)
+            referencesByIndex!![referenceIndex - 1] = reference
+
+        return
+    }
+
+    if (referenceCount >= Short.MAX_VALUE.toInt())
+        return
+
+    val byClass = references
+        ?: HashMap<Class<*>, HashMap<Any, Int>>().also {
+            references = it
+        }
+
+    val clazz = reference.javaClass
+
+    val classMap = byClass[clazz]
+        ?: HashMap<Any, Int>().also {
+            byClass[clazz] = it
+        }
+
+    val nextIndex = referenceCount + 1
+
+    if (classMap.putIfAbsent(reference, nextIndex) == null)
+        referenceCount = nextIndex
+}
+This preserves your existing class-scoped equality behavior but avoids the inner getOrPut lookup-plus-insertion path and its lambda.
+
+The deeper issue: these are value references, not object references
+Your reference table uses hashCode() and equals(), and your documentation explicitly requires those methods for reference recognition.
+
+
+That means this:
+
+val first = Customer(id = 10)
+val second = Customer(id = 10)
+can deserialize as though both positions referred to the same object instance, provided first == second.
+
+That is value interning, not conventional object-reference preservation.
+
+It can also be expensive. A generated data-class hashCode() may traverse strings, lists, nested objects, and other fields. For a large graph, reference checking can become a shadow serialization pass that repeatedly walks the same branches.
+
+When the intent is actual shared-instance and cycle preservation
+Use one IdentityHashMap:
+
+private var references: IdentityHashMap<Any, Int>? = null
+
+private fun referenceIndex(reference: Any?): Int {
+    if (reference == null)
+        return -1
+
+    return references?.get(reference) ?: -1
+}
+Writer registration becomes:
+
+private fun addWriterReference(reference: Any) {
+    if (referenceCount >= Short.MAX_VALUE.toInt())
+        return
+
+    val referenceMap = references
+        ?: IdentityHashMap<Any, Int>().also {
+            references = it
+        }
+
+    if (referenceMap[reference] == null)
+        referenceMap[reference] = ++referenceCount
+}
+This eliminates:
+
+The outer class map
+
+Domain-object hashCode()
+
+Domain-object equals()
+
+Accidental merging of distinct but equal mutable objects
+
+It retains repeated-instance and circular-reference behavior. Existing readers can still read the resulting format, but equal distinct objects will no longer be collapsed, so this does not preserve your current value-deduplication semantics.
+
+When exact value-deduplication semantics must remain
+After applying the gated lookup, the next serious optimization would be a custom open-addressed reference table with:
+
+Array<Any?>       // stored references
+IntArray          // precomputed hashes
+IntArray          // unboxed reference indexes
+Equality would remain:
+
+existing.javaClass === candidate.javaClass &&
+(existing === candidate || candidate == existing)
+That preserves your current class-scoped value equality while eliminating:
+
+One inner HashMap per encountered class
+
+Boxed Int reference indexes
+
+HashMap node allocations
+
+Recalculation of stored-object hashes during table resizing
+
+Two separate map traversals
+
+That is worthwhile only if CLASS/PAIR/OTHER reference handling remains hot after the first patch.
+
+One existing reference-semantics gap
+Arrays, collections, and maps are not currently registered as references before their contents are serialized, and their reader methods do not reserve reference slots before reading those contents.
+
+
+Consequently:
+
+val list = mutableListOf<Any>()
+list += list
+cannot currently round-trip as a cyclic collection, and repeated uses of the same list or map are serialized repeatedly.
+
+The gated optimization deliberately preserves that current behavior. It does not expand reference tracking and therefore does not add more bookkeeping.
+
+Recommended sequence
+First apply the type-gated lookup. It is the strongest guaranteed improvement and leaves reference numbering and wire behavior intact.
+
+Then use the putIfAbsent registration change.
+
+If profiling still lands heavily in domain hashCode() or equals(), the real decision is semantic: use IdentityHashMap for true object references, or use a custom primitive open-addressed table when equal-value deduplication must remain.
+
+
+can you provide me a drop in replacement
+
+Worked for 12m 38s
+Drop-in replacement
+Download the optimized BufferStream.kt
+
+Replace the existing file directly. This version:
+
+Skips reference-table lookup for every type except CLASS, PAIR, and OTHER, which are the only values currently registered as references.
+
+
+Replaces the nested writer-side getOrPut registration with direct map initialization and putIfAbsent.
+
+
+Preserves the existing class-scoped, value-based equals/hashCode reference semantics.
+
+Preserves reference numbering and the serialized wire format.
+
+Does not switch to identity references or change array, collection, map, entity, or buffered-object behavior.
+
+The main savings come from eliminating the nested reference lookup and its possible hashCode()/equals() work from strings, numbers, dates, enums, arrays, collections, maps, entities, nulls, and other untracked types. The original implementation performed that lookup unconditionally for every putObject call.
+
+
+I also passed the replacement through kotlinc parsing. A full compile requires the rest of the Onyx project dependencies, which were not included with the uploaded file.
+
+
+BufferStream.kt
+Code
+
+
+Library
+/
+BufferStream.kt
+
+
 package com.onyx.buffer
 
 import com.onyx.diskmap.data.bigInt
@@ -93,21 +359,29 @@ open class BufferStream(buffer: ByteBuffer) {
      * @param reference Object reference
      */
     private fun addReference(reference: Any) {
-        // If we are pulling from the expandableByteBuffer there is no reason to maintain a hash structure of the value references
-        // especially since they are not fully hydrated and may not have valid hashes yet.
+        // Reader-side references are indexed by insertion order because objects may not be fully hydrated
+        // and therefore may not have stable hashCode/equals implementations yet.
         if (isComingFromBuffer) {
             val referenceIndex = reserveReference()
             if (referenceIndex > 0)
                 referencesByIndex!![referenceIndex - 1] = reference
-        } else {
-            if (references == null) references = HashMap()
-            references!!.getOrPut(reference.javaClass) { HashMap() }
-                    .getOrPut(reference) {
-                        if (referenceCount == Short.MAX_VALUE.toInt())
-                            return
-                        ++referenceCount
-                    }
+            return
         }
+
+        if (referenceCount >= Short.MAX_VALUE.toInt())
+            return
+
+        val referenceMap = references
+            ?: HashMap<Class<*>, HashMap<Any, Int>>().also { references = it }
+        val referenceClass = reference.javaClass
+        val classMap = referenceMap[referenceClass]
+            ?: HashMap<Any, Int>().also { referenceMap[referenceClass] = it }
+        val nextReference = referenceCount + 1
+
+        // putIfAbsent performs a single hash-table traversal while preserving the existing
+        // class-scoped hashCode/equals reference semantics.
+        if (classMap.putIfAbsent(reference, nextReference) == null)
+            referenceCount = nextReference
     }
 
     /**
@@ -744,67 +1018,67 @@ open class BufferStream(buffer: ByteBuffer) {
     @Throws(BufferingException::class)
     fun putArray(array: Any?) {
         when {
-        array!!.javaClass == ClassMetadata.LONG_ARRAY-> {
-            val arr = array as LongArray
-            putInt(arr.size)
-            expandableByteBuffer!!.ensureSize(java.lang.Long.BYTES * arr.size)
-            for (anArr in arr) expandableByteBuffer!!.buffer.putLong(anArr)
-        }
-        array.javaClass == ClassMetadata.INT_ARRAY -> {
-            val arr = array as IntArray
-            putInt(arr.size)
-            expandableByteBuffer!!.ensureSize(Integer.BYTES * arr.size)
-            for (anArr in arr) expandableByteBuffer!!.buffer.putInt(anArr)
-        }
-        array.javaClass == ClassMetadata.FLOAT_ARRAY -> {
-            val arr = array as FloatArray
-            putInt(arr.size)
-            expandableByteBuffer!!.ensureSize(java.lang.Float.BYTES * arr.size)
-            for (anArr in arr) expandableByteBuffer!!.buffer.putFloat(anArr)
-        }
-        array.javaClass == ClassMetadata.BYTE_ARRAY -> {
-            val arr = array as ByteArray
-            putInt(arr.size)
-            expandableByteBuffer!!.ensureSize(arr.size)
-            expandableByteBuffer!!.buffer.put(arr)
-        }
-        array.javaClass == ClassMetadata.CHAR_ARRAY -> {
-            val arr = array as CharArray
-            putInt(arr.size)
-            expandableByteBuffer!!.ensureSize(Character.BYTES * arr.size)
-            for (anArr in arr) expandableByteBuffer!!.buffer.putChar(anArr)
-        }
-        array.javaClass == ClassMetadata.SHORT_ARRAY -> {
-            val arr = array as ShortArray
-            putInt(arr.size)
-            expandableByteBuffer!!.ensureSize(java.lang.Short.BYTES * arr.size)
-            for (anArr in arr) expandableByteBuffer!!.buffer.putShort(anArr)
-        }
-        array.javaClass == ClassMetadata.BOOLEAN_ARRAY -> {
-            val arr = array as BooleanArray
-            putInt(arr.size)
-            expandableByteBuffer!!.ensureSize(java.lang.Byte.BYTES * arr.size)
-            for (anArr in arr) expandableByteBuffer!!.buffer.put((if (anArr) 1 else 0).toByte())
-        }
-        array.javaClass == ClassMetadata.DOUBLE_ARRAY -> {
-            val arr = array as DoubleArray
-            putInt(arr.size)
-            expandableByteBuffer!!.ensureSize(java.lang.Double.BYTES * arr.size)
-            for (anArr in arr) expandableByteBuffer!!.buffer.putDouble(anArr)
-        }
-        array.javaClass == kotlin.Array<Any?>::class.java -> {
-            @Suppress("UNCHECKED_CAST")
-            val arr = array as kotlin.Array<Any?>
-            putInt(arr.size)
-            for (anArr in arr) putObject(anArr)
-        }
-        else -> {
-            putObjectClass(array.javaClass.componentType)
-            @Suppress("UNCHECKED_CAST")
-            val arr = array as kotlin.Array<Any?>
-            putInt(arr.size)
-            for (anArr in arr) putObject(anArr)
-        }
+            array!!.javaClass == ClassMetadata.LONG_ARRAY-> {
+                val arr = array as LongArray
+                putInt(arr.size)
+                expandableByteBuffer!!.ensureSize(java.lang.Long.BYTES * arr.size)
+                for (anArr in arr) expandableByteBuffer!!.buffer.putLong(anArr)
+            }
+            array.javaClass == ClassMetadata.INT_ARRAY -> {
+                val arr = array as IntArray
+                putInt(arr.size)
+                expandableByteBuffer!!.ensureSize(Integer.BYTES * arr.size)
+                for (anArr in arr) expandableByteBuffer!!.buffer.putInt(anArr)
+            }
+            array.javaClass == ClassMetadata.FLOAT_ARRAY -> {
+                val arr = array as FloatArray
+                putInt(arr.size)
+                expandableByteBuffer!!.ensureSize(java.lang.Float.BYTES * arr.size)
+                for (anArr in arr) expandableByteBuffer!!.buffer.putFloat(anArr)
+            }
+            array.javaClass == ClassMetadata.BYTE_ARRAY -> {
+                val arr = array as ByteArray
+                putInt(arr.size)
+                expandableByteBuffer!!.ensureSize(arr.size)
+                expandableByteBuffer!!.buffer.put(arr)
+            }
+            array.javaClass == ClassMetadata.CHAR_ARRAY -> {
+                val arr = array as CharArray
+                putInt(arr.size)
+                expandableByteBuffer!!.ensureSize(Character.BYTES * arr.size)
+                for (anArr in arr) expandableByteBuffer!!.buffer.putChar(anArr)
+            }
+            array.javaClass == ClassMetadata.SHORT_ARRAY -> {
+                val arr = array as ShortArray
+                putInt(arr.size)
+                expandableByteBuffer!!.ensureSize(java.lang.Short.BYTES * arr.size)
+                for (anArr in arr) expandableByteBuffer!!.buffer.putShort(anArr)
+            }
+            array.javaClass == ClassMetadata.BOOLEAN_ARRAY -> {
+                val arr = array as BooleanArray
+                putInt(arr.size)
+                expandableByteBuffer!!.ensureSize(java.lang.Byte.BYTES * arr.size)
+                for (anArr in arr) expandableByteBuffer!!.buffer.put((if (anArr) 1 else 0).toByte())
+            }
+            array.javaClass == ClassMetadata.DOUBLE_ARRAY -> {
+                val arr = array as DoubleArray
+                putInt(arr.size)
+                expandableByteBuffer!!.ensureSize(java.lang.Double.BYTES * arr.size)
+                for (anArr in arr) expandableByteBuffer!!.buffer.putDouble(anArr)
+            }
+            array.javaClass == kotlin.Array<Any?>::class.java -> {
+                @Suppress("UNCHECKED_CAST")
+                val arr = array as kotlin.Array<Any?>
+                putInt(arr.size)
+                for (anArr in arr) putObject(anArr)
+            }
+            else -> {
+                putObjectClass(array.javaClass.componentType)
+                @Suppress("UNCHECKED_CAST")
+                val arr = array as kotlin.Array<Any?>
+                putInt(arr.size)
+                for (anArr in arr) putObject(anArr)
+            }
         }
     }
 
@@ -1133,8 +1407,20 @@ open class BufferStream(buffer: ByteBuffer) {
         val position = this.expandableByteBuffer!!.buffer.position()
 
         var bufferObjectType = BufferObjectType.getTypeCodeForClass(value, context)
-        val referenceNumber = referenceIndex(value).toShort()
-        if (referenceNumber > -1) bufferObjectType = BufferObjectType.REFERENCE
+        var referenceNumber = -1
+
+        // Only CLASS, PAIR, and OTHER values are registered by the writer. Avoid hashing and
+        // probing the reference maps for every scalar, string, date, array, collection, and map.
+        when (bufferObjectType) {
+            BufferObjectType.CLASS,
+            BufferObjectType.PAIR,
+            BufferObjectType.OTHER -> {
+                referenceNumber = referenceIndex(value)
+                if (referenceNumber >= 0)
+                    bufferObjectType = BufferObjectType.REFERENCE
+            }
+            else -> Unit
+        }
 
         try {
 
@@ -1143,7 +1429,7 @@ open class BufferStream(buffer: ByteBuffer) {
 
             when (bufferObjectType) {
                 BufferObjectType.NULL -> return this.expandableByteBuffer!!.buffer.position() - position
-                BufferObjectType.REFERENCE -> putShort(referenceNumber)
+                BufferObjectType.REFERENCE -> putShort(referenceNumber.toShort())
                 BufferObjectType.ENTITY -> putEntity(value as ManagedEntity, context)
                 BufferObjectType.ENUM -> putEnum(value as Enum<*>)
                 BufferObjectType.BYTE, BufferObjectType.MUTABLE_BYTE -> putByte(value as Byte)
