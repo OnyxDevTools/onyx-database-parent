@@ -5,6 +5,7 @@ import com.onyx.buffer.BufferStream
 import com.onyx.exception.TransactionException
 import com.onyx.interactors.transaction.TransactionStore
 import com.onyx.interactors.transaction.data.DeleteQueryTransaction
+import com.onyx.interactors.transaction.data.Transaction
 import com.onyx.interactors.transaction.impl.DefaultTransactionInteractor
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
@@ -20,6 +21,37 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class DefaultTransactionInteractorReadTest {
+
+    @Test
+    fun recoveryAppliesNumberedWalFilesInNumericOrder() {
+        val walDirectory = Files.createTempDirectory("onyx-numbered-wal-recovery")
+        val creationOrder = listOf(1, 10, 11, 2, 3, 4, 5, 6, 7, 8, 9)
+        val recoveredWalFiles = ArrayList<String>()
+        val interactor = object : DefaultTransactionInteractor(UNUSED_TRANSACTION_STORE, noOpPersistenceManager()) {
+            override fun applyTransactionLog(
+                walTransactionFile: String,
+                executeTransaction: (Transaction) -> Boolean
+            ): Boolean {
+                recoveredWalFiles += java.io.File(walTransactionFile).name
+                return true
+            }
+        }
+
+        try {
+            creationOrder.forEach { walNumber ->
+                Files.createFile(walDirectory.resolve("$walNumber.wal"))
+            }
+
+            interactor.recoverDatabase(walDirectory.toString()) { true }
+
+            assertEquals((1..11).map { "$it.wal" }, recoveredWalFiles)
+        } finally {
+            creationOrder.forEach { walNumber ->
+                Files.deleteIfExists(walDirectory.resolve("$walNumber.wal"))
+            }
+            Files.deleteIfExists(walDirectory)
+        }
+    }
 
     @Test
     fun bufferedReaderDecodesTransactionsInOrderAndStopsAtPadding() {

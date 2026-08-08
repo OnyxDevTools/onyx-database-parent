@@ -135,7 +135,7 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
         }
 
         val filePaths = walDirectory.list()!!
-        filePaths.sort()
+        filePaths.sortBy { it.removeSuffix(WAL_FILE_EXTENSION).toLong() }
         filePaths.forEach {
             applyTransactionLog(fromDirectoryPath + File.separator + it, executeTransaction)
         }
@@ -284,6 +284,7 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
     }
 
     companion object {
+        private const val WAL_FILE_EXTENSION = ".wal"
         private const val PADDING: Byte = 0
         private const val SAVE: Byte = 1
         private const val DELETE: Byte = 2
