@@ -19,7 +19,7 @@ import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
 import java.nio.channels.ReadableByteChannel
 import java.nio.channels.WritableByteChannel
-import java.util.Arrays
+import java.nio.file.Path
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
@@ -33,6 +33,7 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
 
     private val journalFileIndex = AtomicLong(0L)
     private var lastWalFileChannel: FileChannel? = null
+    private var lastWalFile: File? = null
     private val transactionFileLock = Block()
     private val asynchronousFlushFailure = AtomicReference<Throwable?>()
     private val flushExecutor = Executors.newSingleThreadExecutor { runnable ->
@@ -60,33 +61,49 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
                     journalingDirector.mkdirs()
                 }
 
-                val directoryListing = File(directory).list() ?: emptyArray()
-                Arrays.sort(directoryListing)
-
-                if (directoryListing.isNotEmpty()) {
-                    var fileName = directoryListing[directoryListing.size - 1]
-                    fileName = fileName.replace(".wal", "")
-
-                    journalFileIndex.addAndGet(Integer.valueOf(fileName).toLong())
+                val walFiles = journalingDirector.listWalFiles()
+                walFiles.dropLast(1).forEach { sealedWalFile ->
+                    if (!sealedWalFile.file.toPath().isCompressedWal()) {
+                        compressWalFileOrThrow(sealedWalFile.file.toPath())
+                    }
                 }
 
-                lastWalFileChannel = openMappedWalFile(directory + journalFileIndex.get() + ".wal")
+                val latestWalFile = walFiles.lastOrNull()
+                if (latestWalFile != null) {
+                    journalFileIndex.set(
+                        if (latestWalFile.file.toPath().isCompressedWal()) {
+                            latestWalFile.index + 1L
+                        } else {
+                            latestWalFile.index
+                        }
+                    )
+                }
+
+                lastWalFile = File(directory + journalFileIndex.get() + WAL_FILE_EXTENSION)
+                lastWalFileChannel = openMappedWalFile(lastWalFile!!.path)
             }
 
-            if (lastWalFileChannel!!.size() > maxJournalSize) {
+            if (lastWalFileChannel!!.size() >= maxJournalSize) {
                 val rotatedWalFile = lastWalFileChannel!!
+                val rotatedWalPath = lastWalFile!!.toPath()
                 val directory = walDirectory
                 val nextJournalFileIndex = journalFileIndex.get() + 1L
-                val nextWalFile = openMappedWalFile(directory + nextJournalFileIndex + ".wal")
+                val nextWalPath = File(directory + nextJournalFileIndex + WAL_FILE_EXTENSION)
+                val nextWalFile = openMappedWalFile(nextWalPath.path)
                 (rotatedWalFile as MemoryMappedTransactionFileChannel).retire()
                 journalFileIndex.set(nextJournalFileIndex)
+                lastWalFile = nextWalPath
                 lastWalFileChannel = nextWalFile
-                finalizeWalFileAsynchronously(rotatedWalFile)
+                finalizeWalFileAsynchronously(rotatedWalFile, rotatedWalPath, compress = true)
             }
 
             return lastWalFileChannel!!
-        } catch (e: IOException) {
-            throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_OPEN_FILE)
+        } catch (cause: IOException) {
+            throw TransactionException(
+                TransactionException.TRANSACTION_FAILED_TO_OPEN_FILE,
+                null,
+                cause
+            )
         }
     }
 
@@ -95,9 +112,37 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
             if (!isClosing) {
                 isClosing = true
                 lastWalFileChannel?.let {
-                    (it as MemoryMappedTransactionFileChannel).retire()
-                    finalizeWalFileAsynchronously(it)
-                    lastWalFileChannel = null
+                    var canCompress = true
+                    val toppedOff = try {
+                        it.size() >= maxJournalSize
+                    } catch (failure: Throwable) {
+                        recordAsynchronousFlushFailure(failure)
+                        canCompress = false
+                        false
+                    }
+                    try {
+                        (it as MemoryMappedTransactionFileChannel).retire()
+                    } catch (failure: Throwable) {
+                        recordAsynchronousFlushFailure(failure)
+                        canCompress = false
+                    }
+                    try {
+                        finalizeWalFileAsynchronously(
+                            it,
+                            lastWalFile?.toPath(),
+                            compress = toppedOff && canCompress
+                        )
+                    } catch (failure: Throwable) {
+                        recordAsynchronousFlushFailure(failure)
+                        try {
+                            finalizeWalFile(it)
+                        } catch (closeFailure: Throwable) {
+                            recordAsynchronousFlushFailure(closeFailure)
+                        }
+                    } finally {
+                        lastWalFileChannel = null
+                        lastWalFile = null
+                    }
                 }
                 flushExecutor.shutdown()
             }
@@ -132,13 +177,49 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
         walFile.close()
     }
 
-    private fun finalizeWalFileAsynchronously(walFile: FileChannel) {
+    protected open fun compressWalFile(walFile: Path) {
+        replaceWithCompressedWal(walFile)
+    }
+
+    private fun compressWalFileOrThrow(walFile: Path) {
+        try {
+            compressWalFile(walFile)
+        } catch (cause: Exception) {
+            throw TransactionException(
+                TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE,
+                null,
+                cause
+            )
+        }
+    }
+
+    private fun finalizeWalFileAsynchronously(
+        walFile: FileChannel,
+        walFilePath: Path?,
+        compress: Boolean
+    ) {
         flushExecutor.execute {
             try {
                 finalizeWalFile(walFile)
+                if (compress) {
+                    compressWalFile(checkNotNull(walFilePath))
+                }
             } catch (failure: Throwable) {
-                asynchronousFlushFailure.compareAndSet(null, failure)
+                recordAsynchronousFlushFailure(failure)
             }
+        }
+    }
+
+    private fun recordAsynchronousFlushFailure(failure: Throwable) {
+        val currentFailure = asynchronousFlushFailure.get()
+        if (currentFailure == null) {
+            if (!asynchronousFlushFailure.compareAndSet(null, failure)) {
+                asynchronousFlushFailure.get()
+                    ?.takeIf { it !== failure }
+                    ?.addSuppressed(failure)
+            }
+        } else if (currentFailure !== failure) {
+            currentFailure.addSuppressed(failure)
         }
     }
 

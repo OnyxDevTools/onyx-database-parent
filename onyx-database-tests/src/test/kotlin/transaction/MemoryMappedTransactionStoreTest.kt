@@ -2,6 +2,7 @@ package transaction
 
 import com.onyx.diskmap.store.StoreType
 import com.onyx.diskmap.store.impl.MemoryMappedStore
+import com.onyx.extension.common.decompressLz77
 import com.onyx.interactors.transaction.TransactionStore
 import com.onyx.interactors.transaction.impl.DefaultTransactionStore
 import com.onyx.interactors.transaction.impl.MemoryMappedTransactionStore
@@ -22,6 +23,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.assertEquals
+import kotlin.test.assertContentEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -112,10 +114,44 @@ class MemoryMappedTransactionStoreTest {
 
             assertFalse(transactionFile.isOpen)
             assertEquals(initialCachedFileChunkCount, MemoryMappedStore.cachedFileChunkCount)
-            assertEquals(256L, Files.size(tempDirectory.resolve("wal").resolve("0.wal")))
+            assertContentEquals(
+                ByteArray(256) { 3 },
+                Files.readAllBytes(tempDirectory.resolve("wal").resolve("0.wal")).decompressLz77()
+            )
         } finally {
             transactionStore.close()
             MemoryMappedStore.maxCachedFileChunks = previousMax
+            deleteDirectory(tempDirectory)
+        }
+    }
+
+    @Test
+    fun toppedOffWalIsCompressedWhenMemoryMappedStoreCloses() {
+        val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-transaction-close-full")
+        val walBytes = ByteArray(256) { 10 }
+        val transactionStore = SmallJournalMemoryMappedTransactionStore(tempDirectory.toString())
+
+        try {
+            transactionStore.getTransactionFile().write(ByteBuffer.wrap(walBytes))
+            transactionStore.close()
+
+            assertContentEquals(
+                walBytes,
+                Files.readAllBytes(tempDirectory.resolve("wal").resolve("0.wal")).decompressLz77()
+            )
+
+            val reopenedStore = SmallJournalMemoryMappedTransactionStore(tempDirectory.toString())
+            try {
+                reopenedStore.getTransactionFile().write(ByteBuffer.wrap(byteArrayOf(11)))
+            } finally {
+                reopenedStore.close()
+            }
+            assertContentEquals(
+                byteArrayOf(11),
+                Files.readAllBytes(tempDirectory.resolve("wal").resolve("1.wal"))
+            )
+        } finally {
+            runCatching { transactionStore.close() }
             deleteDirectory(tempDirectory)
         }
     }
@@ -160,8 +196,15 @@ class MemoryMappedTransactionStoreTest {
 
             assertFalse(firstWalFile.isOpen)
             assertFalse(secondWalFile.isOpen)
-            assertEquals(256L, Files.size(tempDirectory.resolve("wal").resolve("0.wal")))
+            assertContentEquals(
+                ByteArray(256) { 4 },
+                Files.readAllBytes(tempDirectory.resolve("wal").resolve("0.wal")).decompressLz77()
+            )
             assertEquals(3L, Files.size(tempDirectory.resolve("wal").resolve("1.wal")))
+            assertContentEquals(
+                byteArrayOf(5, 6, 7),
+                Files.readAllBytes(tempDirectory.resolve("wal").resolve("1.wal"))
+            )
         } finally {
             allowFinalization.countDown()
             runCatching { transactionStore.close() }
@@ -194,6 +237,35 @@ class MemoryMappedTransactionStoreTest {
             assertFailsWith<com.onyx.exception.TransactionException> {
                 transactionStore.close()
             }
+        } finally {
+            runCatching { transactionStore.close() }
+            deleteDirectory(tempDirectory)
+        }
+    }
+
+    @Test
+    fun asynchronousWalCompressionFailureIsReported() {
+        val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-transaction-compression-failure")
+        val compressionFailed = CountDownLatch(1)
+        val transactionStore = object : SmallJournalMemoryMappedTransactionStore(tempDirectory.toString()) {
+            override fun compressWalFile(walFile: Path) {
+                compressionFailed.countDown()
+                throw IOException("Injected asynchronous WAL compression failure")
+            }
+        }
+
+        try {
+            transactionStore.getTransactionFile().write(ByteBuffer.wrap(ByteArray(256) { 12 }))
+            transactionStore.getTransactionFile()
+
+            assertTrue(compressionFailed.await(5, TimeUnit.SECONDS))
+            assertFailsWith<com.onyx.exception.TransactionException> {
+                transactionStore.close()
+            }
+            assertContentEquals(
+                ByteArray(256) { 12 },
+                Files.readAllBytes(tempDirectory.resolve("wal").resolve("0.wal"))
+            )
         } finally {
             runCatching { transactionStore.close() }
             deleteDirectory(tempDirectory)

@@ -67,6 +67,8 @@ interface TransactionInteractor {
      * An example usage would be if you had replication and experienced a network outage.  In that case in order to synchronize, you
      * could utilize this method.
      *
+     * The WAL may contain regular records or an LZ77-compressed WAL frame.
+     *
      * @param walTransactionFile File that contains transaction log.
      * @param executeTransaction Function that determines whether or not you should execute the transaction
      * @throws TransactionException If a transaction failed to execute, this will be thrown

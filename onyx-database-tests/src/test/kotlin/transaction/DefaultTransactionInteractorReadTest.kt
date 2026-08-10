@@ -3,6 +3,7 @@ package transaction
 import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
 import com.onyx.exception.TransactionException
+import com.onyx.extension.common.compressLz77
 import com.onyx.interactors.transaction.TransactionStore
 import com.onyx.interactors.transaction.data.DeleteQueryTransaction
 import com.onyx.interactors.transaction.data.Transaction
@@ -10,13 +11,17 @@ import com.onyx.interactors.transaction.impl.DefaultTransactionInteractor
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import org.junit.Test
+import java.io.IOException
 import java.lang.reflect.Proxy
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
+import java.util.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -83,6 +88,141 @@ class DefaultTransactionInteractorReadTest {
     }
 
     @Test
+    fun bufferedReaderDecodesCompressedWal() {
+        val walFile = Files.createTempFile("onyx-compressed-wal-reader", ".wal")
+        val expectedRows = listOf(13, 17, 23)
+
+        try {
+            val regularWal = concatenate(
+                *expectedRows.map(::deleteQueryRecord).toTypedArray(),
+                ByteArray(64)
+            )
+            Files.write(walFile, regularWal.compressLz77())
+
+            val actualRows = ArrayList<Int>()
+            assertTrue(interactor().applyTransactionLog(walFile.toString()) { transaction ->
+                actualRows += assertIs<DeleteQueryTransaction>(transaction).query.firstRow
+                false
+            })
+
+            assertEquals(expectedRows, actualRows)
+        } finally {
+            Files.deleteIfExists(walFile)
+        }
+    }
+
+    @Test
+    fun bufferedReaderDecodesRawLz77WalFrame() {
+        val walFile = Files.createTempFile("onyx-raw-lz77-wal-reader", ".wal")
+        val random = Random(7L)
+        val partition = CharArray(64 * 1024) {
+            (33 + random.nextInt(94)).toChar()
+        }.concatToString()
+
+        try {
+            val framedWal = deleteQueryRecord(27, partition).compressLz77()
+            assertEquals(0, framedWal[5].toInt())
+            Files.write(walFile, framedWal)
+
+            var recoveredQuery: Query? = null
+            assertTrue(interactor().applyTransactionLog(walFile.toString()) { transaction ->
+                recoveredQuery = assertIs<DeleteQueryTransaction>(transaction).query
+                false
+            })
+
+            assertEquals(27, recoveredQuery?.firstRow)
+            assertEquals(partition, recoveredQuery?.partition)
+        } finally {
+            Files.deleteIfExists(walFile)
+        }
+    }
+
+    @Test
+    fun recoveryAppliesMixedRegularAndCompressedWalFiles() {
+        val walDirectory = Files.createTempDirectory("onyx-mixed-wal-recovery")
+        val walFiles = listOf(
+            walDirectory.resolve("1.wal") to deleteQueryRecord(1).compressLz77(),
+            walDirectory.resolve("2.wal") to deleteQueryRecord(2),
+            walDirectory.resolve("10.wal") to deleteQueryRecord(10).compressLz77()
+        )
+        val ignoredFile = walDirectory.resolve(".2.wal.replacement.tmp")
+
+        try {
+            walFiles.forEach { (path, contents) -> Files.write(path, contents) }
+            Files.write(ignoredFile, deleteQueryRecord(99))
+
+            val recoveredRows = ArrayList<Int>()
+            interactor().recoverDatabase(walDirectory.toString()) { transaction ->
+                recoveredRows += assertIs<DeleteQueryTransaction>(transaction).query.firstRow
+                false
+            }
+
+            assertEquals(listOf(1, 2, 10), recoveredRows)
+        } finally {
+            walFiles.forEach { (path, _) -> Files.deleteIfExists(path) }
+            Files.deleteIfExists(ignoredFile)
+            Files.deleteIfExists(walDirectory)
+        }
+    }
+
+    @Test
+    fun compressedReaderRejectsInvalidFrame() {
+        val walFile = Files.createTempFile("onyx-invalid-compressed-wal", ".wal")
+
+        try {
+            Files.write(walFile, deleteQueryRecord(31).compressLz77().dropLast(1).toByteArray())
+
+            val failure = assertFailsWith<TransactionException> {
+                interactor().applyTransactionLog(walFile.toString()) { false }
+            }
+            assertEquals(TransactionException.TRANSACTION_FAILED_TO_READ_FILE, failure.message)
+            assertIs<IOException>(failure.cause)
+        } finally {
+            Files.deleteIfExists(walFile)
+        }
+    }
+
+    @Test
+    fun compressedReaderRejectsHugeTruncatedFrameWithoutAllocatingOutput() {
+        val walFile = Files.createTempFile("onyx-oversized-compressed-wal", ".wal")
+        val oversizedFrame = ByteBuffer.allocate(10)
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .put(byteArrayOf('L'.code.toByte(), 'Z'.code.toByte(), '7'.code.toByte(), '7'.code.toByte()))
+            .put(1.toByte())
+            .put(1.toByte())
+            .putInt(Int.MAX_VALUE)
+            .array()
+
+        try {
+            Files.write(walFile, oversizedFrame)
+
+            val failure = assertFailsWith<TransactionException> {
+                interactor().applyTransactionLog(walFile.toString()) { false }
+            }
+            assertEquals(TransactionException.TRANSACTION_FAILED_TO_READ_FILE, failure.message)
+            assertIs<IOException>(failure.cause)
+            assertEquals("Truncated WAL compression payload", failure.cause?.message)
+        } finally {
+            Files.deleteIfExists(walFile)
+        }
+    }
+
+    @Test
+    fun readerDoesNotCreateMissingWalFile() {
+        val directory = Files.createTempDirectory("onyx-missing-wal-reader")
+        val missingWal = directory.resolve("missing.wal")
+
+        try {
+            assertFailsWith<TransactionException> {
+                interactor().applyTransactionLog(missingWal.toString()) { false }
+            }
+            assertFalse(Files.exists(missingWal))
+        } finally {
+            Files.deleteIfExists(directory)
+        }
+    }
+
+    @Test
     fun bufferedReaderAcceptsEmptyWalAndPartialZeroTail() {
         val emptyWal = Files.createTempFile("onyx-empty-buffered-wal", ".wal")
         val paddedWal = Files.createTempFile("onyx-partially-padded-buffered-wal", ".wal")
@@ -124,6 +264,33 @@ class DefaultTransactionInteractorReadTest {
             })
 
             assertEquals(listOf(23, 29), recoveredQueries.map(Query::firstRow))
+            assertEquals(largePartition, recoveredQueries.first().partition)
+        } finally {
+            Files.deleteIfExists(walFile)
+        }
+    }
+
+    @Test
+    fun compressedReaderHandlesPayloadLargerThanItsReadAheadBuffer() {
+        val walFile = Files.createTempFile("onyx-large-compressed-wal-payload", ".wal")
+        val largePartition = "x".repeat(300 * 1024)
+
+        try {
+            Files.write(
+                walFile,
+                concatenate(
+                    deleteQueryRecord(37, largePartition),
+                    deleteQueryRecord(39)
+                ).compressLz77()
+            )
+
+            val recoveredQueries = ArrayList<Query>()
+            assertTrue(interactor().applyTransactionLog(walFile.toString()) { transaction ->
+                recoveredQueries += assertIs<DeleteQueryTransaction>(transaction).query
+                false
+            })
+
+            assertEquals(listOf(37, 39), recoveredQueries.map(Query::firstRow))
             assertEquals(largePartition, recoveredQueries.first().partition)
         } finally {
             Files.deleteIfExists(walFile)
