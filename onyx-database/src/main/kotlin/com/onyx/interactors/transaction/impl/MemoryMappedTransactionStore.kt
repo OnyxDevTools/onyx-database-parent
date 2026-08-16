@@ -430,7 +430,7 @@ private class MemoryMappedTransactionFileChannel(
         synchronized(lock) {
             var failure: IOException? = null
             val mappedSegments = detachedSegments
-                ?: MemoryMappedStore.detachMappedFileSegments(fileId)
+                ?: MemoryMappedStore.retireMappedFileSegments(fileId)
             detachedSegments = null
 
             try {
@@ -456,6 +456,8 @@ private class MemoryMappedTransactionFileChannel(
                 } else {
                     failure.addSuppressed(exception)
                 }
+            } finally {
+                MemoryMappedStore.releaseRetiredMappedFile(fileId)
             }
 
             failure?.let { throw it }
@@ -468,19 +470,24 @@ private class MemoryMappedTransactionFileChannel(
         val initialRemaining = src.remaining()
         var current = position
         while (src.hasRemaining()) {
-            val destination = getBuffer(current)
-            destination.position(getBufferLocation(current))
-            current += copy(src, destination)
+            val copied = withBuffer(current, markDirty = true) { destination ->
+                destination.position(getBufferLocation(current))
+                copy(src, destination)
+            }
+            current += copied
         }
         logicalSize = maxOf(logicalSize, current)
         return initialRemaining
     }
 
-    private fun getBuffer(position: Long): ByteBuffer {
+    private fun <T> withBuffer(position: Long, markDirty: Boolean, action: (ByteBuffer) -> T): T {
         val key = keyForPosition(position)
-        return MemoryMappedStore.getMappedFileSegmentBuffer(key) {
-            mapSegment(key)
-        }
+        return MemoryMappedStore.withMappedFileSegmentBuffer(
+            key = key,
+            mapper = { mapSegment(key) },
+            markDirty = markDirty,
+            action = action
+        )
     }
 
     private fun getBufferLocation(position: Long) = (position % bufferSliceSize).toInt()
@@ -509,7 +516,7 @@ private class MemoryMappedTransactionFileChannel(
     fun retire() = synchronized(lock) {
         ensureOpen()
         acceptsWrites = false
-        detachedSegments = MemoryMappedStore.detachMappedFileSegments(fileId)
+        detachedSegments = MemoryMappedStore.retireMappedFileSegments(fileId)
     }
 
     private fun ensureWritable() {

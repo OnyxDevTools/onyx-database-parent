@@ -64,7 +64,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
             }
             physicalEndBeforeWarmMapping = channel?.size()
             // Warm the first slice to preserve the previous open-time mapping behavior.
-            getBuffer(0)
+            withBuffer(0, markDirty = false) { }
             return true
         } catch (_: FileNotFoundException) {
             return false
@@ -82,9 +82,11 @@ open class MemoryMappedStore : FileChannelStore, Store {
     override fun write(buffer: ByteBuffer, position: Long): Int {
         var current = position
         while (buffer.hasRemaining()) {
-            val destination = getBuffer(current)
-            destination.position(getBufferLocation(current))
-            current += copy(buffer, destination)
+            val copied = withBuffer(current, markDirty = true) { destination ->
+                destination.position(getBufferLocation(current))
+                copy(buffer, destination)
+            }
+            current += copied
         }
         return (current - position).toInt()
     }
@@ -103,9 +105,11 @@ open class MemoryMappedStore : FileChannelStore, Store {
     override fun read(buffer: ByteBuffer, position: Long) {
         var current = position
         while (buffer.hasRemaining()) {
-            val source = getBuffer(current)
-            source.position(getBufferLocation(current))
-            current += copy(source, buffer)
+            val copied = withBuffer(current, markDirty = false) { source ->
+                source.position(getBufferLocation(current))
+                copy(source, buffer)
+            }
+            current += copied
         }
     }
 
@@ -122,6 +126,17 @@ open class MemoryMappedStore : FileChannelStore, Store {
         return mappedFileSegmentCache.getBuffer(key) {
             mapSegment(key)
         }
+    }
+
+    private fun <T> withBuffer(position: Long, markDirty: Boolean, action: (ByteBuffer) -> T): T {
+        ensureOpen()
+        val key = keyForPosition(position)
+        return mappedFileSegmentCache.withBuffer(
+            key = key,
+            mapper = { mapSegment(key) },
+            markDirty = markDirty,
+            action = action
+        )
     }
 
     /**
@@ -161,7 +176,12 @@ open class MemoryMappedStore : FileChannelStore, Store {
                 strictlyForced = false
             }
         }
-        mappedFileSegmentCache.removeFile(fileId)
+        val closingSegments = mappedFileSegmentCache.retireFile(fileId)
+        try {
+            closingSegments.forceAndCloseAll()
+        } catch (_: Throwable) {
+            strictlyForced = false
+        }
         val truncated = deleteOnClose || channel?.isOpen != true || strictlyForced && try {
             channel?.truncate(getFileSize())
             true
@@ -169,10 +189,14 @@ open class MemoryMappedStore : FileChannelStore, Store {
             false
         }
         val closed = try {
-            super.close()
-        } catch (_: Throwable) {
-            runCatching { channel?.close() }
-            false
+            try {
+                super.close()
+            } catch (_: Throwable) {
+                runCatching { channel?.close() }
+                false
+            }
+        } finally {
+            mappedFileSegmentCache.releaseRetiredFile(fileId)
         }
         return strictlyForced && truncated && closed
     }
@@ -235,17 +259,23 @@ open class MemoryMappedStore : FileChannelStore, Store {
 
         internal fun nextMappedFileId(): Int = fileIdCounter.incrementAndGet()
 
-        internal fun getMappedFileSegmentBuffer(
+        internal fun <T> withMappedFileSegmentBuffer(
             key: MappedFileSegmentKey,
-            mapper: () -> MappedFileSegment
-        ): ByteBuffer = mappedFileSegmentCache.getBuffer(key, mapper)
+            mapper: () -> MappedFileSegment,
+            markDirty: Boolean = true,
+            action: (ByteBuffer) -> T
+        ): T = mappedFileSegmentCache.withBuffer(key, mapper, markDirty, action)
 
         internal fun removeMappedFileSegments(fileId: Int) {
             mappedFileSegmentCache.removeFile(fileId)
         }
 
-        internal fun detachMappedFileSegments(fileId: Int): List<MappedFileSegment> =
-            mappedFileSegmentCache.detachFile(fileId)
+        internal fun retireMappedFileSegments(fileId: Int): List<MappedFileSegment> =
+            mappedFileSegmentCache.retireFile(fileId)
+
+        internal fun releaseRetiredMappedFile(fileId: Int) {
+            mappedFileSegmentCache.releaseRetiredFile(fileId)
+        }
 
         internal fun forceAndCloseMappedFileSegments(segments: List<MappedFileSegment>) {
             segments.forceAndCloseAll()
@@ -274,5 +304,15 @@ open class MemoryMappedStore : FileChannelStore, Store {
         @JvmStatic
         val cachedFileChunkCount: Int
             get() = mappedFileSegmentCache.size
+
+        /** Capacity retained by detached mappings whose users have not released them yet. */
+        @JvmStatic
+        val pendingMappedFileBytes: Long
+            get() = mappedFileSegmentCache.pendingSizeBytes
+
+        /** Number of retained mappings with writes not yet forced. */
+        @JvmStatic
+        val dirtyCachedFileChunkCount: Int
+            get() = mappedFileSegmentCache.dirtySize
     }
 }
