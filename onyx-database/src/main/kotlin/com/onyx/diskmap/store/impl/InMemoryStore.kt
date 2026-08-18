@@ -2,7 +2,6 @@ package com.onyx.diskmap.store.impl
 
 import com.onyx.buffer.BufferPool
 import com.onyx.buffer.copy
-import com.onyx.diskmap.store.Store
 import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
@@ -14,9 +13,14 @@ import java.nio.ByteBuffer
  *
  * Rather than writing to a file, this writes to memory.
  */
-class InMemoryStore(context: SchemaContext?, storeId: String) : MemoryMappedStore(), Store {
+class InMemoryStore(context: SchemaContext?, storeId: String) : FileChannelStore() {
 
     private var slices = OptimisticLockingMap<Int, ByteBuffer> (HashMap())
+    private val sliceCapacity = if (isSmallDevice) {
+        SMALL_SLICE_CAPACITY
+    } else {
+        DEFAULT_SLICE_CAPACITY
+    }
 
     init {
         this.contextId = context?.contextId
@@ -36,9 +40,9 @@ class InMemoryStore(context: SchemaContext?, storeId: String) : MemoryMappedStor
         this.filePath = filePath
         slices = OptimisticLockingMap(HashMap())
 
-        // Lets open the memory mapped files in 2Gig increments since on 32 bit machines the max is I think 2G.  Also buffers are limited by
-        // using an int for position.  We are gonna bust that.
-        slices[0] = BufferPool.allocateAndLimit(bufferSliceSize)
+        // ByteBuffer positions are Int-based, so large logical stores are split
+        // across independently addressable in-memory buffers.
+        slices[0] = BufferPool.allocateAndLimit(sliceCapacity)
         return true
     }
 
@@ -47,7 +51,7 @@ class InMemoryStore(context: SchemaContext?, storeId: String) : MemoryMappedStor
      * @param position The absolute file position.
      * @return The relative position within a buffer slice.
      */
-    private fun getBufferLocation(position: Long) = (position % bufferSliceSize).toInt()
+    private fun getBufferLocation(position: Long) = (position % sliceCapacity).toInt()
 
     /**
      * Writes data from the source buffer to the store at the specified position.
@@ -58,7 +62,7 @@ class InMemoryStore(context: SchemaContext?, storeId: String) : MemoryMappedStor
     override fun write(buffer: ByteBuffer, position: Long): Int {
         var current = position
         while (buffer.hasRemaining()) {
-            val destination = getBuffer(current)
+            val destination = bufferForPosition(current)
             destination.position(getBufferLocation(current))
             current += copy(buffer, destination)
         }
@@ -73,7 +77,7 @@ class InMemoryStore(context: SchemaContext?, storeId: String) : MemoryMappedStor
     override fun read(buffer: ByteBuffer, position: Long) {
         var current = position
         while (buffer.hasRemaining()) {
-            val source = getBuffer(current)
+            val source = bufferForPosition(current)
             source.position(getBufferLocation(current))
             current += copy(source, buffer)
         }
@@ -86,15 +90,15 @@ class InMemoryStore(context: SchemaContext?, storeId: String) : MemoryMappedStor
      * @param position The position within the combined FileSlice buffers
      * @return The file slice located at the position specified.
      */
-    override fun getBuffer(position: Long): ByteBuffer {
+    private fun bufferForPosition(position: Long): ByteBuffer {
 
         var index = 0
         if (position > 0) {
-            index = (position / bufferSliceSize).toInt()
+            index = (position / sliceCapacity).toInt()
         }
 
         return slices.getOrPut(index) {
-            BufferPool.allocateAndLimit(bufferSliceSize)
+            BufferPool.allocateAndLimit(sliceCapacity)
         }
     }
 
@@ -113,5 +117,8 @@ class InMemoryStore(context: SchemaContext?, storeId: String) : MemoryMappedStor
         return true
     }
 
-    override fun ensureOpen() = Unit
+    companion object {
+        private const val SMALL_SLICE_CAPACITY = 128 * 1024
+        private const val DEFAULT_SLICE_CAPACITY = 4 * 1024 * 1024
+    }
 }

@@ -1,11 +1,7 @@
 package com.onyx.interactors.transaction.impl
 
-import com.onyx.buffer.copy
 import com.onyx.diskmap.store.impl.FileChannelStore
-import com.onyx.diskmap.store.impl.MappedFileSegment
-import com.onyx.diskmap.store.impl.MappedFileSegmentFactory
-import com.onyx.diskmap.store.impl.MappedFileSegmentKey
-import com.onyx.diskmap.store.impl.MemoryMappedStore
+import com.onyx.diskmap.store.impl.WholeFileMapping
 import com.onyx.exception.TransactionException
 import com.onyx.extension.common.Block
 import com.onyx.extension.common.openFileChannel
@@ -27,7 +23,7 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.min
 
 /**
- * Transaction WAL store that appends through the shared memory-mapped segment cache used by [MemoryMappedStore].
+ * Transaction WAL store that owns one whole-file memory mapping per open WAL.
  */
 open class MemoryMappedTransactionStore(val location: String) : TransactionStore {
 
@@ -165,7 +161,12 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
         val channel = file.path.openFileChannel()
             ?: throw IOException("Unable to open WAL file channel")
 
-        return MemoryMappedTransactionFileChannel(channel)
+        return try {
+            MemoryMappedTransactionFileChannel(channel)
+        } catch (failure: Throwable) {
+            runCatching { channel.close() }
+            throw failure
+        }
     }
 
     /**
@@ -257,17 +258,16 @@ private class MemoryMappedTransactionFileChannel(
 ) : FileChannel() {
 
     private val lock = Any()
-    private val fileId = MemoryMappedStore.nextMappedFileId()
-    private val bufferSliceSize = if (FileChannelStore.isSmallDevice) {
-        FileChannelStore.SMALL_FILE_SLICE_SIZE
-    } else {
-        FileChannelStore.LARGE_FILE_SLICE_SIZE
-    }
+    private val growthQuantum = WholeFileMapping.defaultGrowthQuantum(FileChannelStore.isSmallDevice)
 
     private var currentPosition = channel.position()
     private var logicalSize = channel.size()
+    private var wholeFileMapping: WholeFileMapping? = WholeFileMapping(
+        channel = channel,
+        growthQuantum = growthQuantum,
+        initialRequiredCapacity = logicalSize
+    )
     private var acceptsWrites = true
-    private var detachedSegments: List<MappedFileSegment>? = null
 
     override fun read(dst: ByteBuffer): Int = synchronized(lock) {
         val bytesRead = read(dst, currentPosition)
@@ -329,21 +329,19 @@ private class MemoryMappedTransactionFileChannel(
         ensureOpen()
         ensureWritable()
         require(size >= 0) { "Size must not be negative" }
-        MemoryMappedStore.removeMappedFileSegments(fileId)
-        channel.truncate(size)
-        logicalSize = min(logicalSize, size)
-        currentPosition = min(currentPosition, size)
+        if (size >= logicalSize) {
+            return@synchronized this
+        }
+
+        replaceMappingAfterTruncate(size)
+        logicalSize = size
+        currentPosition = min(currentPosition, logicalSize)
         this
     }
 
     override fun force(metaData: Boolean) = synchronized(lock) {
         ensureOpen()
-        val retiredSegments = detachedSegments
-        if (retiredSegments == null) {
-            MemoryMappedStore.forceMappedFileSegments(fileId)
-        } else {
-            retiredSegments.forEach { it.force() }
-        }
+        currentMapping().force()
         channel.force(metaData)
     }
 
@@ -429,14 +427,13 @@ private class MemoryMappedTransactionFileChannel(
     override fun implCloseChannel() {
         synchronized(lock) {
             var failure: IOException? = null
-            val mappedSegments = detachedSegments
-                ?: MemoryMappedStore.retireMappedFileSegments(fileId)
-            detachedSegments = null
+            val closingMapping = wholeFileMapping
+            wholeFileMapping = null
 
             try {
-                MemoryMappedStore.forceAndCloseMappedFileSegments(mappedSegments)
+                closingMapping?.close()
             } catch (exception: Throwable) {
-                failure = exception as? IOException ?: IOException("Unable to force mapped WAL data", exception)
+                failure = exception as? IOException ?: IOException("Unable to close mapped WAL data", exception)
             }
 
             try {
@@ -456,8 +453,6 @@ private class MemoryMappedTransactionFileChannel(
                 } else {
                     failure.addSuppressed(exception)
                 }
-            } finally {
-                MemoryMappedStore.releaseRetiredMappedFile(fileId)
             }
 
             failure?.let { throw it }
@@ -467,42 +462,33 @@ private class MemoryMappedTransactionFileChannel(
     private fun writeMapped(src: ByteBuffer, position: Long): Int {
         ensureOpen()
         ensureWritable()
-        val initialRemaining = src.remaining()
-        var current = position
-        while (src.hasRemaining()) {
-            val copied = withBuffer(current, markDirty = true) { destination ->
-                destination.position(getBufferLocation(current))
-                copy(src, destination)
-            }
-            current += copied
+        val written = currentMapping().write(src, position)
+        if (written > 0) {
+            logicalSize = maxOf(logicalSize, Math.addExact(position, written.toLong()))
         }
-        logicalSize = maxOf(logicalSize, current)
-        return initialRemaining
+        return written
     }
 
-    private fun <T> withBuffer(position: Long, markDirty: Boolean, action: (ByteBuffer) -> T): T {
-        val key = keyForPosition(position)
-        return MemoryMappedStore.withMappedFileSegmentBuffer(
-            key = key,
-            mapper = { mapSegment(key) },
-            markDirty = markDirty,
-            action = action
-        )
-    }
+    private fun currentMapping(): WholeFileMapping =
+        wholeFileMapping ?: throw ClosedChannelException()
 
-    private fun getBufferLocation(position: Long) = (position % bufferSliceSize).toInt()
+    private fun replaceMappingAfterTruncate(size: Long) {
+        val previous = currentMapping()
+        wholeFileMapping = null
 
-    private fun keyForPosition(position: Long): MappedFileSegmentKey =
-        MappedFileSegmentKey(fileId, (position / bufferSliceSize).toInt())
-
-    private fun mapSegment(key: MappedFileSegmentKey): MappedFileSegment =
-        MappedFileSegmentFactory.map(
-            channel = channel,
-            offset = key.idx.toLong() * bufferSliceSize,
-            size = bufferSliceSize
-        ) {
-            MemoryMappedStore.evictLeastRecentlyUsedMappedFileSegment()
+        try {
+            previous.close()
+            channel.truncate(size)
+            wholeFileMapping = WholeFileMapping(
+                channel = channel,
+                growthQuantum = growthQuantum,
+                initialRequiredCapacity = size
+            )
+        } catch (failure: Throwable) {
+            runCatching { channel.close() }
+            throw failure
         }
+    }
 
     private fun ensureOpen() {
         if (!isOpen) {
@@ -515,8 +501,9 @@ private class MemoryMappedTransactionFileChannel(
 
     fun retire() = synchronized(lock) {
         ensureOpen()
+        // The sealed mapping remains owned by this channel until asynchronous
+        // finalization closes it; only further writes are rejected immediately.
         acceptsWrites = false
-        detachedSegments = MemoryMappedStore.retireMappedFileSegments(fileId)
     }
 
     private fun ensureWritable() {

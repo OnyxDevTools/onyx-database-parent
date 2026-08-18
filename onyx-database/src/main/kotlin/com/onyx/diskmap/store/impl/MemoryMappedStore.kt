@@ -1,6 +1,5 @@
 package com.onyx.diskmap.store.impl
 
-import com.onyx.buffer.copy
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.InitializationException
 import com.onyx.persistence.context.Contexts
@@ -9,21 +8,22 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
-import java.nio.channels.FileChannel
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.withLock
 
 /**
  * A [Store] implementation that uses memory-mapped files for I/O operations.
  * This class extends [FileChannelStore] and provides methods to read, write,
- * and manage memory-mapped buffers.
+ * and manage one whole-file memory mapping.
  */
 open class MemoryMappedStore : FileChannelStore, Store {
 
-    /**
-     * Unique identifier for this file instance.
-     */
-    private var fileId: Int = 0
-    private var physicalEndBeforeWarmMapping: Long? = null
+    private val mappingLock = ReentrantReadWriteLock()
+    private val mappingReadLock = mappingLock.readLock()
+    private val mappingWriteLock = mappingLock.writeLock()
+    private var mappingGrowthQuantum = WholeFileMapping.defaultGrowthQuantum(FileChannelStore.isSmallDevice)
+    private var wholeFileMapping: WholeFileMapping? = null
+    private var physicalEndBeforeMapping: Long? = null
 
     /**
      * Default constructor.
@@ -37,11 +37,9 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @param deleteOnClose True if the file should be deleted on close, false otherwise.
      */
     constructor(filePath: String, context: SchemaContext?, deleteOnClose: Boolean) : super() {
-        this.bufferSliceSize = if (deleteOnClose || FileChannelStore.isSmallDevice) {
-            FileChannelStore.SMALL_FILE_SLICE_SIZE
-        } else {
-            FileChannelStore.LARGE_FILE_SLICE_SIZE
-        }
+        this.mappingGrowthQuantum = WholeFileMapping.defaultGrowthQuantum(
+            deleteOnClose || FileChannelStore.isSmallDevice
+        )
         this.deleteOnClose = deleteOnClose
         this.filePath = filePath
         this.contextId = context?.contextId
@@ -52,23 +50,27 @@ open class MemoryMappedStore : FileChannelStore, Store {
     }
 
     /**
-     * Opens the file at the specified path and memory-maps the initial buffer slice.
+     * Opens the file and creates one mapping that covers its complete physical extent.
      * @param filePath The path to the file to open.
      * @return True if the file was opened successfully, false otherwise.
      */
-    override fun open(filePath: String): Boolean {
+    override fun open(filePath: String): Boolean = mappingWriteLock.withLock {
         try {
-            fileId = nextMappedFileId()
             if (!super.open(filePath)) {
                 return false
             }
-            physicalEndBeforeWarmMapping = channel?.size()
-            // Warm the first slice to preserve the previous open-time mapping behavior.
-            withBuffer(0, markDirty = false) { }
+            physicalEndBeforeMapping = channel?.size()
+            wholeFileMapping = WholeFileMapping(
+                channel = channel!!,
+                growthQuantum = mappingGrowthQuantum,
+                initialRequiredCapacity = physicalEndBeforeMapping ?: 0L
+            )
             return true
         } catch (_: FileNotFoundException) {
+            closeAfterFailedOpen()
             return false
         } catch (_: IOException) {
+            closeAfterFailedOpen()
             return false
         }
     }
@@ -79,22 +81,14 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @param position The position in the store to write to.
      * @return The number of bytes written.
      */
-    override fun write(buffer: ByteBuffer, position: Long): Int {
-        var current = position
-        while (buffer.hasRemaining()) {
-            val copied = withBuffer(current, markDirty = true) { destination ->
-                destination.position(getBufferLocation(current))
-                copy(buffer, destination)
-            }
-            current += copied
-        }
-        return (current - position).toInt()
+    override fun write(buffer: ByteBuffer, position: Long): Int = mappingWriteLock.withLock {
+        currentMapping().write(buffer, position)
     }
 
     override fun recoverLogicalEnd(persistedReservationEnd: Long, physicalEnd: Long): Long =
         super.recoverLogicalEnd(
             persistedReservationEnd,
-            physicalEndBeforeWarmMapping ?: physicalEnd
+            physicalEndBeforeMapping ?: physicalEnd
         )
 
     /**
@@ -103,85 +97,89 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @param position The position in the store to read from.
      */
     override fun read(buffer: ByteBuffer, position: Long) {
-        var current = position
-        while (buffer.hasRemaining()) {
-            val copied = withBuffer(current, markDirty = false) { source ->
-                source.position(getBufferLocation(current))
-                copy(source, buffer)
+        require(position >= 0L) { "File position cannot be negative: $position" }
+        val endExclusive = Math.addExact(position, buffer.remaining().toLong())
+
+        mappingReadLock.withLock {
+            val current = currentMapping()
+            if (endExclusive <= current.capacity) {
+                current.read(buffer, position)
+                return
             }
-            current += copied
+        }
+
+        // Allocated-but-unwritten ranges can be beyond the current mapping.
+        // Grow only on that uncommon path, then perform the read while the
+        // exclusive lock keeps the arena stable.
+        mappingWriteLock.withLock {
+            currentMapping().let {
+                it.ensureCapacity(endExclusive)
+                it.read(buffer, position)
+            }
         }
     }
 
-    /**
-     * Retrieves or maps a [ByteBuffer] for the given file position.
-     * This method manages a cache of memory-mapped buffers.
-     * @param position The file position for which to get the buffer.
-     * @return The [ByteBuffer] for the specified position.
-     * @throws InitializationException if the store is not open.
-     */
-    open fun getBuffer(position: Long): ByteBuffer {
-        ensureOpen()
-        val key = keyForPosition(position)
-        return mappedFileSegmentCache.getBuffer(key) {
-            mapSegment(key)
-        }
+    override fun allocate(size: Int): Long = mappingWriteLock.withLock {
+        super<FileChannelStore>.allocate(size).also { ensureAllocatedCapacity() }
     }
 
-    private fun <T> withBuffer(position: Long, markDirty: Boolean, action: (ByteBuffer) -> T): T {
-        ensureOpen()
-        val key = keyForPosition(position)
-        return mappedFileSegmentCache.withBuffer(
-            key = key,
-            mapper = { mapSegment(key) },
-            markDirty = markDirty,
-            action = action
-        )
+    override fun allocateAligned(size: Int, alignment: Int): Long = mappingWriteLock.withLock {
+        super<FileChannelStore>.allocateAligned(size, alignment).also { ensureAllocatedCapacity() }
+    }
+
+    override fun allocateSlot(size: Int): Long = mappingWriteLock.withLock {
+        super<FileChannelStore>.allocateSlot(size).also { ensureAllocatedCapacity() }
+    }
+
+    override fun allocateObject(size: Int): Long = mappingWriteLock.withLock {
+        super<FileChannelStore>.allocateObject(size).also { ensureAllocatedCapacity() }
+    }
+
+    override fun retireObject(position: Long) = mappingWriteLock.withLock {
+        super<FileChannelStore>.retireObject(position)
+    }
+
+    override fun prepareRetiredObjects() = mappingWriteLock.withLock {
+        super<FileChannelStore>.prepareRetiredObjects()
+    }
+
+    override fun publishRetiredObjects() = mappingWriteLock.withLock {
+        super<FileChannelStore>.publishRetiredObjects()
+    }
+
+    override fun reset() = mappingWriteLock.withLock {
+        super<FileChannelStore>.reset()
     }
 
     /**
-     * Calculates the location within a buffer slice for a given absolute file position.
-     * @param position The absolute file position.
-     * @return The relative position within a buffer slice.
-     */
-    private fun getBufferLocation(position: Long) = (position % bufferSliceSize).toInt()
-
-    private fun keyForPosition(position: Long): MappedFileSegmentKey =
-        MappedFileSegmentKey(fileId, (position / bufferSliceSize).toInt())
-
-    private fun mapSegment(key: MappedFileSegmentKey): MappedFileSegment =
-        MappedFileSegmentFactory.map(
-            channel = channel!!,
-            offset = key.idx.toLong() * bufferSliceSize,
-            size = bufferSliceSize
-        ) {
-            mappedFileSegmentCache.evictLeastRecentlyUsed()
-        }
-
-    /**
-     * Closes the store, removing its associated buffers from the cache.
+     * Closes the store and releases its mapping arena.
      * @return True if the store was closed successfully, false otherwise.
      */
-    override fun close(): Boolean {
-        // Persist the exact allocated end while the header mapping is still live,
-        // then evict mappings before truncating their physical reservation.
+    override fun close(): Boolean = mappingWriteLock.withLock {
+        if (channel == null) return true
+
+        // Persist the exact allocated end while the mapping is live, then
+        // unmap before truncating its physical growth reservation.
         var strictlyForced = true
         if (!deleteOnClose && channel?.isOpen == true) {
             try {
                 finishAllocationReservations()
-                forceMappedFileSegments(fileId)
+                wholeFileMapping?.force()
             } catch (_: Throwable) {
-                // Still evict mappings and close the channel, but do not
-                // truncate after a failed strict force.
+                // Still unmap and close, but do not truncate after a failed
+                // strict durability barrier.
                 strictlyForced = false
             }
         }
-        val closingSegments = mappedFileSegmentCache.retireFile(fileId)
+
+        val closingMapping = wholeFileMapping
+        wholeFileMapping = null
         try {
-            closingSegments.forceAndCloseAll()
+            closingMapping?.close()
         } catch (_: Throwable) {
             strictlyForced = false
         }
+
         val truncated = deleteOnClose || channel?.isOpen != true || strictlyForced && try {
             channel?.truncate(getFileSize())
             true
@@ -189,24 +187,18 @@ open class MemoryMappedStore : FileChannelStore, Store {
             false
         }
         var closeProtocolSucceeded = false
-        val physicallyClosed = try {
+        val physicallyClosed = run {
             closeProtocolSucceeded = try {
                 super.close()
             } catch (_: Throwable) {
                 false
             }
-            // FileChannelStore.close() reports a durability failure without
-            // closing the channel. A retired mapped store must still become
-            // physically unusable instead of being allowed to map again.
+            // FileChannelStore.close() reports durability failure without
+            // closing the channel. The store must still become unusable.
             if (channel?.isOpen == true) {
                 runCatching { channel?.close() }
             }
             channel?.isOpen != true
-        } finally {
-            // Keep the cache identity retired if physical close itself failed.
-            if (channel?.isOpen != true) {
-                mappedFileSegmentCache.releaseRetiredFile(fileId)
-            }
         }
         return strictlyForced && truncated && closeProtocolSucceeded && physicallyClosed
     }
@@ -215,14 +207,14 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * Commits any changes to the store.
      * This is a no-op if deleteOnClose is true.
      */
-    override fun commit() {
+    override fun commit() = mappingWriteLock.withLock {
         if (!deleteOnClose) {
             super.commit()
         }
     }
 
-    override fun forceWrites() {
-        forceMappedFileSegments(fileId)
+    override fun forceWrites() = mappingWriteLock.withLock {
+        wholeFileMapping?.force()
         super.forceWrites()
     }
 
@@ -234,95 +226,19 @@ open class MemoryMappedStore : FileChannelStore, Store {
         if (!channel!!.isOpen) throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
     }
 
-    /**
-     * Companion object for [MemoryMappedStore].
-     * Contains constants and shared resources.
-     */
-    companion object {
-        /**
-         * A counter to generate unique file IDs for different instances of [MemoryMappedStore].
-         */
-        private val fileIdCounter: AtomicInteger = AtomicInteger()
+    private fun currentMapping(): WholeFileMapping {
+        ensureOpen()
+        return wholeFileMapping
+            ?: throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
+    }
 
-        /**
-         * Default maximum cached chunks for regular JVM runtimes.
-         */
-        const val DEFAULT_JVM_MAX_CACHED_FILE_CHUNKS = 64 * 1024
+    private fun ensureAllocatedCapacity() {
+        wholeFileMapping?.ensureCapacity(getFileSize())
+    }
 
-        /**
-         * Default maximum cached chunks for Android runtimes.
-         */
-        const val DEFAULT_ANDROID_MAX_CACHED_FILE_CHUNKS = 1024
-
-        /**
-         * Default maximum cached chunks for the current runtime.
-         */
-        @JvmStatic
-        val defaultMaxCachedFileChunks: Int
-            get() = if (FileChannelStore.isSmallDevice) {
-                DEFAULT_ANDROID_MAX_CACHED_FILE_CHUNKS
-            } else {
-                DEFAULT_JVM_MAX_CACHED_FILE_CHUNKS
-            }
-
-        private val mappedFileSegmentCache = MappedFileSegmentCache(defaultMaxCachedFileChunks)
-
-        internal fun nextMappedFileId(): Int = fileIdCounter.incrementAndGet()
-
-        internal fun <T> withMappedFileSegmentBuffer(
-            key: MappedFileSegmentKey,
-            mapper: () -> MappedFileSegment,
-            markDirty: Boolean = true,
-            action: (ByteBuffer) -> T
-        ): T = mappedFileSegmentCache.withBuffer(key, mapper, markDirty, action)
-
-        internal fun removeMappedFileSegments(fileId: Int) {
-            mappedFileSegmentCache.removeFile(fileId)
-        }
-
-        internal fun retireMappedFileSegments(fileId: Int): List<MappedFileSegment> =
-            mappedFileSegmentCache.retireFile(fileId)
-
-        internal fun releaseRetiredMappedFile(fileId: Int) {
-            mappedFileSegmentCache.releaseRetiredFile(fileId)
-        }
-
-        internal fun forceAndCloseMappedFileSegments(segments: List<MappedFileSegment>) {
-            segments.forceAndCloseAll()
-        }
-
-        internal fun forceMappedFileSegments(fileId: Int) {
-            mappedFileSegmentCache.forceFile(fileId)
-        }
-
-        internal fun evictLeastRecentlyUsedMappedFileSegment(): Boolean =
-            mappedFileSegmentCache.evictLeastRecentlyUsed()
-
-        /**
-         * Maximum number of memory-mapped file chunks retained globally across all stores.
-         */
-        @JvmStatic
-        var maxCachedFileChunks: Int
-            get() = mappedFileSegmentCache.maxChunks
-            set(value) {
-                mappedFileSegmentCache.maxChunks = value
-            }
-
-        /**
-         * Current number of mapped file chunks retained by the global cache.
-         */
-        @JvmStatic
-        val cachedFileChunkCount: Int
-            get() = mappedFileSegmentCache.size
-
-        /** Capacity retained by detached mappings whose users have not released them yet. */
-        @JvmStatic
-        val pendingMappedFileBytes: Long
-            get() = mappedFileSegmentCache.pendingSizeBytes
-
-        /** Number of retained mappings with writes not yet forced. */
-        @JvmStatic
-        val dirtyCachedFileChunkCount: Int
-            get() = mappedFileSegmentCache.dirtySize
+    private fun closeAfterFailedOpen() {
+        runCatching { wholeFileMapping?.close() }
+        wholeFileMapping = null
+        runCatching { channel?.close() }
     }
 }

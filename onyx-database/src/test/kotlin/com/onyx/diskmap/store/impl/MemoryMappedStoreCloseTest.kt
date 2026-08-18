@@ -18,7 +18,6 @@ class MemoryMappedStoreCloseTest {
         val store = FailingFinalForceMemoryMappedStore()
 
         try {
-            store.bufferSliceSize = 64
             assertTrue(store.open(path.toString()))
             store.allocate(java.lang.Long.BYTES)
             store.failFinalForce = true

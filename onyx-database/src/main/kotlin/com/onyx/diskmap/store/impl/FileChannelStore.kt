@@ -42,14 +42,13 @@ open class FileChannelStore() : Store {
 
     final override var filePath: String = ""
     var deleteOnClose: Boolean = false // Whether to delete this file upon closing database or JVM
-    var bufferSliceSize = if (isSmallDevice) SMALL_FILE_SLICE_SIZE else LARGE_FILE_SLICE_SIZE // Size of each slice
 
     internal var channel: FileChannel? = null
     protected var contextId: String? = null
     /**
      * Logical end of allocated data. The channel can be physically larger when a
-     * [MemoryMappedStore] has mapped a complete slice; that physical reservation
-     * must never be used as the reopen allocation cursor.
+     * [MemoryMappedStore] has reserved its mapping capacity; that physical
+     * reservation must never be used as the reopen allocation cursor.
      */
     private var logicalSizeCounter: AtomicCounter = DefaultAtomicCounter(0)
     private val allocationLock = Any()
@@ -63,7 +62,6 @@ open class FileChannelStore() : Store {
     private var reusableObjectSlotCount = 0
 
     constructor(filePath: String = "", context: SchemaContext? = null, deleteOnClose: Boolean = false) : this() {
-        this.bufferSliceSize = if (deleteOnClose || isSmallDevice) SMALL_FILE_SLICE_SIZE else LARGE_FILE_SLICE_SIZE
         this.deleteOnClose = deleteOnClose
         this.filePath = filePath
         this.contextId = context?.contextId
@@ -205,7 +203,7 @@ open class FileChannelStore() : Store {
         forceWrites()
     }
 
-    /** Flush data written by this store. Memory-mapped stores also force their mapped slices. */
+    /** Flush data written by this store. Memory-mapped stores also force their mapping. */
     protected open fun forceWrites() {
         if (this.channel?.isOpen == true) {
             this.channel?.force(true)
@@ -591,9 +589,6 @@ open class FileChannelStore() : Store {
         private const val SLOT_RESERVATION_SIZE = 64 * 1024
         private const val OBJECT_RESERVATION_SIZE = 1024 * 1024
         private const val MAX_REUSABLE_OBJECT_SLOTS = 65_536
-        const val SMALL_FILE_SLICE_SIZE = 1024 * 128 // 128K
-        var LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 4 // 4MB
-
         val isSmallDevice:Boolean by lazy {
             try {
                 Class.forName("android.app.Activity")
