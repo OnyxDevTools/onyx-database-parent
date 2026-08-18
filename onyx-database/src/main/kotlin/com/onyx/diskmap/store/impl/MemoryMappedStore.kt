@@ -16,7 +16,7 @@ import kotlin.concurrent.withLock
  * This class extends [FileChannelStore] and provides methods to read, write,
  * and manage one whole-file memory mapping.
  */
-open class MemoryMappedStore : FileChannelStore, Store {
+open class MemoryMappedStore : FileChannelStore {
 
     private val mappingLock = ReentrantReadWriteLock()
     private val mappingReadLock = mappingLock.readLock()
