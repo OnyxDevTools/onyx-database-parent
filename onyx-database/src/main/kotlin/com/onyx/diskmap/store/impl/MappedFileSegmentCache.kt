@@ -48,7 +48,8 @@ internal class MappedFileSegment(
 
     /** Keep eviction and unmapping outside the supplied buffer operation. */
     fun <T> useBuffer(markDirty: Boolean, action: (ByteBuffer) -> T): MappedBufferUse<T>? {
-        lifecycleLock.readLock().withLock {
+        val lock = if (markDirty) lifecycleLock.writeLock() else lifecycleLock.readLock()
+        lock.withLock {
             if (closed) return null
             // A failed operation may still have changed part of the mapping.
             if (markDirty) recordDirty()
@@ -436,6 +437,9 @@ internal fun List<MappedFileSegment>.forceAndCloseAll() {
 }
 
 internal object MappedFileSegmentFactory {
+    private const val MAX_MAPPING_ATTEMPTS = 3
+    private const val BASE_RETRY_DELAY_MILLIS = 25L
+    private const val MAX_RETRY_DELAY_MILLIS = 250L
     private val mapper: SegmentMapper = ForeignMemorySegmentMapper.create() ?: MappedByteBufferSegmentMapper
 
     fun map(
@@ -443,28 +447,42 @@ internal object MappedFileSegmentFactory {
         offset: Long,
         size: Int,
         onMemoryPressure: () -> Unit
-    ): MappedFileSegment {
-        var attempts = 1L
-        while (true) {
+    ): MappedFileSegment = mapWithRetry(
+        mappingAction = { mapper.map(channel, offset, size) },
+        onMemoryPressure = onMemoryPressure,
+        waitBeforeRetry = { delayMillis ->
+            System.gc()
             try {
-                return mapper.map(channel, offset, size)
-            } catch (throwable: Throwable) {
-                val actual = throwable.unwrapInvocationTarget()
-                if (!actual.isDirectMemoryFailure()) {
-                    throw actual
-                }
-                println("Direct Memory is critically low.  Attempting to release memory")
-                onMemoryPressure.invoke()
-                System.gc()
-                try {
-                    Thread.sleep(min(250L * attempts, 5_000L))
-                } catch (interrupted: InterruptedException) {
-                    Thread.currentThread().interrupt()
-                    throw interrupted
-                }
-                attempts += 1
+                Thread.sleep(delayMillis)
+            } catch (interrupted: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw interrupted
             }
         }
+    )
+
+    internal fun mapWithRetry(
+        mappingAction: () -> MappedFileSegment,
+        onMemoryPressure: () -> Unit,
+        waitBeforeRetry: (Long) -> Unit
+    ): MappedFileSegment {
+        var attempt = 1
+        while (attempt <= MAX_MAPPING_ATTEMPTS) {
+            try {
+                return mappingAction.invoke()
+            } catch (throwable: Throwable) {
+                val actual = throwable.unwrapInvocationTarget()
+                if (!actual.isDirectMemoryFailure() || attempt == MAX_MAPPING_ATTEMPTS) {
+                    throw actual
+                }
+                onMemoryPressure.invoke()
+                waitBeforeRetry.invoke(
+                    min(BASE_RETRY_DELAY_MILLIS * attempt, MAX_RETRY_DELAY_MILLIS)
+                )
+                attempt += 1
+            }
+        }
+        error("Unreachable mapping retry state")
     }
 }
 

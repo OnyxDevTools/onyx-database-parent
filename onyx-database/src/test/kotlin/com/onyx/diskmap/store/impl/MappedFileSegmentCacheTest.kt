@@ -47,6 +47,68 @@ class MappedFileSegmentCacheTest {
     }
 
     @Test
+    fun `dirty writer excludes a clean reader of the same segment`() {
+        val segment = testSegment(16)
+        val writerInside = CountDownLatch(1)
+        val releaseWriter = CountDownLatch(1)
+        val readerAttempted = CountDownLatch(1)
+        val readerInside = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(2)
+
+        try {
+            val writer = executor.submit {
+                segment.useBuffer(markDirty = true) {
+                    writerInside.countDown()
+                    assertTrue(releaseWriter.await(5, TimeUnit.SECONDS))
+                }
+            }
+            assertTrue(writerInside.await(5, TimeUnit.SECONDS))
+
+            val reader = executor.submit {
+                readerAttempted.countDown()
+                segment.useBuffer(markDirty = false) {
+                    readerInside.countDown()
+                }
+            }
+            assertTrue(readerAttempted.await(5, TimeUnit.SECONDS))
+            assertFalse(readerInside.await(200, TimeUnit.MILLISECONDS))
+
+            releaseWriter.countDown()
+            writer.get(5, TimeUnit.SECONDS)
+            reader.get(5, TimeUnit.SECONDS)
+            assertEquals(0L, readerInside.count)
+        } finally {
+            releaseWriter.countDown()
+            executor.shutdownNow()
+            segment.close()
+        }
+    }
+
+    @Test
+    fun `direct memory mapping failure stops after three attempts`() {
+        val mappingAttempts = AtomicInteger()
+        val pressureCallbacks = AtomicInteger()
+        val retryDelays = mutableListOf<Long>()
+        val terminalFailure = OutOfMemoryError("simulated direct-memory exhaustion")
+
+        val thrown = assertFailsWith<OutOfMemoryError> {
+            MappedFileSegmentFactory.mapWithRetry(
+                mappingAction = {
+                    mappingAttempts.incrementAndGet()
+                    throw terminalFailure
+                },
+                onMemoryPressure = { pressureCallbacks.incrementAndGet() },
+                waitBeforeRetry = { retryDelays.add(it) }
+            )
+        }
+
+        assertTrue(thrown === terminalFailure)
+        assertEquals(3, mappingAttempts.get())
+        assertEquals(2, pressureCallbacks.get())
+        assertEquals(listOf(25L, 50L), retryDelays)
+    }
+
+    @Test
     fun `clean reads skip force and dirty writes force once`() {
         val forceCount = AtomicInteger()
         val closeCount = AtomicInteger()

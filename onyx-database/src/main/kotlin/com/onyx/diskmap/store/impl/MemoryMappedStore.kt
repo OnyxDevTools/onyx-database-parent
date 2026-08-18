@@ -188,17 +188,27 @@ open class MemoryMappedStore : FileChannelStore, Store {
         } catch (_: IOException) {
             false
         }
-        val closed = try {
-            try {
+        var closeProtocolSucceeded = false
+        val physicallyClosed = try {
+            closeProtocolSucceeded = try {
                 super.close()
             } catch (_: Throwable) {
-                runCatching { channel?.close() }
                 false
             }
+            // FileChannelStore.close() reports a durability failure without
+            // closing the channel. A retired mapped store must still become
+            // physically unusable instead of being allowed to map again.
+            if (channel?.isOpen == true) {
+                runCatching { channel?.close() }
+            }
+            channel?.isOpen != true
         } finally {
-            mappedFileSegmentCache.releaseRetiredFile(fileId)
+            // Keep the cache identity retired if physical close itself failed.
+            if (channel?.isOpen != true) {
+                mappedFileSegmentCache.releaseRetiredFile(fileId)
+            }
         }
-        return strictlyForced && truncated && closed
+        return strictlyForced && truncated && closeProtocolSucceeded && physicallyClosed
     }
 
     /**
