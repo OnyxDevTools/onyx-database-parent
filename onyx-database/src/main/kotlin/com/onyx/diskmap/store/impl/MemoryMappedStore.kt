@@ -72,6 +72,9 @@ open class MemoryMappedStore : FileChannelStore {
         } catch (_: IOException) {
             closeAfterFailedOpen()
             return false
+        } catch (failure: Throwable) {
+            closeAfterFailedOpen()
+            throw failure
         }
     }
 
@@ -223,7 +226,9 @@ open class MemoryMappedStore : FileChannelStore {
      * @throws InitializationException if the channel is not open.
      */
     protected open fun ensureOpen() {
-        if (!channel!!.isOpen) throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
+        if (channel?.isOpen != true) {
+            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
+        }
     }
 
     private fun currentMapping(): WholeFileMapping {

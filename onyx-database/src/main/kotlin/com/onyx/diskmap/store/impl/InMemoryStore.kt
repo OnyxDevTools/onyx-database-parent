@@ -15,7 +15,7 @@ import java.nio.ByteBuffer
  */
 class InMemoryStore(context: SchemaContext?, storeId: String) : FileChannelStore() {
 
-    private var slices = OptimisticLockingMap<Int, ByteBuffer> (HashMap())
+    private var slices = OptimisticLockingMap<Int, ByteBuffer>(HashMap())
     private val sliceCapacity = if (isSmallDevice) {
         SMALL_SLICE_CAPACITY
     } else {
@@ -46,12 +46,7 @@ class InMemoryStore(context: SchemaContext?, storeId: String) : FileChannelStore
         return true
     }
 
-    /**
-     * Calculates the location within a buffer slice for a given absolute file position.
-     * @param position The absolute file position.
-     * @return The relative position within a buffer slice.
-     */
-    private fun getBufferLocation(position: Long) = (position % sliceCapacity).toInt()
+    private fun offsetInSlice(position: Long) = (position % sliceCapacity).toInt()
 
     /**
      * Writes data from the source buffer to the store at the specified position.
@@ -62,8 +57,8 @@ class InMemoryStore(context: SchemaContext?, storeId: String) : FileChannelStore
     override fun write(buffer: ByteBuffer, position: Long): Int {
         var current = position
         while (buffer.hasRemaining()) {
-            val destination = bufferForPosition(current)
-            destination.position(getBufferLocation(current))
+            val destination = sliceForPosition(current)
+            destination.position(offsetInSlice(current))
             current += copy(buffer, destination)
         }
         return (current - position).toInt()
@@ -77,26 +72,14 @@ class InMemoryStore(context: SchemaContext?, storeId: String) : FileChannelStore
     override fun read(buffer: ByteBuffer, position: Long) {
         var current = position
         while (buffer.hasRemaining()) {
-            val source = bufferForPosition(current)
-            source.position(getBufferLocation(current))
+            val source = sliceForPosition(current)
+            source.position(offsetInSlice(current))
             current += copy(source, buffer)
         }
     }
 
-    /**
-     * Get the associated buffer to the position of the file.  So if the position is 2G + it will get the prop
-     * er "slice" of the file
-     *
-     * @param position The position within the combined FileSlice buffers
-     * @return The file slice located at the position specified.
-     */
-    private fun bufferForPosition(position: Long): ByteBuffer {
-
-        var index = 0
-        if (position > 0) {
-            index = (position / sliceCapacity).toInt()
-        }
-
+    private fun sliceForPosition(position: Long): ByteBuffer {
+        val index = (position / sliceCapacity).toInt()
         return slices.getOrPut(index) {
             BufferPool.allocateAndLimit(sliceCapacity)
         }
