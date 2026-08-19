@@ -4,12 +4,16 @@ import com.onyx.diskmap.store.Store
 import java.nio.ByteBuffer
 
 /**
- * Cache- and disk-friendly B+ tree page.
+ * In-memory representation and serializer for a B+ tree page.
  *
- * A compact root avoids wasting 4 KiB for the many tiny maps used by indexes.
- * Once promoted, pages use 64-bit keys, 40-bit page/entry pointers, and 4 KiB blocks.
- * Stable [BTreeEntry] records use 48-bit value-store pointers.
- * Parents are deliberately not persisted; mutations retain their descent path.
+ * A tree begins with a 96-byte compact leaf root and promotes it to ordinary 4 KiB pages when it
+ * outgrows that layout. Every persisted slot contains a 64-bit key token and a 40-bit pointer. In
+ * a leaf the pointer identifies a stable [BTreeEntry]; in an internal page it identifies the child
+ * to the right of the separator, while the first child is stored in the header. Leaf headers also
+ * form a doubly linked list for ordered traversal.
+ *
+ * The in-memory arrays include one overflow slot so insertions can be split after they occur.
+ * Parent links are deliberately not persisted; mutations retain the descent path instead.
  */
 class BTreePage private constructor(
     var position: Long,
@@ -262,7 +266,12 @@ class BTreePage private constructor(
     }
 }
 
-/** Optional decoded-key storage; primitive-key pages leave the backing array unallocated. */
+/**
+ * Slot-aligned cache of decoded non-primitive keys for a [BTreePage].
+ *
+ * Disabled caches allocate no backing array. They still accept `null` writes so page mutation
+ * code can clear and move slots without branching on the key representation.
+ */
 class DecodedKeyCache internal constructor(size: Int, val enabled: Boolean) {
     private val values: Array<Any?>? = if (enabled) arrayOfNulls(size) else null
     val size: Int = size

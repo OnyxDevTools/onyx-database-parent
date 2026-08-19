@@ -5,10 +5,14 @@ import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
 
 /**
- * Stable value handle exposed as a disk-map record ID.
+ * Persistent indirection between a B+ tree leaf slot and its value record.
  *
- * Keys live in B-tree pages. Moving a key during a split therefore leaves this
- * handle, and every reference to it, unchanged.
+ * A leaf stores this entry's [position] as the record ID exposed to callers. The six-byte entry
+ * at that position contains [record], the current value location in the record store. Updating a
+ * value rewrites that pointer in place, so moving its key during a page split or merge does not
+ * invalidate existing record IDs.
+ *
+ * A value read through this object is held weakly and may be decoded again after collection.
  */
 data class BTreeEntry(
     var position: Long = 0L,

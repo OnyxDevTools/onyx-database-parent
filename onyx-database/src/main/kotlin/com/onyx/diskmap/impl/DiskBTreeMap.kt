@@ -15,7 +15,17 @@ import java.lang.ref.WeakReference
 import java.lang.reflect.Field
 import java.util.HashSet
 
-/** A sorted, persistent disk map backed by a page-oriented B+ tree. */
+/**
+ * A persistent, sorted map backed by a page-oriented B+ tree.
+ *
+ * Keys are normalized to [keyType] before lookup. Primitive-compatible keys are encoded
+ * directly in tree pages; other keys and all non-null values are stored in [recordStore].
+ * Leaf slots refer to stable [BTreeEntry] positions, so the record IDs exposed by this map
+ * remain valid when pages split, merge, or rebalance.
+ *
+ * Individual map operations are coordinated by [mapReadWriteLock]. Iteration is provided by
+ * live collection views and therefore is not a snapshot of the tree.
+ */
 @Suppress("UNCHECKED_CAST")
 open class DiskBTreeMap<K, V>(
     fileStore: WeakReference<Store>,

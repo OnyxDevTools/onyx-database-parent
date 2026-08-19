@@ -10,7 +10,14 @@ import java.lang.ref.WeakReference
 import java.util.AbstractSet
 import java.util.NoSuchElementException
 
-/** Collection views that walk leaf slots directly without eager key or entry hydration. */
+/**
+ * Exposes a B+ tree's linked leaves as lazy, live map collection views.
+ *
+ * Iterators walk leaf slots in key order and resolve only the key, value, dictionary, or stable
+ * entry ID requested by the selected view. The views are backed by the tree rather than copied;
+ * iterator removal updates the tree and then resumes from the next ordered key so page merges do
+ * not invalidate its traversal position.
+ */
 @Suppress("UNCHECKED_CAST")
 abstract class AbstractIterableBTree<K, V>(
     store: WeakReference<Store>,

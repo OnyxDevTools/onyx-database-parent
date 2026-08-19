@@ -11,12 +11,23 @@ import com.onyx.extension.common.castTo
 import com.onyx.extension.common.forceCompare
 import com.onyx.extension.common.long
 import com.onyx.extension.common.toType
+import com.onyx.lang.map.ConcurrentWeakValueMap
 import com.onyx.persistence.query.QueryCriteriaOperator
 import java.lang.ref.WeakReference
 import java.util.ArrayDeque
-import java.util.concurrent.ConcurrentHashMap
 
-/** Persistent B+ tree with page-local keys, stable value handles, and linked leaves. */
+/**
+ * Core persistence, search, and rebalancing logic for a page-oriented B+ tree.
+ *
+ * Leaf slots pair ordered key tokens with stable [BTreeEntry] positions. Each entry points to
+ * its value in the record store, allowing leaf slots to move without changing the record ID
+ * exposed to callers. Internal separators contain the minimum key of their right subtree, and
+ * leaf pages form a doubly linked list for ordered range traversal.
+ *
+ * The root is retained strongly while other [BTreePage] instances are cached with weak values.
+ * This layer does not synchronize tree operations; the concrete map is responsible for
+ * coordinating readers and writers.
+ */
 @Suppress("UNCHECKED_CAST")
 abstract class AbstractBTree<K, V>(
     store: WeakReference<Store>,
@@ -25,8 +36,7 @@ abstract class AbstractBTree<K, V>(
     keyType: Class<*>
 ) : AbstractDiskMap<K, V>(store, recordStore, header, keyType) {
 
-    /** Pages are few and expensive to hydrate, so retain canonical strong instances. */
-    protected open val pageCache = ConcurrentHashMap<Long, BTreePage>()
+    protected open val pageCache = ConcurrentWeakValueMap<Long, BTreePage>()
     protected var root: BTreePage
 
     private val keyKind = KeyKind.forType(keyType)
@@ -677,12 +687,9 @@ abstract class AbstractBTree<K, V>(
 
     private fun compareStoredToKey(page: BTreePage, index: Int, key: K, token: Long): Int =
         when (keyKind) {
-            KeyKind.INTEGRAL -> java.lang.Long.compare(page.keys[index], token)
-            KeyKind.FLOAT -> java.lang.Float.compare(
-                java.lang.Float.intBitsToFloat(page.keys[index].toInt()),
-                key as Float
-            )
-            KeyKind.DOUBLE -> java.lang.Double.compare(java.lang.Double.longBitsToDouble(page.keys[index]), key as Double)
+            KeyKind.INTEGRAL -> page.keys[index].compareTo(token)
+            KeyKind.FLOAT -> java.lang.Float.intBitsToFloat(page.keys[index].toInt()).compareTo(key as Float)
+            KeyKind.DOUBLE -> java.lang.Double.longBitsToDouble(page.keys[index]).compareTo(key as Double)
             KeyKind.OBJECT -> compareKeys(keyAt(page, index), key)
         }
 
