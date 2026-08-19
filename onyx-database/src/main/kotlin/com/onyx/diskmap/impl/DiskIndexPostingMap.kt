@@ -15,11 +15,12 @@ import com.onyx.extension.common.long
 import com.onyx.extension.common.toType
 import com.onyx.lang.concurrent.ClosureReadWriteLock
 import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
+import com.onyx.lang.map.ConcurrentWeakValueMap
 import com.onyx.persistence.query.QueryCriteriaOperator
 import java.lang.ref.WeakReference
 import java.util.ArrayDeque
 import java.util.Date
-import java.util.concurrent.ConcurrentHashMap
+import java.util.WeakHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -52,9 +53,9 @@ class DiskIndexPostingMap(
         it.recordCount = AtomicLong(header.recordCount.get())
     }
 
-    private val pageCache = ConcurrentHashMap<Long, IndexPostingPage>()
-    private val objectTokensByValue = ConcurrentHashMap<Any, Long>()
-    private val objectValuesByToken = ConcurrentHashMap<Long, Any>()
+    private val pageCache = ConcurrentWeakValueMap<Long, IndexPostingPage>()
+    private val objectTokensByValue = WeakHashMap<Any, Long>()
+    private val objectValuesByToken = ConcurrentWeakValueMap<Long, Any>()
     private val pathPool = ThreadLocal.withInitial { ArrayDeque<SearchPath>(2) }
     private val lock: ClosureReadWriteLock = DefaultClosureReadWriteLock()
 

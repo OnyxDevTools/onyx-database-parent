@@ -160,7 +160,10 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
      *
      * @param walTransactionFile File that contains transaction log.
      * @param executeTransaction Function that determines whether or not you should execute the transaction
-     * @throws TransactionException If a transaction failed to execute, this will be thrown
+     * Individual transaction application failures are reported and skipped so later transactions
+     * can still be recovered. Structural or I/O failures in the WAL throw [TransactionException].
+     *
+     * @throws TransactionException If the WAL cannot be read safely
      */
     @Throws(TransactionException::class)
     override fun applyTransactionLog(walTransactionFile: String, executeTransaction:  (Transaction) -> Boolean): Boolean {
@@ -169,6 +172,7 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
             openWalReadSource(Path.of(walTransactionFile)).use { source ->
                 WalReadBuffer(source.channel, source.logSize, WAL_READ_BUFFER_SIZE).use { wal ->
                     while (true) {
+                        val transactionOffset = source.logSize - wal.bytesRemaining
                         try {
                             transaction = null
                             val metadataBytesAvailable = wal.ensureAvailable(TRANSACTION_METADATA_SIZE)
@@ -281,9 +285,9 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
                                 cause
                             )
                         } catch (cause: TransactionException) {
-                            println("Failure to apply transaction")
+                            onTransactionReplayFailure(walTransactionFile, transactionOffset, transaction, cause)
                         } catch (cause: Exception) {
-                            println("Failure to apply transaction")
+                            onTransactionReplayFailure(walTransactionFile, transactionOffset, transaction, cause)
                         }
                     }
                 }
@@ -299,6 +303,21 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
         }
 
         return true
+    }
+
+    /** Reports a failed transaction without preventing later WAL records from being replayed. */
+    protected open fun onTransactionReplayFailure(
+        walTransactionFile: String,
+        transactionOffset: Long,
+        transaction: Transaction?,
+        cause: Exception
+    ) {
+        val transactionName = transaction?.javaClass?.simpleName ?: "unknown transaction"
+        System.err.println(
+            "Failed to apply $transactionName from WAL '$walTransactionFile' at byte $transactionOffset: " +
+                (cause.message ?: cause.javaClass.name)
+        )
+        cause.printStackTrace(System.err)
     }
 
     companion object {

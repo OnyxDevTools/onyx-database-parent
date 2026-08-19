@@ -71,7 +71,10 @@ interface TransactionInteractor {
      *
      * @param walTransactionFile File that contains transaction log.
      * @param executeTransaction Function that determines whether or not you should execute the transaction
-     * @throws TransactionException If a transaction failed to execute, this will be thrown
+     * Individual transaction application failures are reported and skipped so later transactions
+     * can still be recovered. Structural or I/O failures in the WAL throw [TransactionException].
+     *
+     * @throws TransactionException If the WAL cannot be read safely
      */
     @Throws(TransactionException::class)
     fun applyTransactionLog(walTransactionFile: String, executeTransaction: (Transaction) -> Boolean): Boolean

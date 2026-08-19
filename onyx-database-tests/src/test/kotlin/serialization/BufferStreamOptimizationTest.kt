@@ -1,13 +1,17 @@
 package serialization
 
 import com.onyx.buffer.BufferPool
+import com.onyx.buffer.BufferObjectType
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.ExpandableByteBuffer
+import com.onyx.exception.BufferUnderflowException
+import com.onyx.exception.BufferingException
 import org.junit.Test
 import pojo.Simple
 import java.nio.ByteBuffer
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -58,61 +62,10 @@ class BufferStreamOptimizationTest {
     }
 
     @Test
-    fun optimizedPrimitiveWritesKeepExistingWireBytes() {
-        val intBuffer = BufferStream.toLegacyBuffer(1)
-        assertContentEquals(
-            byteArrayOf(0, 0, 0, 9, 22, 0, 0, 0, 1),
-            intBuffer.copyRemainingBytes()
-        )
-        BufferPool.recycle(intBuffer)
-
-        val bytesBuffer = BufferStream.toLegacyBuffer(byteArrayOf(1, 2, 3, 4))
-        assertContentEquals(
-            byteArrayOf(0, 0, 0, 13, 11, 0, 0, 0, 4, 1, 2, 3, 4),
-            bytesBuffer.copyRemainingBytes()
-        )
-        BufferPool.recycle(bytesBuffer)
-    }
-
-    @Test
     fun bulkArrayWriteRetainsItsVoidJvmSignature() {
         val method = BufferStream::class.java.getMethod("putArray", Any::class.java)
 
         assertEquals(java.lang.Void.TYPE, method.returnType)
-    }
-
-    @Test
-    fun optimizedDoubleArrayWritesKeepExistingWireBytes() {
-        val buffer = BufferStream.toLegacyBuffer(doubleArrayOf(1.25, -2.5))
-
-        assertContentEquals(
-            """
-                00000019
-                10 00000002
-                3ff4000000000000
-                c004000000000000
-            """.hexBytes(),
-            buffer.copyRemainingBytes()
-        )
-        BufferPool.recycle(buffer)
-    }
-
-    @Test
-    fun collectionWritesKeepExistingWireBytes() {
-        val buffer = BufferStream.toLegacyBuffer(arrayListOf(1, 2))
-
-        assertContentEquals(
-            """
-                0000002b
-                21
-                20 00000013 6a6176612e7574696c2e41727261794c697374
-                00000002
-                16 00000001
-                16 00000002
-            """.hexBytes(),
-            buffer.copyRemainingBytes()
-        )
-        BufferPool.recycle(buffer)
     }
 
     @Test
@@ -135,19 +88,6 @@ class BufferStreamOptimizationTest {
             name = "root"
             next = this
         }
-        val legacyBuffer = BufferStream.toLegacyBuffer(original)
-
-        assertContentEquals(
-            """
-                00000031
-                24
-                20 0000001b 73657269616c697a6174696f6e2e5265666572656e63654e6f6465
-                1f 00000004 726f6f74
-                01 0002
-            """.hexBytes(),
-            legacyBuffer.copyRemainingBytes()
-        )
-        BufferPool.recycle(legacyBuffer)
 
         val buffer = BufferStream.toBuffer(original)
         val decoded = BufferStream.fromBuffer(buffer) as ReferenceNode
@@ -160,21 +100,6 @@ class BufferStreamOptimizationTest {
     @Test
     fun pairAliasesKeepWriterReferenceOrder() {
         val pair = Pair(Simple().apply { hiya = 7 }, "value")
-        val legacyBuffer = BufferStream.toLegacyBuffer(arrayOf(pair, pair))
-
-        assertContentEquals(
-            """
-                0000003b
-                14 0000000b 6b6f746c696e2e50616972
-                00000002
-                25
-                24 20 0000000b 706f6a6f2e53696d706c65 00000007
-                1f 00000005 76616c7565
-                01 0002
-            """.hexBytes(),
-            legacyBuffer.copyRemainingBytes()
-        )
-        BufferPool.recycle(legacyBuffer)
 
         val buffer = BufferStream.toBuffer(arrayOf(pair, pair))
         val decoded = BufferStream.fromBuffer(buffer) as Array<*>
@@ -188,18 +113,6 @@ class BufferStreamOptimizationTest {
     @Test
     fun repeatedClassReferencesResolveFromReaderList() {
         val values = arrayOf<Any?>(Simple::class.java, Simple::class.java)
-        val legacyBuffer = BufferStream.toLegacyBuffer(values)
-
-        assertContentEquals(
-            """
-                0000001c
-                13 00000002
-                20 0000000b 706f6a6f2e53696d706c65
-                01 0001
-            """.hexBytes(),
-            legacyBuffer.copyRemainingBytes()
-        )
-        BufferPool.recycle(legacyBuffer)
 
         val buffer = BufferStream.toBuffer(values)
         val decoded = BufferStream.fromBuffer(buffer) as Array<*>
@@ -240,16 +153,41 @@ class BufferStreamOptimizationTest {
         BufferPool.recycle(serialized)
     }
 
-    private fun ByteBuffer.copyRemainingBytes(): ByteArray {
-        val copy = duplicate()
-        return ByteArray(copy.remaining()).also { copy.get(it) }
+    @Test
+    fun framedReaderRejectsLegacyFormat() {
+        val legacyFrame = ByteBuffer.wrap(
+            byteArrayOf(0, 0, 0, 9, BufferObjectType.INT.ordinal.toByte(), 0, 0, 0, 1)
+        )
+
+        assertFailsWith<BufferingException> {
+            BufferStream.fromBuffer(legacyFrame)
+        }
     }
 
-    private fun String.hexBytes(): ByteArray =
-        filterNot(Char::isWhitespace)
-            .chunked(2)
-            .map { it.toInt(16).toByte() }
-            .toByteArray()
+    @Test
+    fun compactReaderRejectsStringLengthBeyondFrameBeforeAllocating() {
+        val frame = ByteBuffer.allocate(16)
+        frame.position(Integer.BYTES)
+        frame.put(2.toByte())
+        frame.put(BufferObjectType.STRING.ordinal.toByte())
+        putUnsignedInt(frame, (1_000_000 shl 1) or 1)
+        val frameSize = frame.position()
+        frame.putInt(0, frameSize or Int.MIN_VALUE)
+        frame.flip()
+
+        assertFailsWith<BufferUnderflowException> {
+            BufferStream.fromBuffer(frame)
+        }
+    }
+
+    private fun putUnsignedInt(buffer: ByteBuffer, value: Int) {
+        var remaining = value
+        while (remaining and -0x80 != 0) {
+            buffer.put(((remaining and 0x7f) or 0x80).toByte())
+            remaining = remaining ushr 7
+        }
+        buffer.put(remaining.toByte())
+    }
 }
 
 class ReferenceNode {

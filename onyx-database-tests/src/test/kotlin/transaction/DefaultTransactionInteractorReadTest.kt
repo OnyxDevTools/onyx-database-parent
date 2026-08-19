@@ -88,6 +88,43 @@ class DefaultTransactionInteractorReadTest {
     }
 
     @Test
+    fun transactionApplicationFailureIsReportedAndLaterRecordsStillReplay() {
+        val walFile = Files.createTempFile("onyx-partial-wal-recovery", ".wal")
+        val attemptedRows = ArrayList<Int>()
+        val failures = ArrayList<ReplayFailure>()
+        val interactor = object : DefaultTransactionInteractor(UNUSED_TRANSACTION_STORE, noOpPersistenceManager()) {
+            override fun onTransactionReplayFailure(
+                walTransactionFile: String,
+                transactionOffset: Long,
+                transaction: Transaction?,
+                cause: Exception
+            ) {
+                failures += ReplayFailure(walTransactionFile, transactionOffset, transaction, cause)
+            }
+        }
+
+        try {
+            Files.write(walFile, concatenate(deleteQueryRecord(3), deleteQueryRecord(7)))
+
+            assertTrue(interactor.applyTransactionLog(walFile.toString()) { transaction ->
+                val row = assertIs<DeleteQueryTransaction>(transaction).query.firstRow
+                attemptedRows += row
+                if (row == 3) throw IllegalStateException("cannot apply row 3")
+                false
+            })
+
+            assertEquals(listOf(3, 7), attemptedRows)
+            assertEquals(1, failures.size)
+            assertEquals(walFile.toString(), failures.single().walFile)
+            assertEquals(0L, failures.single().offset)
+            assertIs<DeleteQueryTransaction>(failures.single().transaction)
+            assertEquals("cannot apply row 3", failures.single().cause.message)
+        } finally {
+            Files.deleteIfExists(walFile)
+        }
+    }
+
+    @Test
     fun bufferedReaderDecodesCompressedWal() {
         val walFile = Files.createTempFile("onyx-compressed-wal-reader", ".wal")
         val expectedRows = listOf(13, 17, 23)
@@ -440,6 +477,13 @@ class DefaultTransactionInteractorReadTest {
         values.forEach(result::put)
         return result.array()
     }
+
+    private data class ReplayFailure(
+        val walFile: String,
+        val offset: Long,
+        val transaction: Transaction?,
+        val cause: Exception
+    )
 
     private companion object {
         const val DELETE_QUERY: Byte = 3

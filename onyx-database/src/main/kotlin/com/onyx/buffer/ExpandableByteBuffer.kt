@@ -1,6 +1,7 @@
 package com.onyx.buffer
 
 import java.nio.Buffer
+import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
 import kotlin.math.max
 
@@ -44,9 +45,19 @@ class ExpandableByteBuffer {
     /**
      * Check to see if the buffer need additional bytes
      * @param required Number of additional required bytes
-     * @return Whether the buffer already has enough bytes remaining
+     * @return True when the requested bytes are available
+     * @throws BufferUnderflowException when the requested bytes exceed the active frame
      */
-    fun ensureRequiredSize(required: Int): Boolean = buffer.position() + required < maxBufferSize + bufferStartingPosition
+    fun ensureRequiredSize(required: Int): Boolean {
+        require(required >= 0) { "Required buffer size must not be negative: $required" }
+
+        val requiredEnd = buffer.position().toLong() + required.toLong()
+        val frameEnd = bufferStartingPosition.toLong() + maxBufferSize.toLong()
+        if (requiredEnd > buffer.limit().toLong() || requiredEnd > frameEnd) {
+            throw BufferUnderflowException()
+        }
+        return true
+    }
 
     /**
      * Check size and ensure the expandableByteBuffer has enough space to accommodate
