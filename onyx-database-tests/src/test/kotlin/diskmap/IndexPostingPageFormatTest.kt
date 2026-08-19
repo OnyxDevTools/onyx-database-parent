@@ -1,24 +1,16 @@
 package diskmap
 
-import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.IndexPostingPage
 import com.onyx.diskmap.data.IndexPostingPage.ValueKind
-import com.onyx.diskmap.data.bigInt
-import com.onyx.diskmap.impl.DiskIndexPostingMap
-import com.onyx.diskmap.store.Store
 import com.onyx.diskmap.store.impl.InMemoryStore
 import org.junit.Test
-import java.lang.ref.WeakReference
-import java.nio.ByteBuffer
-import java.util.ArrayDeque
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class IndexPostingPageFormatTest {
 
     @Test
-    fun versionTwoRoundTripsEveryNativeValueWidthAndSignedness() {
+    fun roundTripsEveryNativeValueWidthAndSignedness() {
         val store = InMemoryStore(null, "posting-page-widths-${System.nanoTime()}")
         try {
             val specifications = listOf(
@@ -78,7 +70,6 @@ class IndexPostingPageFormatTest {
                 page.write(store)
 
                 val reopened = IndexPostingPage.get(store, page.position, specification.valueKind)
-                assertFalse(reopened.legacyLayout, specification.name)
                 assertEquals(specification.width, reopened.valueTokenWidth, specification.name)
                 assertEquals(page.capacity, reopened.capacity, specification.name)
                 assertEquals(specification.persisted(specification.firstToken), reopened.valueTokens[0], specification.name)
@@ -93,7 +84,7 @@ class IndexPostingPageFormatTest {
     }
 
     @Test
-    fun versionTwoUsesFiveByteInternalChildrenAndDynamicCompactCapacity() {
+    fun usesFiveByteInternalChildrenAndDynamicCompactCapacity() {
         val store = InMemoryStore(null, "posting-page-pointers-${System.nanoTime()}")
         try {
             val internal = IndexPostingPage.create(
@@ -145,82 +136,6 @@ class IndexPostingPageFormatTest {
         }
     }
 
-    @Test
-    fun legacyVersionOneTreeRemainsReadableAndPropagatesItsLayoutThroughEverySplitLevel() {
-        val nodeStore = InMemoryStore(null, "posting-page-legacy-node-${System.nanoTime()}")
-        val dataStore = InMemoryStore(null, "posting-page-legacy-data-${System.nanoTime()}")
-        try {
-            val header = Header().also {
-                it.position = nodeStore.allocate(Header.HEADER_SIZE)
-                it.firstNode = writeEmptyLegacyCompactLeaf(nodeStore)
-                nodeStore.write(it, it.position)
-            }
-            val map = DiskIndexPostingMap(
-                WeakReference(nodeStore),
-                WeakReference(dataStore),
-                header,
-                Long::class.java
-            )
-
-            (1L..LEGACY_POSTING_COUNT).forEach { value -> assertTrue(map.add(value, value)) }
-            assertEquals(LEGACY_POSTING_COUNT, map.longSize())
-            assertTrue(map.contains(1L, 1L))
-            assertTrue(map.contains(LEGACY_POSTING_COUNT, LEGACY_POSTING_COUNT))
-            map.clearCache()
-            assertTrue(map.contains(1L, 1L))
-            assertTrue(map.contains(LEGACY_POSTING_COUNT, LEGACY_POSTING_COUNT))
-
-            val rootPosition = readBigInt(nodeStore, header.position)
-            val pages = ArrayDeque<Pair<Long, Int>>()
-            val visited = HashSet<Long>()
-            var maximumDepth = 0
-            pages.add(rootPosition to 0)
-            while (pages.isNotEmpty()) {
-                val (position, depth) = pages.removeFirst()
-                assertTrue(visited.add(position), "Page $position was referenced more than once")
-                val page = IndexPostingPage.get(
-                    nodeStore,
-                    position,
-                    ValueKind.INTEGRAL,
-                    Long.SIZE_BYTES,
-                    true
-                )
-                assertTrue(page.legacyLayout, "Split page $position at depth $depth changed formats")
-                maximumDepth = maxOf(maximumDepth, depth)
-                if (!page.leaf) {
-                    for (index in 0..page.keyCount) pages.add(page.children[index] to depth + 1)
-                }
-            }
-            assertTrue(maximumDepth >= 2, "The fixture must force both leaf and internal splits")
-        } finally {
-            nodeStore.close()
-            dataStore.close()
-        }
-    }
-
-    private fun writeEmptyLegacyCompactLeaf(store: Store): Long {
-        val position = store.allocate(IndexPostingPage.COMPACT_PAGE_SIZE)
-        val buffer = ByteBuffer.allocate(IndexPostingPage.COMPACT_PAGE_SIZE)
-        buffer.putInt(IndexPostingPage.MAGIC)
-        buffer.put(LEGACY_FORMAT_VERSION)
-        buffer.put((LEAF_FLAG or COMPACT_FLAG).toByte())
-        buffer.putShort(0)
-        buffer.putLong(0L)
-        buffer.putLong(0L)
-        buffer.putLong(0L)
-        while (buffer.hasRemaining()) buffer.put(0)
-        buffer.flip()
-        store.write(buffer, position)
-        return position
-    }
-
-    private fun readBigInt(store: Store, position: Long): Long {
-        val buffer = ByteBuffer.allocate(BIG_INT_SIZE)
-        store.read(buffer, position)
-        buffer.flip()
-        return buffer.bigInt
-    }
-
     private data class TokenSpecification(
         val name: String,
         val valueKind: ValueKind,
@@ -238,10 +153,6 @@ class IndexPostingPageFormatTest {
     private companion object {
         const val PAGE_HEADER_SIZE = 32
         const val BIG_INT_SIZE = 5
-        const val LEGACY_FORMAT_VERSION: Byte = 1
-        const val LEAF_FLAG = 1
-        const val COMPACT_FLAG = 2
         const val MAX_BIG_INT = (1L shl 40) - 1L
-        const val LEGACY_POSTING_COUNT = 42_000L
     }
 }

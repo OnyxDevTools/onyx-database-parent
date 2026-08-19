@@ -14,6 +14,12 @@ import java.nio.ByteBuffer
  *
  * The in-memory arrays include one overflow slot so insertions can be split after they occur.
  * Parent links are deliberately not persisted; mutations retain the descent path instead.
+ *
+ * @property position byte offset of the page in the tree store
+ * @property leaf whether slots contain entry pointers (`true`) or child pointers (`false`)
+ * @property compact whether this page uses the small-root layout rather than a page-aligned 4 KiB
+ * layout
+ * @param cacheDecodedKeys whether to retain decoded, externally stored keys alongside their tokens
  */
 class BTreePage private constructor(
     var position: Long,
@@ -21,22 +27,58 @@ class BTreePage private constructor(
     val compact: Boolean,
     cacheDecodedKeys: Boolean
 ) {
+    /** Maximum number of keys that can be persisted in this page's selected layout. */
     val capacity: Int = if (compact) COMPACT_MAX_KEYS else MAX_KEYS
     private val pageSize: Int = if (compact) COMPACT_PAGE_SIZE else PAGE_SIZE
+
+    /**
+     * Number of active keys. This may temporarily equal `capacity + 1` after insertion, but the
+     * page must be split or promoted before [write] is called.
+     */
     var keyCount: Int = 0
+
+    /** Previous leaf's page position, or `0` at the beginning of the leaf chain. */
     var previousLeaf: Long = 0L
+
+    /** Next leaf's page position, or `0` at the end of the leaf chain. */
     var nextLeaf: Long = 0L
 
-    /** Leaf: stable entry IDs. Internal: child 0 followed by right children. */
+    /**
+     * Slot-aligned file pointers.
+     *
+     * Leaf pages use indexes `0 until keyCount` for stable [BTreeEntry] positions. Internal pages
+     * use indexes `0..keyCount` for children; [keys] at index `i` is the lower bound of child
+     * `i + 1`.
+     */
     val pointers = LongArray(capacity + 2)
+
+    /**
+     * Ordered key tokens for active slots plus one temporary overflow slot.
+     *
+     * A token is either the key encoded directly as a `Long` or the position of a serialized key,
+     * as determined by the owning tree.
+     */
     val keys = LongArray(capacity + 1)
 
-    /** Lazily decoded non-primitive keys, kept with the cached page. */
+    /** Lazily decoded non-primitive keys, indexed identically to [keys]. */
     val decodedKeys = DecodedKeyCache(capacity + 1, cacheDecodedKeys)
 
-    /** Lazily read value pointers for leaf slots. */
+    /**
+     * Lazily read value-record pointers for leaf slots, initialized to [UNLOADED_RECORD]. Internal
+     * pages expose an empty array because their pointers address child pages instead.
+     */
     val recordPointers = if (leaf) LongArray(capacity + 1) { UNLOADED_RECORD } else EMPTY_RECORD_POINTERS
 
+    /**
+     * Inserts a leaf slot at [index], shifting subsequent slots and their caches to the right.
+     *
+     * One insertion beyond [capacity] is supported in memory so the owning tree can choose a split
+     * point. The page cannot be persisted in that state.
+     *
+     * @param key encoded key token
+     * @param entry stable [BTreeEntry] position
+     * @param record current value-record position, or [BTreeEntry.NULL_RECORD]
+     */
     fun insertLeaf(index: Int, key: Long, entry: Long, record: Long) {
         check(leaf)
         require(index in 0..keyCount)
@@ -54,6 +96,7 @@ class BTreePage private constructor(
         keyCount++
     }
 
+    /** Removes the leaf slot at [index], compacts all slot-aligned caches, and clears the old tail. */
     fun removeLeaf(index: Int) {
         check(leaf)
         require(index in 0 until keyCount)
@@ -71,7 +114,13 @@ class BTreePage private constructor(
         recordPointers[keyCount] = UNLOADED_RECORD
     }
 
-    /** Inserts a separator and its right child at [index]. */
+    /**
+     * Inserts a separator and its right child at [index].
+     *
+     * The existing child at `pointers[index]` remains to the separator's left and [rightChild] is
+     * inserted at `pointers[index + 1]`. As with [insertLeaf], one in-memory overflow separator is
+     * allowed for splitting.
+     */
     fun insertInternal(index: Int, key: Long, rightChild: Long) {
         check(!leaf)
         require(index in 0..keyCount)
@@ -90,7 +139,10 @@ class BTreePage private constructor(
         keyCount++
     }
 
-    /** Removes separator [keyIndex] and the child immediately to its right. */
+    /**
+     * Removes separator [keyIndex] and the child immediately to its right, then compacts the
+     * remaining keys, children, and decoded-key cache.
+     */
     fun removeInternal(keyIndex: Int) {
         check(!leaf)
         require(keyIndex in 0 until keyCount)
@@ -109,6 +161,14 @@ class BTreePage private constructor(
         pointers[keyCount + 1] = 0L
     }
 
+    /**
+     * Writes the complete fixed-size page, including its header, active slots, and zero-filled
+     * unused space.
+     *
+     * Newly created pages are not durable until this method is called.
+     *
+     * @throws IllegalArgumentException if [keyCount] is outside the persistable range
+     */
     fun write(store: Store) {
         require(keyCount in 0..capacity) { "B-tree page contains too many keys: $keyCount" }
         val buffer = getPageBuffer(pageSize)
@@ -122,7 +182,12 @@ class BTreePage private constructor(
         store.write(buffer, position)
     }
 
-    /** Writes the changed slot tail without rewriting the whole page. */
+    /**
+     * Rewrites active slots in `[fromIndex, toIndexExclusive)` without touching the header.
+     *
+     * Callers must persist [keyCount] separately with [writeCount]. Removed trailing slots are not
+     * cleared on disk because the persisted count makes them unreachable.
+     */
     fun writeSlots(store: Store, fromIndex: Int, toIndexExclusive: Int = keyCount) {
         require(fromIndex in 0..keyCount)
         require(toIndexExclusive in fromIndex..keyCount)
@@ -137,6 +202,7 @@ class BTreePage private constructor(
         store.write(buffer, position + HEADER_SIZE + fromIndex.toLong() * SLOT_SIZE)
     }
 
+    /** Rewrites only the key-count field in the persisted header. */
     fun writeCount(store: Store) {
         val buffer = getSmallBuffer()
         buffer.putShort(keyCount.toShort())
@@ -144,6 +210,9 @@ class BTreePage private constructor(
         store.write(buffer, position + KEY_COUNT_OFFSET)
     }
 
+    /**
+     * Rewrites only the encoded key at [index], leaving the slot's page or entry pointer unchanged.
+     */
     fun writeKey(store: Store, index: Int) {
         val buffer = getSmallBuffer()
         buffer.putLong(keys[index])
@@ -151,6 +220,7 @@ class BTreePage private constructor(
         store.write(buffer, position + HEADER_SIZE + index.toLong() * SLOT_SIZE)
     }
 
+    /** Rewrites only [previousLeaf] in the persisted header. */
     fun writePreviousLeaf(store: Store) = writeHeaderLong(store, PREVIOUS_OFFSET, previousLeaf)
 
     private fun writeHeaderLong(store: Store, offset: Int, value: Long) {
@@ -178,11 +248,22 @@ class BTreePage private constructor(
     private fun ByteBuffer.putPointer(value: Long) = putBigInt(value)
 
     companion object {
+        /** Persisted-key capacity of a standard [PAGE_SIZE] page. */
         const val MAX_KEYS = 312
+
+        /** Persisted-key capacity of the initial compact root page. */
         const val COMPACT_MAX_KEYS = 4
+
+        /** Size and alignment, in bytes, of a standard page. */
         const val PAGE_SIZE = 4096
+
+        /** Size, in bytes, of a compact root page. */
         const val COMPACT_PAGE_SIZE = 96
+
+        /** File signature stored at the beginning of every page (`OBTR`). */
         const val MAGIC = 0x4f425452 // "OBTR"
+
+        /** In-memory sentinel indicating that a leaf's value-record pointer has not been read. */
         const val UNLOADED_RECORD = Long.MIN_VALUE
 
         private const val FORMAT_VERSION: Byte = 3
@@ -194,6 +275,13 @@ class BTreePage private constructor(
         private const val PREVIOUS_OFFSET = 8
         private val EMPTY_RECORD_POINTERS = LongArray(0)
 
+        /**
+         * Allocates a page and returns its empty in-memory representation.
+         *
+         * Standard pages are aligned to [PAGE_SIZE]. Compact pages use only
+         * [COMPACT_PAGE_SIZE] bytes and are intended for the initial leaf root. Allocation does not
+         * write a page header; call [write] after initializing the page.
+         */
         fun create(
             store: Store,
             leaf: Boolean,
@@ -210,6 +298,17 @@ class BTreePage private constructor(
             )
         }
 
+        /**
+         * Loads and validates the page at [position].
+         *
+         * The persisted magic, format version, and key count are checked before slots are exposed.
+         * Value-record pointers are intentionally left as [UNLOADED_RECORD] for lazy loading.
+         *
+         * @param cacheDecodedKeys whether externally stored keys decoded by the tree should be
+         * retained on this page
+         * @throws IllegalArgumentException if the page signature, format version, or key count is
+         * invalid
+         */
         fun get(store: Store, position: Long, cacheDecodedKeys: Boolean = true): BTreePage {
             val header = getPageBuffer(HEADER_SIZE)
             store.read(header, position)

@@ -18,18 +18,10 @@ class IndexPostingPage private constructor(
     val valueKind: ValueKind,
     /** Width used by value tokens in this page's persisted format. */
     val valueTokenWidth: Int,
-    private val signedValueToken: Boolean,
-    private val formatVersion: Byte
+    private val signedValueToken: Boolean
 ) {
-    val legacyLayout: Boolean
-        get() = formatVersion == LEGACY_FORMAT_VERSION
-
     private val pageSize: Int = if (compact) COMPACT_PAGE_SIZE else PAGE_SIZE
-    private val slotSize: Int = if (legacyLayout) {
-        if (leaf) LEGACY_LEAF_SLOT_SIZE else LEGACY_INTERNAL_SLOT_SIZE
-    } else {
-        valueTokenWidth + BIG_INT_SIZE + if (leaf) 0 else BIG_INT_SIZE
-    }
+    private val slotSize: Int = valueTokenWidth + BIG_INT_SIZE + if (leaf) 0 else BIG_INT_SIZE
 
     /** Capacity follows the persisted slot width rather than a single tree-wide constant. */
     val capacity: Int = (pageSize - HEADER_SIZE) / slotSize
@@ -205,45 +197,33 @@ class IndexPostingPage private constructor(
 
     fun writeFirstChild(store: Store) {
         check(!leaf)
-        writePosition(store, if (legacyLayout) LEGACY_FIRST_CHILD_OFFSET else FIRST_CHILD_OFFSET, children[0])
+        writePosition(store, FIRST_CHILD_OFFSET, children[0])
     }
 
     private fun writePosition(store: Store, offset: Int, value: Long) {
         val buffer = getSmallBuffer()
-        if (legacyLayout) buffer.putLong(value) else buffer.putBigInt(value)
+        buffer.putBigInt(value)
         buffer.flip()
         store.write(buffer, position + offset)
     }
 
     private fun writeHeader(buffer: ByteBuffer) {
         buffer.putInt(MAGIC)
-        buffer.put(formatVersion)
+        buffer.put(FORMAT_VERSION)
         var flags = valueKind.id shl VALUE_KIND_SHIFT
         if (leaf) flags = flags or LEAF_FLAG
         if (compact) flags = flags or COMPACT_FLAG
-        if (!legacyLayout) {
-            flags = flags or (widthCode(valueTokenWidth) shl VALUE_WIDTH_SHIFT)
-            if (signedValueToken) flags = flags or SIGNED_VALUE_FLAG
-        }
+        flags = flags or (widthCode(valueTokenWidth) shl VALUE_WIDTH_SHIFT)
+        if (signedValueToken) flags = flags or SIGNED_VALUE_FLAG
         buffer.put(flags.toByte())
         buffer.putShort(keyCount.toShort())
-        if (legacyLayout) {
-            buffer.putLong(previousLeaf)
-            buffer.putLong(nextLeaf)
-            buffer.putLong(if (leaf) 0L else children[0])
-        } else {
-            buffer.putBigInt(previousLeaf)
-            buffer.putBigInt(nextLeaf)
-            buffer.putBigInt(if (leaf) 0L else children[0])
-            while (buffer.position() < HEADER_SIZE) buffer.put(0)
-        }
+        buffer.putBigInt(previousLeaf)
+        buffer.putBigInt(nextLeaf)
+        buffer.putBigInt(if (leaf) 0L else children[0])
+        while (buffer.position() < HEADER_SIZE) buffer.put(0)
     }
 
     private fun writeValueToken(buffer: ByteBuffer, value: Long) {
-        if (legacyLayout) {
-            buffer.putLong(value)
-            return
-        }
         when (valueTokenWidth) {
             Byte.SIZE_BYTES -> buffer.put(value.toByte())
             Short.SIZE_BYTES -> buffer.putShort(value.toShort())
@@ -254,11 +234,11 @@ class IndexPostingPage private constructor(
     }
 
     private fun writeRecordId(buffer: ByteBuffer, value: Long) {
-        if (legacyLayout) buffer.putLong(value) else buffer.putBigInt(value)
+        buffer.putBigInt(value)
     }
 
     private fun writeChild(buffer: ByteBuffer, value: Long) {
-        if (legacyLayout) buffer.putLong(value) else buffer.putBigInt(value)
+        buffer.putBigInt(value)
     }
 
     private fun clearKey(index: Int) {
@@ -281,16 +261,11 @@ class IndexPostingPage private constructor(
     }
 
     companion object {
-        /** Legacy v1 capacities retained for source compatibility. */
-        const val LEAF_MAX_KEYS = 254
-        const val INTERNAL_MAX_KEYS = 169
-        const val COMPACT_MAX_KEYS = 4
         const val PAGE_SIZE = 4096
         const val COMPACT_PAGE_SIZE = 96
         const val MAGIC = 0x4f495054 // "OIPT"
 
-        private const val LEGACY_FORMAT_VERSION: Byte = 1
-        private const val FORMAT_VERSION: Byte = 2
+        private const val FORMAT_VERSION: Byte = 1
         private const val LEAF_FLAG = 1
         private const val COMPACT_FLAG = 2
         private const val VALUE_KIND_SHIFT = 2
@@ -298,37 +273,16 @@ class IndexPostingPage private constructor(
         private const val VALUE_WIDTH_SHIFT = 5
         private const val VALUE_WIDTH_MASK = 0x60
         private const val SIGNED_VALUE_FLAG = 0x80
-        private const val LEGACY_ALLOWED_FLAGS = LEAF_FLAG or COMPACT_FLAG or VALUE_KIND_MASK
-        private const val ALLOWED_FLAGS = LEGACY_ALLOWED_FLAGS or VALUE_WIDTH_MASK or SIGNED_VALUE_FLAG
+        private const val ALLOWED_FLAGS =
+            LEAF_FLAG or COMPACT_FLAG or VALUE_KIND_MASK or VALUE_WIDTH_MASK or SIGNED_VALUE_FLAG
         private const val HEADER_SIZE = 32
         private const val BIG_INT_SIZE = 5
-        private const val LEGACY_LEAF_SLOT_SIZE = 16
-        private const val LEGACY_INTERNAL_SLOT_SIZE = 24
         private const val KEY_COUNT_OFFSET = 6L
         private const val PREVIOUS_OFFSET = 8
         private const val FIRST_CHILD_OFFSET = 18
-        private const val LEGACY_FIRST_CHILD_OFFSET = 24
 
         private val EMPTY_LONGS = LongArray(0)
         private val EMPTY_DECODED_VALUES = emptyArray<Any?>()
-
-        /**
-         * Source-compatible creation shape. New callers should provide the native value-token width.
-         */
-        fun create(
-            store: Store,
-            leaf: Boolean,
-            compact: Boolean = false,
-            valueKind: ValueKind
-        ): IndexPostingPage = create(
-            store,
-            leaf,
-            compact,
-            valueKind,
-            Long.SIZE_BYTES,
-            defaultSignedValueToken(valueKind),
-            FORMAT_VERSION
-        )
 
         fun create(
             store: Store,
@@ -337,39 +291,6 @@ class IndexPostingPage private constructor(
             valueKind: ValueKind,
             valueTokenWidth: Int,
             signedValueToken: Boolean
-        ): IndexPostingPage = create(
-            store,
-            leaf,
-            compact,
-            valueKind,
-            valueTokenWidth,
-            signedValueToken,
-            FORMAT_VERSION
-        )
-
-        fun createLike(
-            store: Store,
-            source: IndexPostingPage,
-            leaf: Boolean,
-            compact: Boolean = false
-        ): IndexPostingPage = create(
-            store,
-            leaf,
-            compact,
-            source.valueKind,
-            source.valueTokenWidth,
-            source.signedValueToken,
-            source.formatVersion
-        )
-
-        private fun create(
-            store: Store,
-            leaf: Boolean,
-            compact: Boolean,
-            valueKind: ValueKind,
-            valueTokenWidth: Int,
-            signedValueToken: Boolean,
-            formatVersion: Byte
         ): IndexPostingPage {
             require(!compact || leaf) { "Only an index posting leaf can be compact" }
             require(valueTokenWidth in SUPPORTED_VALUE_WIDTHS) {
@@ -383,12 +304,25 @@ class IndexPostingPage private constructor(
                 compact,
                 valueKind,
                 valueTokenWidth,
-                signedValueToken,
-                formatVersion
+                signedValueToken
             )
         }
 
-        /** Reads either page format using the width and signedness persisted by v2 pages. */
+        fun createLike(
+            store: Store,
+            source: IndexPostingPage,
+            leaf: Boolean,
+            compact: Boolean = false
+        ): IndexPostingPage = create(
+            store,
+            leaf,
+            compact,
+            source.valueKind,
+            source.valueTokenWidth,
+            source.signedValueToken
+        )
+
+        /** Reads the value width and signedness persisted in the page header. */
         fun get(store: Store, position: Long, valueKind: ValueKind): IndexPostingPage =
             read(store, position, valueKind, null, null)
 
@@ -418,35 +352,26 @@ class IndexPostingPage private constructor(
             header.flip()
             require(header.int == MAGIC) { "Invalid index posting page at position $position" }
             val formatVersion = header.get()
-            require(formatVersion == LEGACY_FORMAT_VERSION || formatVersion == FORMAT_VERSION) {
+            require(formatVersion == FORMAT_VERSION) {
                 "Unsupported index posting page version $formatVersion at position $position"
             }
             val flags = header.get().toInt() and 0xff
-            val allowedFlags = if (formatVersion == LEGACY_FORMAT_VERSION) LEGACY_ALLOWED_FLAGS else ALLOWED_FLAGS
-            require(flags and allowedFlags.inv() == 0) {
+            require(flags and ALLOWED_FLAGS.inv() == 0) {
                 "Invalid index posting page flags 0x${flags.toString(16)} at position $position"
             }
             val storedValueKind = ValueKind.fromId((flags and VALUE_KIND_MASK) ushr VALUE_KIND_SHIFT)
             require(storedValueKind == valueKind) {
                 "Index posting page at position $position stores $storedValueKind values, not $valueKind"
             }
-            val valueTokenWidth = if (formatVersion == LEGACY_FORMAT_VERSION) {
-                Long.SIZE_BYTES
-            } else {
-                widthFromCode((flags and VALUE_WIDTH_MASK) ushr VALUE_WIDTH_SHIFT)
-            }
-            if (formatVersion != LEGACY_FORMAT_VERSION && expectedValueTokenWidth != null) {
+            val valueTokenWidth = widthFromCode((flags and VALUE_WIDTH_MASK) ushr VALUE_WIDTH_SHIFT)
+            if (expectedValueTokenWidth != null) {
                 require(valueTokenWidth == expectedValueTokenWidth) {
                     "Index posting page at position $position uses $valueTokenWidth-byte values, " +
                         "not $expectedValueTokenWidth-byte values"
                 }
             }
-            val storedSignedValueToken = if (formatVersion == LEGACY_FORMAT_VERSION) {
-                expectedSignedValueToken ?: true
-            } else {
-                flags and SIGNED_VALUE_FLAG != 0
-            }
-            if (formatVersion != LEGACY_FORMAT_VERSION && expectedSignedValueToken != null) {
+            val storedSignedValueToken = flags and SIGNED_VALUE_FLAG != 0
+            if (expectedSignedValueToken != null) {
                 require(storedSignedValueToken == expectedSignedValueToken) {
                     "Index posting page at position $position uses a " +
                         (if (storedSignedValueToken) "signed" else "unsigned") +
@@ -458,18 +383,16 @@ class IndexPostingPage private constructor(
             val compact = flags and COMPACT_FLAG != 0
             require(!compact || leaf) { "Compact index posting page at position $position is not a leaf" }
             val count = header.short.toInt() and 0xffff
-            val legacyLayout = formatVersion == LEGACY_FORMAT_VERSION
-            val previous = if (legacyLayout) header.long else header.bigInt
-            val next = if (legacyLayout) header.long else header.bigInt
-            val firstChild = if (legacyLayout) header.long else header.bigInt
+            val previous = header.bigInt
+            val next = header.bigInt
+            val firstChild = header.bigInt
             val page = IndexPostingPage(
                 position,
                 leaf,
                 compact,
                 storedValueKind,
                 valueTokenWidth,
-                storedSignedValueToken,
-                formatVersion
+                storedSignedValueToken
             )
             require(count <= page.capacity) {
                 "Invalid index posting key count $count at position $position"
@@ -506,11 +429,6 @@ class IndexPostingPage private constructor(
 
         private fun widthFromCode(code: Int): Int = 1 shl code
 
-        private fun defaultSignedValueToken(valueKind: ValueKind): Boolean = when (valueKind) {
-            ValueKind.INTEGRAL, ValueKind.DATE -> true
-            ValueKind.FLOAT, ValueKind.DOUBLE, ValueKind.OBJECT -> false
-        }
-
         private val SUPPORTED_VALUE_WIDTHS = setOf(
             Byte.SIZE_BYTES,
             Short.SIZE_BYTES,
@@ -533,7 +451,6 @@ class IndexPostingPage private constructor(
     }
 
     private fun readValueToken(buffer: ByteBuffer): Long {
-        if (legacyLayout) return buffer.long
         return when (valueTokenWidth) {
             Byte.SIZE_BYTES -> if (signedValueToken) buffer.get().toLong() else buffer.get().toLong() and 0xffL
             Short.SIZE_BYTES -> if (signedValueToken) buffer.short.toLong() else buffer.short.toLong() and 0xffffL
@@ -543,7 +460,7 @@ class IndexPostingPage private constructor(
         }
     }
 
-    private fun readRecordId(buffer: ByteBuffer): Long = if (legacyLayout) buffer.long else buffer.bigInt
+    private fun readRecordId(buffer: ByteBuffer): Long = buffer.bigInt
 
-    private fun readChild(buffer: ByteBuffer): Long = if (legacyLayout) buffer.long else buffer.bigInt
+    private fun readChild(buffer: ByteBuffer): Long = buffer.bigInt
 }
