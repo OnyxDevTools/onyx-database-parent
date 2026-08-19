@@ -7,6 +7,7 @@ import com.onyx.extension.*
 import com.onyx.extension.common.castTo
 import com.onyx.interactors.record.FullTextRecordInteractor
 import com.onyx.interactors.record.impl.DefaultRecordInteractor
+import com.onyx.lucene.interactors.LuceneLifecycle
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import org.apache.lucene.analysis.Analyzer
@@ -128,8 +129,10 @@ open class LuceneRecordInteractor(
             }
         }
 
-        indexWriter.commit()
-        ensureIndexVersionMarker()
+        LuceneLifecycle.withIndexLock(indexKey) {
+            indexWriter.commit()
+            ensureIndexVersionMarker()
+        }
     }
 
     @Throws(OnyxException::class)
@@ -219,14 +222,17 @@ open class LuceneRecordInteractor(
     }
 
     override fun deleteResources() {
-        shutdownInstance(indexKey)
+        LuceneLifecycle.withIndexLock(indexKey) {
+            val isClosed = shutdownInstance(indexKey)
+            if (!isClosed) return@withIndexLock
 
-        val indexDirectory = File(indexKey)
-        if (indexDirectory.exists()) {
-            indexDirectory.deleteRecursively()
+            val indexDirectory = File(indexKey)
+            if (indexDirectory.exists()) {
+                indexDirectory.deleteRecursively()
+            }
+
+            luceneDirectories.remove(indexKey)
         }
-
-        luceneDirectories.remove(indexKey)
     }
 
     /* ─────────────────────────── internals ─────────────────────────── */
@@ -241,35 +247,37 @@ open class LuceneRecordInteractor(
     private fun hydrateStates() {
         val key = indexKey
 
-        val state = luceneStates.computeIfAbsent(key) {
-            directory = createDirectory(key)
+        val state = LuceneLifecycle.withIndexLock(key) {
+            luceneStates.computeIfAbsent(key) {
+                directory = createDirectory(key)
 
-            val writerConfig = IndexWriterConfig(analyzer).apply {
-                openMode = IndexWriterConfig.OpenMode.CREATE_OR_APPEND
-                ramBufferSizeMB = 48.0
-                useCompoundFile = false
-                mergePolicy = (mergePolicy as TieredMergePolicy).apply {
-                    segmentsPerTier = 10.0
-                    maxMergeAtOnce = 10
-                    floorSegmentMB = 16.0
+                val writerConfig = IndexWriterConfig(analyzer).apply {
+                    openMode = IndexWriterConfig.OpenMode.CREATE_OR_APPEND
+                    ramBufferSizeMB = 48.0
+                    useCompoundFile = false
+                    mergePolicy = (mergePolicy as TieredMergePolicy).apply {
+                        segmentsPerTier = 10.0
+                        maxMergeAtOnce = 10
+                        floorSegmentMB = 16.0
+                    }
                 }
+
+                val writer = IndexWriter(directory, writerConfig)
+                val manager = SearcherManager(writer, null)
+
+                val thread = ControlledRealTimeReopenThread(
+                    writer,
+                    manager,
+                    5.0,
+                    0.1
+                ).apply {
+                    isDaemon = true
+                    name = "lucene-record-nrt-reopen-$key"
+                    start()
+                }
+
+                LuceneRecordState(writer, manager, thread, directory)
             }
-
-            val writer = IndexWriter(directory, writerConfig)
-            val manager = SearcherManager(writer, null)
-
-            val thread = ControlledRealTimeReopenThread(
-                writer,
-                manager,
-                5.0,
-                0.1
-            ).apply {
-                isDaemon = true
-                name = "lucene-record-nrt-reopen-$key"
-                start()
-            }
-
-            LuceneRecordState(writer, manager, thread, directory)
         }
 
         indexWriter = state.indexWriter
@@ -476,52 +484,42 @@ open class LuceneRecordInteractor(
             })
         }
 
-        private fun shutdownInstance(key: String) {
-            val state = luceneStates.remove(key) ?: return
-
-            // Prevent the background commit worker from trying to commit while this key is shutting down.
-            IndexCommitScheduler.clearDirtyKey(key)
-
-            runCatching {
-                state.reopenThread.close()
-            }
-
+        private fun shutdownInstance(key: String): Boolean = LuceneLifecycle.withIndexLock(key) {
+            val state = luceneStates[key] ?: return@withIndexLock true
             var closeError: Exception? = null
 
-            runCatching {
-                state.searcherManager.close()
-            }.onFailure {
-                closeError = closeError ?: (it as? Exception ?: Exception(it))
-            }
-
-            runCatching {
-                if (state.indexWriter.isOpen) {
-                    state.indexWriter.commit()
+            fun closeResource(action: () -> Unit) {
+                try {
+                    action()
+                } catch (e: Exception) {
+                    if (closeError == null) closeError = e else closeError!!.addSuppressed(e)
                 }
-            }.onFailure {
-                closeError = closeError ?: (it as? Exception ?: Exception(it))
             }
 
-            runCatching {
-                if (state.indexWriter.isOpen) {
-                    state.indexWriter.close()
-                }
-            }.onFailure {
-                closeError = closeError ?: (it as? Exception ?: Exception(it))
+            IndexCommitScheduler.clearDirtyKey(key)
+            closeResource { state.reopenThread.close() }
+            closeResource {
+                if (state.indexWriter.isOpen) state.indexWriter.close()
+            }
+            if (state.indexWriter.isOpen) {
+                closeResource { state.indexWriter.rollback() }
             }
 
-            runCatching {
-                state.directory.close()
-            }.onFailure {
-                closeError = closeError ?: (it as? Exception ?: Exception(it))
+            val writerClosed = !state.indexWriter.isOpen
+            if (writerClosed) {
+                closeResource { state.searcherManager.close() }
+                closeResource { state.directory.close() }
+                luceneDirectories.remove(key, state.directory)
+                luceneStates.remove(key, state)
             }
 
-            luceneDirectories.remove(key)
+            IndexCommitScheduler.clearDirtyKey(key)
 
-            if (closeError != null) {
-                System.err.println("CRITICAL: Error closing Lucene Record Index '$key': ${closeError!!.message}")
-                closeError!!.printStackTrace()
+            closeError?.let {
+                System.err.println("CRITICAL: Error closing Lucene Record Index '$key': ${it.message}")
+                it.printStackTrace()
             }
+            writerClosed
         }
 
         private fun generateKey(entityDescriptor: EntityDescriptor, context: SchemaContext): String {
@@ -562,9 +560,11 @@ open class LuceneRecordInteractor(
                             iterator.remove()
 
                             val state = luceneStates[key]
-                            if (state != null && state.indexWriter.isOpen) {
+                            if (state != null) {
                                 try {
-                                    state.indexWriter.commit()
+                                    LuceneLifecycle.withIndexLock(key) {
+                                        if (state.indexWriter.isOpen) state.indexWriter.commit()
+                                    }
                                 } catch (e: Exception) {
                                     dirtyIndexKeys.add(key)
                                     System.err.println("Error committing record index $key: ${e.message}")

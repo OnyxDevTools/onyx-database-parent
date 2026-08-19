@@ -16,6 +16,8 @@ dependencies {
     implementation("org.apache.lucene:lucene-analyzers-common:8.11.4")
     implementation("org.apache.lucene:lucene-codecs:${Config.LUCENE_VERSION}")
     implementation("org.apache.lucene:lucene-queryparser:${Config.LUCENE_VERSION}")
+
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:${Config.KOTLIN_VERSION}")
 }
 
 java {
