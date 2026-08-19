@@ -54,7 +54,7 @@ open class BufferStream(buffer: ByteBuffer) {
     // References by index number ordered by first used
     private var referencesByIndex: ArrayList<Any?>? = null
 
-    // Framed serialization uses the compact version-2 format.
+    // Version 2 uses compact structural values while legacy streams remain readable.
     private var compactFormat = false
 
     // Strings are immutable, so value-based interning is safe and dramatically reduces repeated values.
@@ -1528,12 +1528,21 @@ open class BufferStream(buffer: ByteBuffer) {
         @JvmOverloads
         @JvmStatic
         fun toBuffer(any: Any, context: SchemaContext? = null): ByteBuffer =
-            serializeFramed(any, context)
+            serializeFramed(any, context, compact = true)
 
-        private fun serializeFramed(any: Any, context: SchemaContext?): ByteBuffer {
+        /** Writes the original version-1 format for migration tests or rolling upgrades. */
+        @Throws(BufferingException::class)
+        @JvmOverloads
+        @JvmStatic
+        fun toLegacyBuffer(any: Any, context: SchemaContext? = null): ByteBuffer =
+            serializeFramed(any, context, compact = false)
+
+        private fun serializeFramed(any: Any, context: SchemaContext?, compact: Boolean): ByteBuffer {
             val bufferStream = BufferStream(context)
-            bufferStream.compactFormat = true
-            bufferStream.expandableByteBuffer!!.buffer.position(COMPACT_HEADER_SIZE)
+            bufferStream.compactFormat = compact
+            bufferStream.expandableByteBuffer!!.buffer.position(
+                if (compact) COMPACT_HEADER_SIZE else Integer.BYTES
+            )
             bufferStream.putObject(any)
 
             // Re-acquire the buffer because ExpandableByteBuffer may have replaced it while growing.
@@ -1541,8 +1550,12 @@ open class BufferStream(buffer: ByteBuffer) {
             val serializedSize = result.position()
             require(serializedSize > 0) { "Serialized buffer must not be empty" }
 
-            result.putInt(0, serializedSize or COMPACT_LENGTH_FLAG)
-            result.put(Integer.BYTES, COMPACT_FORMAT_VERSION.toByte())
+            if (compact) {
+                result.putInt(0, serializedSize or COMPACT_LENGTH_FLAG)
+                result.put(Integer.BYTES, COMPACT_FORMAT_VERSION.toByte())
+            } else {
+                result.putInt(0, serializedSize)
+            }
             result.flip()
             return result
         }
@@ -1568,26 +1581,27 @@ open class BufferStream(buffer: ByteBuffer) {
             }
 
             val framedSize = buffer.int
-            if (framedSize >= 0) {
-                throw BufferingException(BufferingException.UNKNOWN_DESERIALIZE)
-            }
-            val maxBufferSize = framedSize and Int.MAX_VALUE
-            if (maxBufferSize < COMPACT_HEADER_SIZE || maxBufferSize > originalLimit - bufferStartingPosition) {
+            val compact = framedSize < 0
+            val maxBufferSize = if (compact) framedSize and Int.MAX_VALUE else framedSize
+            val minimumSize = if (compact) COMPACT_HEADER_SIZE else Integer.BYTES
+            if (maxBufferSize < minimumSize || maxBufferSize > originalLimit - bufferStartingPosition) {
                 throw BufferingException(BufferingException.UNKNOWN_DESERIALIZE)
             }
 
             val recordEnd = bufferStartingPosition + maxBufferSize
             buffer.limit(recordEnd)
             try {
-                val version = buffer.get().toInt() and 0xff
-                if (version != COMPACT_FORMAT_VERSION) {
-                    buffer.position(recordEnd)
-                    throw BufferingException(BufferingException.UNKNOWN_DESERIALIZE)
+                if (compact) {
+                    val version = buffer.get().toInt() and 0xff
+                    if (version != COMPACT_FORMAT_VERSION) {
+                        buffer.position(recordEnd)
+                        throw BufferingException(BufferingException.UNKNOWN_DESERIALIZE)
+                    }
                 }
 
                 val bufferStream = BufferStream(buffer)
                 bufferStream.context = context
-                bufferStream.compactFormat = true
+                bufferStream.compactFormat = compact
                 bufferStream.expandableByteBuffer = ExpandableByteBuffer(buffer, maxBufferSize, bufferStartingPosition)
                 bufferStream.isComingFromBuffer = true
 
