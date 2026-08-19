@@ -405,17 +405,22 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         LuceneLifecycle.withIndexLock(indexKey) {
             // First shutdown the index to release resources. The outer lifecycle lock remains held
             // through deletion so another interactor cannot recreate the writer between the two.
-            val isClosed = shutdownInstance(indexKey)
+            val isClosed = shutdownInstance(indexKey, evictOnSuccess = false)
 
-            // Never delete files underneath a writer that could not be closed. Keeping the state
-            // cached also prevents a second writer from trying to acquire the same write lock.
-            if (!isClosed) return@withIndexLock
+            // Never delete files underneath any Lucene resource that could not be closed. Keeping
+            // the state cached also prevents a second writer from opening the same index.
+            check(isClosed) {
+                "Failed to close every Lucene resource for '$indexKey'; index directory was not deleted"
+            }
 
             val indexDir = File(indexKey)
             if (indexDir.exists()) {
-                indexDir.deleteRecursively()
+                check(indexDir.deleteRecursively()) {
+                    "Failed to delete Lucene index directory '$indexKey'"
+                }
             }
 
+            luceneStates.remove(indexKey)
             luceneDirectories.remove(indexKey)
         }
     }
@@ -463,22 +468,27 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
          * Centralized logic to safely close a Lucene instance.
          * Closing the writer automatically triggers a final commit.
          */
-        private fun shutdownInstance(key: String): Boolean = LuceneLifecycle.withIndexLock(key) {
+        private fun shutdownInstance(
+            key: String,
+            evictOnSuccess: Boolean = true
+        ): Boolean = LuceneLifecycle.withIndexLock(key) {
             val state = luceneStates[key] ?: return@withIndexLock true
             var closeError: Exception? = null
 
-            fun closeResource(action: () -> Unit) {
+            fun closeResource(action: () -> Unit): Boolean =
                 try {
                     action()
+                    true
                 } catch (e: Exception) {
                     if (closeError == null) closeError = e else closeError!!.addSuppressed(e)
+                    false
                 }
-            }
 
             // Clearing the queue is not sufficient by itself because the scheduler may already
             // have captured this state. The shared lifecycle lock also waits for that commit.
             IndexCommitScheduler.clearDirtyKey(key)
             closeResource { state.reopenThread.close() }
+            val reopenThreadClosed = !state.reopenThread.isAlive
 
             // IndexWriter.close() performs the final commit. If it cannot close, rollback is the
             // last-resort path that releases Lucene's write lock (with possible uncommitted loss).
@@ -490,9 +500,15 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
             }
 
             val writerClosed = !state.indexWriter.isOpen
+            var searcherManagerClosed = false
+            var directoryClosed = false
             if (writerClosed) {
-                closeResource { state.searcherManager.close() }
-                closeResource { state.directory.close() }
+                searcherManagerClosed = closeResource { state.searcherManager.close() }
+                directoryClosed = closeResource { state.directory.close() }
+            }
+
+            val fullyClosed = reopenThreadClosed && writerClosed && searcherManagerClosed && directoryClosed
+            if (fullyClosed && evictOnSuccess) {
                 luceneDirectories.remove(key, state.directory)
                 luceneStates.remove(key, state)
             }
@@ -503,7 +519,7 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
                 System.err.println("CRITICAL: Error closing Lucene index '$key': ${it.message}")
                 it.printStackTrace()
             }
-            writerClosed
+            fullyClosed
         }
 
         private fun generateKey(entityDescriptor: EntityDescriptor, indexDescriptor: IndexDescriptor, context: SchemaContext): String {

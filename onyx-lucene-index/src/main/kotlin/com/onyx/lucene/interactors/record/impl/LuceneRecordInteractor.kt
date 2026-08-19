@@ -223,14 +223,19 @@ open class LuceneRecordInteractor(
 
     override fun deleteResources() {
         LuceneLifecycle.withIndexLock(indexKey) {
-            val isClosed = shutdownInstance(indexKey)
-            if (!isClosed) return@withIndexLock
+            val isClosed = shutdownInstance(indexKey, evictOnSuccess = false)
+            check(isClosed) {
+                "Failed to close every Lucene record resource for '$indexKey'; index directory was not deleted"
+            }
 
             val indexDirectory = File(indexKey)
             if (indexDirectory.exists()) {
-                indexDirectory.deleteRecursively()
+                check(indexDirectory.deleteRecursively()) {
+                    "Failed to delete Lucene record index directory '$indexKey'"
+                }
             }
 
+            luceneStates.remove(indexKey)
             luceneDirectories.remove(indexKey)
         }
     }
@@ -484,20 +489,25 @@ open class LuceneRecordInteractor(
             })
         }
 
-        private fun shutdownInstance(key: String): Boolean = LuceneLifecycle.withIndexLock(key) {
+        private fun shutdownInstance(
+            key: String,
+            evictOnSuccess: Boolean = true
+        ): Boolean = LuceneLifecycle.withIndexLock(key) {
             val state = luceneStates[key] ?: return@withIndexLock true
             var closeError: Exception? = null
 
-            fun closeResource(action: () -> Unit) {
+            fun closeResource(action: () -> Unit): Boolean =
                 try {
                     action()
+                    true
                 } catch (e: Exception) {
                     if (closeError == null) closeError = e else closeError!!.addSuppressed(e)
+                    false
                 }
-            }
 
             IndexCommitScheduler.clearDirtyKey(key)
             closeResource { state.reopenThread.close() }
+            val reopenThreadClosed = !state.reopenThread.isAlive
             closeResource {
                 if (state.indexWriter.isOpen) state.indexWriter.close()
             }
@@ -506,9 +516,15 @@ open class LuceneRecordInteractor(
             }
 
             val writerClosed = !state.indexWriter.isOpen
+            var searcherManagerClosed = false
+            var directoryClosed = false
             if (writerClosed) {
-                closeResource { state.searcherManager.close() }
-                closeResource { state.directory.close() }
+                searcherManagerClosed = closeResource { state.searcherManager.close() }
+                directoryClosed = closeResource { state.directory.close() }
+            }
+
+            val fullyClosed = reopenThreadClosed && writerClosed && searcherManagerClosed && directoryClosed
+            if (fullyClosed && evictOnSuccess) {
                 luceneDirectories.remove(key, state.directory)
                 luceneStates.remove(key, state)
             }
@@ -519,7 +535,7 @@ open class LuceneRecordInteractor(
                 System.err.println("CRITICAL: Error closing Lucene Record Index '$key': ${it.message}")
                 it.printStackTrace()
             }
-            writerClosed
+            fullyClosed
         }
 
         private fun generateKey(entityDescriptor: EntityDescriptor, context: SchemaContext): String {
