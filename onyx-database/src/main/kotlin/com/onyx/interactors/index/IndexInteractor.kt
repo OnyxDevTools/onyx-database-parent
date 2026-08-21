@@ -21,12 +21,24 @@ interface IndexInteractor {
     fun save(indexValue: Any?, oldReferenceId: Long, newReferenceId: Long)
 
     /**
+     * Save an index key when the caller has retained the value that was persisted before the record update.
+     * Implementations that do not need the old value may continue to implement the legacy overload.
+     */
+    @Throws(OnyxException::class)
+    fun save(oldIndexValue: Any?, indexValue: Any?, oldReferenceId: Long, newReferenceId: Long) =
+        save(indexValue, oldReferenceId, newReferenceId)
+
+    /**
      * Delete an index key with a record reference
      *
      * @param reference Entity reference
      */
     @Throws(OnyxException::class)
     fun delete(reference: Long)
+
+    /** Delete an index key without requiring a persistent reverse lookup by record reference. */
+    @Throws(OnyxException::class)
+    fun delete(indexValue: Any?, reference: Long) = delete(reference)
 
     /**
      * Find all index references

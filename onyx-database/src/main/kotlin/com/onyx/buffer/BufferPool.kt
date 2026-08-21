@@ -17,25 +17,13 @@ object BufferPool {
     private const val NUMBER_MEDIUM_BUFFERS = 20
     private const val NUMBER_LARGE_BUFFERS = 10
 
-    private const val SMALL_BUFFER_SIZE = 512
+    const val SMALL_BUFFER_SIZE = 2 * 1024
     const val MEDIUM_BUFFER_SIZE = 1024 * 6
     private const val LARGE_BUFFER_SIZE = 18 * 1024
 
     private val SMALL_BUFFER_POOL = ConcurrentLinkedQueue<ByteBuffer>()
     private val MEDIUM_BUFFER_POOL = ConcurrentLinkedQueue<ByteBuffer>()
     private val LARGE_BUFFER_POOL = ConcurrentLinkedQueue<ByteBuffer>()
-
-    /**
-     * Pre Allocate buffers.
-     */
-    init {
-        for (i in 1..NUMBER_SMALL_BUFFERS)
-            SMALL_BUFFER_POOL.add(allocateExact(SMALL_BUFFER_SIZE))
-        for (i in 1..NUMBER_MEDIUM_BUFFERS)
-            MEDIUM_BUFFER_POOL.add(allocateExact(MEDIUM_BUFFER_SIZE))
-        for (i in 1..NUMBER_LARGE_BUFFERS)
-            LARGE_BUFFER_POOL.add(allocateExact(LARGE_BUFFER_SIZE))
-    }
 
     /**
      * Recycle a byte buffer to be reused

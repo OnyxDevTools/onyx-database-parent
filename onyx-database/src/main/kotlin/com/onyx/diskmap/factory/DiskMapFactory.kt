@@ -1,5 +1,6 @@
 package com.onyx.diskmap.factory
 
+import com.onyx.diskmap.IndexPostingMap
 import com.onyx.diskmap.data.Header
 
 /**
@@ -22,7 +23,7 @@ interface DiskMapFactory {
      * @since 1.1.0
      *
      * Note, this was changed to use what was being referred to as a DefaultDiskMap which was a parent of AbstractBitmap.
-     * It is now an implementation of an inter changeable index followed by a skip list.
+     * It is now implemented by a persistent B-tree.
      */
     fun <T : Map<*,*>> getHashMap(keyType:Class<*>, name: String): T
 
@@ -35,6 +36,12 @@ interface DiskMapFactory {
      * @since 1.0.0
      */
     fun <T : Map<*,*>> getHashMap(keyType:Class<*>, header: Header): T
+
+    /**
+     * Get the native posting BTree used by a regular secondary index.
+     * Its logical key is `(indexValue, recordId)` without a serialized wrapper.
+     */
+    fun getIndexMap(valueType: Class<*>, name: String): IndexPostingMap
 
     /**
      * Close Map Builder.  Flush the file writes

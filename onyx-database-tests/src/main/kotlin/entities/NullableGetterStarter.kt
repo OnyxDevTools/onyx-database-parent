@@ -22,7 +22,7 @@ data class NullableGetterStarter(
         get() = if (hasPerformance) {
             NullableGetterPerformance(
                 starterId = starterId,
-                finishPosition = finishPosition,
+                finishPosition = finishPosition?.toString(),
             )
         } else {
             null
@@ -35,5 +35,5 @@ data class NullableGetterPerformance(
     @Attribute
     var starterId: String = "",
     @Attribute
-    var finishPosition: Int? = null,
+    var finishPosition: String? = null,
 ) : ManagedEntity()

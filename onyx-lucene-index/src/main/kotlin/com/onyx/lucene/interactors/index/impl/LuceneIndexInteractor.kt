@@ -6,6 +6,7 @@ import com.onyx.diskmap.DiskMap
 import com.onyx.exception.OnyxException
 import com.onyx.extension.get
 import com.onyx.interactors.index.impl.DefaultIndexInteractor
+import com.onyx.lucene.interactors.LuceneLifecycle
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import org.apache.lucene.analysis.Analyzer
@@ -111,38 +112,40 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
      * exists per physical index, allowing multiple interactors to safely share resources.
      */
     private fun hydrateStates() {
-        val luceneState = luceneStates.computeIfAbsent(indexKey) {
-            directory = createDirectory(indexKey)
+        val luceneState = LuceneLifecycle.withIndexLock(indexKey) {
+            luceneStates.computeIfAbsent(indexKey) {
+                directory = createDirectory(indexKey)
 
-            // Reduced RAM buffer to 48MB (safer than 256MB) to encourage more frequent flushing to disk segments
-            val writerConfig = IndexWriterConfig(analyzer).apply {
-                openMode = IndexWriterConfig.OpenMode.CREATE_OR_APPEND
-                ramBufferSizeMB = 48.0
-                useCompoundFile = false
-                mergePolicy = (mergePolicy as TieredMergePolicy).apply {
-                    segmentsPerTier = 10.0
-                    maxMergeAtOnce = 10
-                    floorSegmentMB = 16.0
+                // Reduced RAM buffer to 48MB (safer than 256MB) to encourage more frequent flushing to disk segments
+                val writerConfig = IndexWriterConfig(analyzer).apply {
+                    openMode = IndexWriterConfig.OpenMode.CREATE_OR_APPEND
+                    ramBufferSizeMB = 48.0
+                    useCompoundFile = false
+                    mergePolicy = (mergePolicy as TieredMergePolicy).apply {
+                        segmentsPerTier = 10.0
+                        maxMergeAtOnce = 10
+                        floorSegmentMB = 16.0
+                    }
                 }
+
+                val writer = IndexWriter(directory, writerConfig)
+                val manager = SearcherManager(writer, null)
+
+                // NRT: Keep searchers reasonably fresh (max 5s stale)
+                // without blocking every write operation.
+                val thread = ControlledRealTimeReopenThread(
+                    writer,
+                    manager,
+                    5.0,
+                    0.1
+                ).apply {
+                    isDaemon = true
+                    name = "lucene-nrt-reopen-$indexKey"
+                    start()
+                }
+
+                LuceneState(writer, manager, directory, thread, writerConfig)
             }
-
-            val writer = IndexWriter(directory, writerConfig)
-            val manager = SearcherManager(writer, null)
-
-            // NRT: Keep searchers reasonably fresh (max 5s stale)
-            // without blocking every write operation.
-            val thread = ControlledRealTimeReopenThread(
-                writer,
-                manager,
-                5.0,
-                0.1
-            ).apply {
-                isDaemon = true
-                name = "lucene-nrt-reopen-$indexKey"
-                start()
-            }
-
-            LuceneState(writer, manager, directory, thread, writerConfig)
         }
 
         // Assign the shared components to this instance
@@ -166,6 +169,18 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         updateDocument(newReferenceId, indexValue)
     }
 
+    @Throws(OnyxException::class)
+    @Synchronized
+    override fun save(
+        oldIndexValue: Any?,
+        indexValue: Any?,
+        oldReferenceId: Long,
+        newReferenceId: Long
+    ) {
+        super.save(oldIndexValue, indexValue, oldReferenceId, newReferenceId)
+        updateDocument(newReferenceId, indexValue)
+    }
+
     /**
      * Deletes an entity from the Lucene index using its record ID.
      *
@@ -177,6 +192,14 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         super.delete(reference)
         indexWriter.deleteDocuments(Term(ID_FIELD, reference.toString()))
         // Mark as dirty so the deletion gets committed
+        IndexCommitScheduler.markDirty(indexKey)
+    }
+
+    @Throws(OnyxException::class)
+    @Synchronized
+    override fun delete(indexValue: Any?, reference: Long) {
+        super.delete(indexValue, reference)
+        indexWriter.deleteDocuments(Term(ID_FIELD, reference.toString()))
         IndexCommitScheduler.markDirty(indexKey)
     }
 
@@ -266,10 +289,12 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
         }
         if (documentBatch.isNotEmpty()) indexWriter.addDocuments(documentBatch)
 
-        // Force explicit commit on rebuild
-        indexWriter.commit()
-        // Make results visible
-        searcherManager.maybeRefreshBlocking()
+        LuceneLifecycle.withIndexLock(indexKey) {
+            // Force explicit commit on rebuild and keep the subsequent refresh in the same
+            // lifecycle operation so shutdown cannot close the searcher between them.
+            indexWriter.commit()
+            searcherManager.maybeRefreshBlocking()
+        }
     }
 
     /**
@@ -377,17 +402,27 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
      * @since 3.9.10
      */
     override fun deleteResources() {
-        // First shutdown the index to release resources
-        shutdownInstance(indexKey)
-        
-        // Delete the index directory
-        val indexDir = File(indexKey)
-        if (indexDir.exists()) {
-            indexDir.deleteRecursively()
+        LuceneLifecycle.withIndexLock(indexKey) {
+            // First shutdown the index to release resources. The outer lifecycle lock remains held
+            // through deletion so another interactor cannot recreate the writer between the two.
+            val isClosed = shutdownInstance(indexKey, evictOnSuccess = false)
+
+            // Never delete files underneath any Lucene resource that could not be closed. Keeping
+            // the state cached also prevents a second writer from opening the same index.
+            check(isClosed) {
+                "Failed to close every Lucene resource for '$indexKey'; index directory was not deleted"
+            }
+
+            val indexDir = File(indexKey)
+            if (indexDir.exists()) {
+                check(indexDir.deleteRecursively()) {
+                    "Failed to delete Lucene index directory '$indexKey'"
+                }
+            }
+
+            luceneStates.remove(indexKey)
+            luceneDirectories.remove(indexKey)
         }
-        
-        // Also clean up any cached references
-        luceneDirectories.remove(indexKey)
     }
 
     companion object {
@@ -433,24 +468,58 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
          * Centralized logic to safely close a Lucene instance.
          * Closing the writer automatically triggers a final commit.
          */
-        private fun shutdownInstance(key: String) {
-            val state = luceneStates.remove(key) ?: return
+        private fun shutdownInstance(
+            key: String,
+            evictOnSuccess: Boolean = true
+        ): Boolean = LuceneLifecycle.withIndexLock(key) {
+            val state = luceneStates[key] ?: return@withIndexLock true
+            var closeError: Exception? = null
 
-            runCatching {
-                state.reopenThread.close() // closes and joins
+            fun closeResource(action: () -> Unit): Boolean =
+                try {
+                    action()
+                    true
+                } catch (e: Exception) {
+                    if (closeError == null) closeError = e else closeError!!.addSuppressed(e)
+                    false
+                }
+
+            // Clearing the queue is not sufficient by itself because the scheduler may already
+            // have captured this state. The shared lifecycle lock also waits for that commit.
+            IndexCommitScheduler.clearDirtyKey(key)
+            closeResource { state.reopenThread.close() }
+            val reopenThreadClosed = !state.reopenThread.isAlive
+
+            // IndexWriter.close() performs the final commit. If it cannot close, rollback is the
+            // last-resort path that releases Lucene's write lock (with possible uncommitted loss).
+            closeResource {
+                if (state.indexWriter.isOpen) state.indexWriter.close()
+            }
+            if (state.indexWriter.isOpen) {
+                closeResource { state.indexWriter.rollback() }
             }
 
-            try {
-                // Close implicitly commits.
-                // We do not use runCatching here because we want to see errors in logs if persistence fails.
-                state.searcherManager.close()
-                state.indexWriter.close()
-                state.directory.close()
-                luceneDirectories.remove(key)
-            } catch (e: Exception) {
-                System.err.println("CRITICAL: Error closing Lucene index '$key': ${e.message}")
-                e.printStackTrace()
+            val writerClosed = !state.indexWriter.isOpen
+            var searcherManagerClosed = false
+            var directoryClosed = false
+            if (writerClosed) {
+                searcherManagerClosed = closeResource { state.searcherManager.close() }
+                directoryClosed = closeResource { state.directory.close() }
             }
+
+            val fullyClosed = reopenThreadClosed && writerClosed && searcherManagerClosed && directoryClosed
+            if (fullyClosed && evictOnSuccess) {
+                luceneDirectories.remove(key, state.directory)
+                luceneStates.remove(key, state)
+            }
+
+            IndexCommitScheduler.clearDirtyKey(key)
+
+            closeError?.let {
+                System.err.println("CRITICAL: Error closing Lucene index '$key': ${it.message}")
+                it.printStackTrace()
+            }
+            fullyClosed
         }
 
         private fun generateKey(entityDescriptor: EntityDescriptor, indexDescriptor: IndexDescriptor, context: SchemaContext): String {
@@ -510,9 +579,12 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
                             iterator.remove()
 
                             val state = luceneStates[key]
-                            if (state != null && state.indexWriter.isOpen) {
+                            if (state != null) {
                                 try {
-                                    state.indexWriter.commit()
+                                    LuceneLifecycle.withIndexLock(key) {
+                                        // Shutdown may have completed while this queue item was waiting.
+                                        if (state.indexWriter.isOpen) state.indexWriter.commit()
+                                    }
                                 } catch (e: Exception) {
                                     // If commit fails, add back to queue to retry later
                                     dirtyIndexKeys.add(key)
@@ -547,6 +619,10 @@ class LuceneIndexInteractor @Throws(OnyxException::class) constructor(
              */
             fun markDirty(key: String) {
                 dirtyIndexKeys.add(key)
+            }
+
+            fun clearDirtyKey(key: String) {
+                dirtyIndexKeys.remove(key)
             }
         }
     }

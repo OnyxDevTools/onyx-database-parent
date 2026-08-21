@@ -123,7 +123,7 @@ class QuerySortComparator(query: Query, private val orderBy: Array<QueryOrder>, 
     fun getAttribute(queryAttributeResource: QueryAttributeResource, entity: IManagedEntity, context: SchemaContext): Any? {
         val parts = queryAttributeResource.attributeParts
 
-        return when {
+        val value = when {
             parts.size == 1 && queryAttributeResource.relationshipDescriptor != null && queryAttributeResource.relationshipDescriptor.isToOne -> entity.getRelationshipFromStore(context, queryAttributeResource.attribute).firstOrNull()
             parts.size == 1 && queryAttributeResource.relationshipDescriptor != null && queryAttributeResource.relationshipDescriptor.isToMany -> entity.getRelationshipFromStore(context, queryAttributeResource.attribute)
             queryAttributeResource.relationshipDescriptor != null && queryAttributeResource.relationshipDescriptor.isToOne -> entity.getRelationshipFromStore(context, queryAttributeResource.attribute).firstOrNull()?.get(context, queryAttributeResource.descriptor, parts.last())
@@ -131,6 +131,8 @@ class QuerySortComparator(query: Query, private val orderBy: Array<QueryOrder>, 
             hasMember(entity::class, parts.first()) -> entity.get(queryAttributeResource.attribute)
             else -> entity[context, queryAttributeResource.descriptor, queryAttributeResource.attribute]
         }
+
+        return queryAttributeResource.function?.normalizeInput(value) ?: value
     }
 
 }
