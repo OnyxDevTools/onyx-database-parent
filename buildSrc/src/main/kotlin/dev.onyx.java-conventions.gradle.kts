@@ -51,6 +51,9 @@ signing {
     if (secretKey != null && password != null) {
         useInMemoryPgpKeys(secretKey, password)
         sign(publishing.publications)
+    } else if (project.findOptionalProperty("signing.gnupg.keyName") != null) {
+        useGpgCmd()
+        sign(publishing.publications)
     }
 }
 

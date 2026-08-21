@@ -72,7 +72,7 @@ open class DefaultSchemaContext : SchemaContext {
     // when having multiple running instances on a single machine.  By default it will be the database location
     final override val contextId: String
 
-    override var storeType: StoreType = StoreType.FILE
+    override var storeType: StoreType = StoreType.MEMORY_MAPPED_FILE
         set(value) {
             if (field == value) {
                 return

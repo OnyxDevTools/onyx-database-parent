@@ -25,13 +25,23 @@ fun IManagedEntity.indexInteractor(context: SchemaContext, name:String, descript
  * @since 2.0.0
  *
  */
-fun IManagedEntity.saveIndexes(context: SchemaContext, previousReferenceId:Long, newReferenceId:Long, descriptor: EntityDescriptor = descriptor(context)) {
+fun IManagedEntity.saveIndexes(
+    context: SchemaContext,
+    previousReferenceId: Long,
+    newReferenceId: Long,
+    descriptor: EntityDescriptor = descriptor(context),
+    previousEntity: IManagedEntity? = null
+) {
     if (descriptor.hasIndexes) {
+        require(previousReferenceId <= 0L || previousEntity != null) {
+            "The previously persisted entity is required when updating indexes without reverse mappings"
+        }
         // Save All Indexes
         descriptor.indexes.values.forEach {
             val indexInteractor = indexInteractor(context, it.name, descriptor)
-            val indexValue:Any? = get(context, descriptor, it.name)
-            indexInteractor.save(indexValue, previousReferenceId, newReferenceId)
+            val oldIndexValue: Any? = previousEntity?.get(context, descriptor, it.name)
+            val indexValue: Any? = get(context, descriptor, it.name)
+            indexInteractor.save(oldIndexValue, indexValue, previousReferenceId, newReferenceId)
         }
     }
 }
@@ -48,7 +58,8 @@ fun IManagedEntity.saveIndexes(context: SchemaContext, previousReferenceId:Long,
 fun IManagedEntity.deleteAllIndexes(context: SchemaContext, referenceId:Long, descriptor: EntityDescriptor = descriptor(context)) {
     if (descriptor.hasIndexes) {
         descriptor.indexes.values.forEach {
-            indexInteractor(context, it.name, descriptor).delete(referenceId)
+            val indexValue: Any? = get(context, descriptor, it.name)
+            indexInteractor(context, it.name, descriptor).delete(indexValue, referenceId)
         }
     }
 }

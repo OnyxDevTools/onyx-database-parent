@@ -1,14 +1,9 @@
 package com.onyx.interactors.transaction.impl
 
-import com.onyx.buffer.copy
 import com.onyx.diskmap.store.impl.FileChannelStore
-import com.onyx.diskmap.store.impl.MappedFileSegment
-import com.onyx.diskmap.store.impl.MappedFileSegmentFactory
-import com.onyx.diskmap.store.impl.MappedFileSegmentKey
-import com.onyx.diskmap.store.impl.MemoryMappedStore
+import com.onyx.diskmap.store.impl.WholeFileMapping
 import com.onyx.exception.TransactionException
 import com.onyx.extension.common.Block
-import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.openFileChannel
 import com.onyx.interactors.transaction.TransactionStore
 import java.io.File
@@ -20,24 +15,40 @@ import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
 import java.nio.channels.ReadableByteChannel
 import java.nio.channels.WritableByteChannel
-import java.util.Arrays
+import java.nio.file.Path
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.min
 
 /**
- * Transaction WAL store that appends through the shared memory-mapped segment cache used by [MemoryMappedStore].
+ * Transaction WAL store that owns one whole-file memory mapping per open WAL.
  */
 open class MemoryMappedTransactionStore(val location: String) : TransactionStore {
 
     private val journalFileIndex = AtomicLong(0L)
     private var lastWalFileChannel: FileChannel? = null
+    private var lastWalFile: File? = null
     private val transactionFileLock = Block()
+    private val asynchronousFlushFailure = AtomicReference<Throwable?>()
+    private val flushExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "onyx-wal-flush-${flushThreadIndex.incrementAndGet()}").apply {
+            isDaemon = true
+        }
+    }
+    private var isClosing = false
 
     private val walDirectory: String
         get() = this.location + File.separator + "wal" + File.separator
 
     @Throws(TransactionException::class)
     override fun getTransactionFile(): FileChannel = synchronized(transactionFileLock) {
+        if (isClosing) {
+            throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_OPEN_FILE)
+        }
+        throwIfAsynchronousFlushFailed()
+
         try {
             if (lastWalFileChannel == null) {
                 val directory = walDirectory
@@ -46,41 +57,99 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
                     journalingDirector.mkdirs()
                 }
 
-                val directoryListing = File(directory).list() ?: emptyArray()
-                Arrays.sort(directoryListing)
-
-                if (directoryListing.isNotEmpty()) {
-                    var fileName = directoryListing[directoryListing.size - 1]
-                    fileName = fileName.replace(".wal", "")
-
-                    journalFileIndex.addAndGet(Integer.valueOf(fileName).toLong())
+                val walFiles = journalingDirector.listWalFiles()
+                walFiles.dropLast(1).forEach { sealedWalFile ->
+                    if (!sealedWalFile.file.toPath().isCompressedWal()) {
+                        compressWalFileOrThrow(sealedWalFile.file.toPath())
+                    }
                 }
 
-                lastWalFileChannel = openMappedWalFile(directory + journalFileIndex.get() + ".wal")
+                val latestWalFile = walFiles.lastOrNull()
+                if (latestWalFile != null) {
+                    journalFileIndex.set(
+                        if (latestWalFile.file.toPath().isCompressedWal()) {
+                            latestWalFile.index + 1L
+                        } else {
+                            latestWalFile.index
+                        }
+                    )
+                }
+
+                lastWalFile = File(directory + journalFileIndex.get() + WAL_FILE_EXTENSION)
+                lastWalFileChannel = openMappedWalFile(lastWalFile!!.path)
             }
 
-            if (lastWalFileChannel!!.size() > MAX_JOURNAL_SIZE) {
-                lastWalFileChannel!!.force(true)
-                lastWalFileChannel!!.close()
-
+            if (lastWalFileChannel!!.size() >= maxJournalSize) {
+                val rotatedWalFile = lastWalFileChannel!!
+                val rotatedWalPath = lastWalFile!!.toPath()
                 val directory = walDirectory
-                lastWalFileChannel = openMappedWalFile(directory + journalFileIndex.addAndGet(1) + ".wal")
+                val nextJournalFileIndex = journalFileIndex.get() + 1L
+                val nextWalPath = File(directory + nextJournalFileIndex + WAL_FILE_EXTENSION)
+                val nextWalFile = openMappedWalFile(nextWalPath.path)
+                (rotatedWalFile as MemoryMappedTransactionFileChannel).retire()
+                journalFileIndex.set(nextJournalFileIndex)
+                lastWalFile = nextWalPath
+                lastWalFileChannel = nextWalFile
+                finalizeWalFileAsynchronously(rotatedWalFile, rotatedWalPath, compress = true)
             }
 
             return lastWalFileChannel!!
-        } catch (e: IOException) {
-            throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_OPEN_FILE)
+        } catch (cause: IOException) {
+            throw TransactionException(
+                TransactionException.TRANSACTION_FAILED_TO_OPEN_FILE,
+                null,
+                cause
+            )
         }
     }
 
     override fun close() {
-        if (lastWalFileChannel != null) {
-            catchAll {
-                lastWalFileChannel!!.force(true)
-                lastWalFileChannel!!.close()
+        synchronized(transactionFileLock) {
+            if (!isClosing) {
+                isClosing = true
+                lastWalFileChannel?.let {
+                    var canCompress = true
+                    val toppedOff = try {
+                        it.size() >= maxJournalSize
+                    } catch (failure: Throwable) {
+                        recordAsynchronousFlushFailure(failure)
+                        canCompress = false
+                        false
+                    }
+                    try {
+                        (it as MemoryMappedTransactionFileChannel).retire()
+                    } catch (failure: Throwable) {
+                        recordAsynchronousFlushFailure(failure)
+                        canCompress = false
+                    }
+                    try {
+                        finalizeWalFileAsynchronously(
+                            it,
+                            lastWalFile?.toPath(),
+                            compress = toppedOff && canCompress
+                        )
+                    } catch (failure: Throwable) {
+                        recordAsynchronousFlushFailure(failure)
+                        try {
+                            finalizeWalFile(it)
+                        } catch (closeFailure: Throwable) {
+                            recordAsynchronousFlushFailure(closeFailure)
+                        }
+                    } finally {
+                        lastWalFileChannel = null
+                        lastWalFile = null
+                    }
+                }
+                flushExecutor.shutdown()
             }
         }
+
+        awaitAsynchronousFlushes()
+        throwIfAsynchronousFlushFailed()
     }
+
+    protected open val maxJournalSize: Long
+        get() = MAX_JOURNAL_SIZE
 
     private fun openMappedWalFile(filePath: String): FileChannel {
         val file = File(filePath)
@@ -92,11 +161,95 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
         val channel = file.path.openFileChannel()
             ?: throw IOException("Unable to open WAL file channel")
 
-        return MemoryMappedTransactionFileChannel(channel)
+        return try {
+            MemoryMappedTransactionFileChannel(channel)
+        } catch (failure: Throwable) {
+            runCatching { channel.close() }
+            throw failure
+        }
+    }
+
+    /**
+     * Finalizes a WAL file after it has been removed from the transaction write path.
+     * Closing the mapped channel forces its mapped data, truncates the mapped reservation
+     * to the logical WAL length, forces that length metadata, and then closes the file.
+     */
+    protected open fun finalizeWalFile(walFile: FileChannel) {
+        walFile.close()
+    }
+
+    protected open fun compressWalFile(walFile: Path) {
+        replaceWithCompressedWal(walFile)
+    }
+
+    private fun compressWalFileOrThrow(walFile: Path) {
+        try {
+            compressWalFile(walFile)
+        } catch (cause: Exception) {
+            throw TransactionException(
+                TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE,
+                null,
+                cause
+            )
+        }
+    }
+
+    private fun finalizeWalFileAsynchronously(
+        walFile: FileChannel,
+        walFilePath: Path?,
+        compress: Boolean
+    ) {
+        flushExecutor.execute {
+            try {
+                finalizeWalFile(walFile)
+                if (compress) {
+                    compressWalFile(checkNotNull(walFilePath))
+                }
+            } catch (failure: Throwable) {
+                recordAsynchronousFlushFailure(failure)
+            }
+        }
+    }
+
+    private fun recordAsynchronousFlushFailure(failure: Throwable) {
+        val currentFailure = asynchronousFlushFailure.get()
+        if (currentFailure == null) {
+            if (!asynchronousFlushFailure.compareAndSet(null, failure)) {
+                asynchronousFlushFailure.get()
+                    ?.takeIf { it !== failure }
+                    ?.addSuppressed(failure)
+            }
+        } else if (currentFailure !== failure) {
+            currentFailure.addSuppressed(failure)
+        }
+    }
+
+    private fun throwIfAsynchronousFlushFailed() {
+        val failure = asynchronousFlushFailure.get() ?: return
+        throw TransactionException(
+            TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE,
+            null,
+            failure
+        )
+    }
+
+    private fun awaitAsynchronousFlushes() {
+        var interrupted = false
+        while (!flushExecutor.isTerminated) {
+            try {
+                flushExecutor.awaitTermination(1, TimeUnit.SECONDS)
+            } catch (_: InterruptedException) {
+                interrupted = true
+            }
+        }
+        if (interrupted) {
+            Thread.currentThread().interrupt()
+        }
     }
 
     companion object {
-        private const val MAX_JOURNAL_SIZE = 1024 * 1024 * 20
+        private const val MAX_JOURNAL_SIZE = 1024L * 1024L * 20L
+        private val flushThreadIndex = AtomicLong()
     }
 }
 
@@ -105,15 +258,16 @@ private class MemoryMappedTransactionFileChannel(
 ) : FileChannel() {
 
     private val lock = Any()
-    private val fileId = MemoryMappedStore.nextMappedFileId()
-    private val bufferSliceSize = if (FileChannelStore.isSmallDevice) {
-        FileChannelStore.SMALL_FILE_SLICE_SIZE
-    } else {
-        FileChannelStore.LARGE_FILE_SLICE_SIZE
-    }
+    private val growthQuantum = WholeFileMapping.defaultGrowthQuantum(FileChannelStore.isSmallDevice)
 
     private var currentPosition = channel.position()
     private var logicalSize = channel.size()
+    private var wholeFileMapping: WholeFileMapping? = WholeFileMapping(
+        channel = channel,
+        growthQuantum = growthQuantum,
+        initialRequiredCapacity = logicalSize
+    )
+    private var acceptsWrites = true
 
     override fun read(dst: ByteBuffer): Int = synchronized(lock) {
         val bytesRead = read(dst, currentPosition)
@@ -173,17 +327,21 @@ private class MemoryMappedTransactionFileChannel(
 
     override fun truncate(size: Long): FileChannel = synchronized(lock) {
         ensureOpen()
+        ensureWritable()
         require(size >= 0) { "Size must not be negative" }
-        MemoryMappedStore.removeMappedFileSegments(fileId)
-        channel.truncate(size)
-        logicalSize = min(logicalSize, size)
-        currentPosition = min(currentPosition, size)
+        if (size >= logicalSize) {
+            return@synchronized this
+        }
+
+        replaceMappingAfterTruncate(size)
+        logicalSize = size
+        currentPosition = min(currentPosition, logicalSize)
         this
     }
 
     override fun force(metaData: Boolean) = synchronized(lock) {
         ensureOpen()
-        MemoryMappedStore.forceMappedFileSegments(fileId)
+        currentMapping().force()
         channel.force(metaData)
     }
 
@@ -198,6 +356,7 @@ private class MemoryMappedTransactionFileChannel(
 
     override fun transferFrom(src: ReadableByteChannel, position: Long, count: Long): Long = synchronized(lock) {
         ensureOpen()
+        ensureWritable()
         require(position >= 0) { "Position must not be negative" }
         if (count <= 0) {
             return@synchronized 0L
@@ -242,13 +401,17 @@ private class MemoryMappedTransactionFileChannel(
 
     override fun write(src: ByteBuffer, position: Long): Int = synchronized(lock) {
         ensureOpen()
+        ensureWritable()
         require(position >= 0) { "Position must not be negative" }
         writeMapped(src, position)
     }
 
-    override fun map(mode: MapMode, position: Long, size: Long): MappedByteBuffer {
+    override fun map(mode: MapMode, position: Long, size: Long): MappedByteBuffer = synchronized(lock) {
         ensureOpen()
-        return channel.map(mode, position, size)
+        if (mode != MapMode.READ_ONLY) {
+            ensureWritable()
+        }
+        channel.map(mode, position, size)
     }
 
     override fun lock(position: Long, size: Long, shared: Boolean): FileLock {
@@ -264,11 +427,17 @@ private class MemoryMappedTransactionFileChannel(
     override fun implCloseChannel() {
         synchronized(lock) {
             var failure: IOException? = null
-
-            MemoryMappedStore.removeMappedFileSegments(fileId)
+            val closingMapping = wholeFileMapping
+            wholeFileMapping = null
 
             try {
-                if (channel.isOpen) {
+                closingMapping?.close()
+            } catch (exception: Throwable) {
+                failure = exception as? IOException ?: IOException("Unable to close mapped WAL data", exception)
+            }
+
+            try {
+                if (failure == null && channel.isOpen) {
                     channel.truncate(logicalSize)
                     channel.force(true)
                 }
@@ -281,6 +450,8 @@ private class MemoryMappedTransactionFileChannel(
             } catch (exception: IOException) {
                 if (failure == null) {
                     failure = exception
+                } else {
+                    failure.addSuppressed(exception)
                 }
             }
 
@@ -290,43 +461,53 @@ private class MemoryMappedTransactionFileChannel(
 
     private fun writeMapped(src: ByteBuffer, position: Long): Int {
         ensureOpen()
-        val initialRemaining = src.remaining()
-        var current = position
-        while (src.hasRemaining()) {
-            val destination = getBuffer(current)
-            destination.position(getBufferLocation(current))
-            current += copy(src, destination)
+        ensureWritable()
+        val written = currentMapping().write(src, position)
+        if (written > 0) {
+            logicalSize = maxOf(logicalSize, Math.addExact(position, written.toLong()))
         }
-        logicalSize = maxOf(logicalSize, current)
-        return initialRemaining
+        return written
     }
 
-    private fun getBuffer(position: Long): ByteBuffer {
-        val key = keyForPosition(position)
-        return MemoryMappedStore.getMappedFileSegmentBuffer(key) {
-            mapSegment(key)
+    private fun currentMapping(): WholeFileMapping =
+        wholeFileMapping ?: throw ClosedChannelException()
+
+    private fun replaceMappingAfterTruncate(size: Long) {
+        val previous = currentMapping()
+        wholeFileMapping = null
+
+        try {
+            previous.close()
+            channel.truncate(size)
+            wholeFileMapping = WholeFileMapping(
+                channel = channel,
+                growthQuantum = growthQuantum,
+                initialRequiredCapacity = size
+            )
+        } catch (failure: Throwable) {
+            runCatching { channel.close() }
+            throw failure
         }
     }
-
-    private fun getBufferLocation(position: Long) = (position % bufferSliceSize).toInt()
-
-    private fun keyForPosition(position: Long): MappedFileSegmentKey =
-        MappedFileSegmentKey(fileId, (position / bufferSliceSize).toInt())
-
-    private fun mapSegment(key: MappedFileSegmentKey): MappedFileSegment =
-        MappedFileSegmentFactory.map(
-            channel = channel,
-            offset = key.idx.toLong() * bufferSliceSize,
-            size = bufferSliceSize
-        ) {
-            MemoryMappedStore.evictLeastRecentlyUsedMappedFileSegment()
-        }
 
     private fun ensureOpen() {
         if (!isOpen) {
             throw ClosedChannelException()
         }
         if (!channel.isOpen) {
+            throw ClosedChannelException()
+        }
+    }
+
+    fun retire() = synchronized(lock) {
+        ensureOpen()
+        // The sealed mapping remains owned by this channel until asynchronous
+        // finalization closes it; only further writes are rejected immediately.
+        acceptsWrites = false
+    }
+
+    private fun ensureWritable() {
+        if (!acceptsWrites) {
             throw ClosedChannelException()
         }
     }

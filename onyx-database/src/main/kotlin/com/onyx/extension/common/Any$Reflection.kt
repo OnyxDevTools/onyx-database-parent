@@ -9,13 +9,14 @@ import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier
-import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
-private val classMetadatas: MutableMap<String, ClassMetadata> = Collections.synchronizedMap(hashMapOf())
+private val classMetadatas = ConcurrentHashMap<String, ClassMetadata>()
 
-fun metadata(contextId: String) = classMetadatas.getOrPut(contextId) { ClassMetadata() }
+fun metadata(contextId: String): ClassMetadata =
+    classMetadatas.computeIfAbsent(contextId) { ClassMetadata() }
 
 /**
  * Get fields for a class that apply to its reflection and serialization.  All transient fields and or fields
@@ -23,7 +24,25 @@ fun metadata(contextId: String) = classMetadatas.getOrPut(contextId) { ClassMeta
  *
  * @since 2.0.0
  */
-fun Any.getFields(contextId: String) : List<Field> = metadata(contextId).fields(this.javaClass)
+fun Any.getFields(contextId: String): List<Field> = metadata(contextId).fields(this.javaClass)
+
+/** Cached field plus primitive/object kind used by the serializer hot path. */
+data class SerializationField(val field: Field, val kind: Int)
+
+object SerializationFieldKind {
+    const val OBJECT = 0
+    const val LONG = 1
+    const val INT = 2
+    const val DOUBLE = 3
+    const val FLOAT = 4
+    const val BYTE = 5
+    const val CHAR = 6
+    const val SHORT = 7
+    const val BOOLEAN = 8
+}
+
+fun Any.getSerializationFields(contextId: String): List<SerializationField> =
+    metadata(contextId).serializationFields(this.javaClass)
 
 /**
  * Instantiate an instance of the class.  As a pre-requisite to invoking this method, there must
@@ -194,11 +213,13 @@ class ClassMetadata {
     private val constructors = OptimisticLockingMap<Class<*>, Constructor<*>>(HashMap())
     private val classes = OptimisticLockingMap<String, Class<*>>(HashMap())
     private val classFields = OptimisticLockingMap<Class<*>, List<Field>>(HashMap())
+    private val classSerializationFields = OptimisticLockingMap<Class<*>, List<SerializationField>>(HashMap())
 
     fun removeClass(name: String) {
-        classes.remove(name).apply {
-            constructors.remove(this)
-            classFields.remove(this)
+        classes.remove(name)?.let { clazz ->
+            constructors.remove(clazz)
+            classFields.remove(clazz)
+            classSerializationFields.remove(clazz)
         }
     }
 
@@ -234,24 +255,24 @@ class ClassMetadata {
             val fields = ArrayList<Field>()
             var aClass:Class<*> = clazz
             while (aClass != ANY_CLASS
-                    && aClass != Exception::class.java
-                    && aClass != Throwable::class.java) {
+                && aClass != Exception::class.java
+                && aClass != Throwable::class.java) {
                 aClass.declaredFields
-                        .asSequence()
-                        .filter { it.modifiers and Modifier.STATIC == 0 && !Modifier.isTransient(it.modifiers) && it.type != Exception::class.java && it.type != Throwable::class.java }
-                        .forEach {
-                            if (!isManagedEntity) {
-                                it.isAccessible = true
-                                fields.add(it)
-                            } else if (it.isAnnotationPresent(ATTRIBUTE_ANNOTATION)
-                                    || it.isAnnotationPresent(INDEX_ANNOTATION)
-                                    || it.isAnnotationPresent(PARTITION_ANNOTATION)
-                                    || it.isAnnotationPresent(IDENTIFIER_ANNOTATION)
-                                    || it.isAnnotationPresent(RELATIONSHIP_ANNOTATION)) {
-                                it.isAccessible = true
-                                fields.add(it)
-                            }
+                    .asSequence()
+                    .filter { it.modifiers and Modifier.STATIC == 0 && !Modifier.isTransient(it.modifiers) && it.type != Exception::class.java && it.type != Throwable::class.java }
+                    .forEach {
+                        if (!isManagedEntity) {
+                            it.isAccessible = true
+                            fields.add(it)
+                        } else if (it.isAnnotationPresent(ATTRIBUTE_ANNOTATION)
+                            || it.isAnnotationPresent(INDEX_ANNOTATION)
+                            || it.isAnnotationPresent(PARTITION_ANNOTATION)
+                            || it.isAnnotationPresent(IDENTIFIER_ANNOTATION)
+                            || it.isAnnotationPresent(RELATIONSHIP_ANNOTATION)) {
+                            it.isAccessible = true
+                            fields.add(it)
                         }
+                    }
                 aClass = aClass.superclass
             }
 
@@ -259,6 +280,27 @@ class ClassMetadata {
             fields
         }
     }
+
+    /**
+     * Returns the same stable, name-sorted fields as [fields], with the field kind calculated once.
+     */
+    fun serializationFields(clazz: Class<*>): List<SerializationField> =
+        classSerializationFields.getOrPut(clazz) {
+            fields(clazz).map { field ->
+                val kind = when (field.type) {
+                    LONG_PRIMITIVE_TYPE -> SerializationFieldKind.LONG
+                    INT_PRIMITIVE_TYPE -> SerializationFieldKind.INT
+                    DOUBLE_PRIMITIVE_TYPE -> SerializationFieldKind.DOUBLE
+                    FLOAT_PRIMITIVE_TYPE -> SerializationFieldKind.FLOAT
+                    BYTE_PRIMITIVE_TYPE -> SerializationFieldKind.BYTE
+                    CHAR_PRIMITIVE_TYPE -> SerializationFieldKind.CHAR
+                    SHORT_PRIMITIVE_TYPE -> SerializationFieldKind.SHORT
+                    BOOLEAN_PRIMITIVE_TYPE -> SerializationFieldKind.BOOLEAN
+                    else -> SerializationFieldKind.OBJECT
+                }
+                SerializationField(field, kind)
+            }
+        }
 
     // endregion
 }

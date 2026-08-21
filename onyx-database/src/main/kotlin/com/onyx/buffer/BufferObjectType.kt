@@ -4,6 +4,7 @@ import com.onyx.extension.common.ClassMetadata
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import java.util.Date
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.Pair
 
 /**
@@ -86,18 +87,21 @@ enum class BufferObjectType constructor(private val type: Class<*>?) {
             else if (value is IManagedEntity && context == null)
                 return OTHER
 
-            return enumValues
-                    .firstOrNull { it.type != null && it.type.isAssignableFrom(type) }
+            resolvedTypes[type]?.let { return it }
+
+            return resolvedTypes.computeIfAbsent(type) { resolvedType ->
+                enumValues
+                    .firstOrNull { it.type != null && it.type.isAssignableFrom(resolvedType) }
                     ?.let {
-                        if (it === OBJECT_ARRAY && type != Array<Any>::class.java) {
-                            OTHER_ARRAY
-                        } else it
+                        if (it === OBJECT_ARRAY && resolvedType != Array<Any>::class.java) OTHER_ARRAY else it
                     }
                     ?: OTHER
+            }
         }
 
         // Java in all of its wisdom clones the array each time you invoke values.
         // Surprisingly this is expensive so, this is a way around that.
         val enumValues = values()
+        private val resolvedTypes = ConcurrentHashMap<Class<*>, BufferObjectType>()
     }
 }

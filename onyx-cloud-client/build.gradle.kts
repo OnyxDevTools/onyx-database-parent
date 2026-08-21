@@ -15,3 +15,7 @@ dependencies {
 java {
     withJavadocJar()
 }
+
+kotlin {
+    jvmToolchain(Config.JAVA_VERSION)
+}

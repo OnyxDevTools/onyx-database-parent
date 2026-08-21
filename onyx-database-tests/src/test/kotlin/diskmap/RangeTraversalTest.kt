@@ -1,7 +1,7 @@
 package diskmap
 
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
-import com.onyx.diskmap.impl.DiskSkipListMap
+import com.onyx.diskmap.impl.DiskBTreeMap
 import database.base.DatabaseBaseTest
 import org.junit.BeforeClass
 import org.junit.Test
@@ -22,7 +22,7 @@ class RangeTraversalTest {
     @Test
     fun aboveBelowBetweenReachBottom() {
         val store = DefaultDiskMapFactory(TEST_DATABASE)
-        val map = store.getHashMap(Int::class.java, "range") as DiskSkipListMap<Int, String>
+        val map = store.getHashMap(Int::class.java, "range") as DiskBTreeMap<Int, String>
 
         for (i in 0 until 100) {
             map.put(i, "v" + i)
@@ -36,6 +36,15 @@ class RangeTraversalTest {
 
         val betweenVals = map.between(40, true, 44, true).mapNotNull { map.getWithRecID(it) }
         assertEquals((40..44).map { "v$it" }.toSet(), betweenVals.toSet())
+
+        val aboveExclusive = map.above(90, false).mapNotNull { map.getWithRecID(it) }
+        assertEquals((91..99).map { "v$it" }.toSet(), aboveExclusive.toSet())
+
+        val belowExclusive = map.below(9, false).mapNotNull { map.getWithRecID(it) }
+        assertEquals((0..8).map { "v$it" }.toSet(), belowExclusive.toSet())
+
+        val betweenExclusive = map.between(40, false, 44, false).mapNotNull { map.getWithRecID(it) }
+        assertEquals((41..43).map { "v$it" }.toSet(), betweenExclusive.toSet())
 
         store.close()
     }

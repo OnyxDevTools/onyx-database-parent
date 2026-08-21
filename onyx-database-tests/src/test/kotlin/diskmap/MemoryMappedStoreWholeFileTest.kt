@@ -10,7 +10,7 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class MemoryMappedStoreCacheTest {
+class MemoryMappedStoreWholeFileTest {
 
     @Test
     fun closeTruncatesMappedFileToAllocatedSize() {
@@ -20,7 +20,6 @@ class MemoryMappedStoreCacheTest {
         try {
             val path = tempDirectory.resolve("truncate.db")
             store = MemoryMappedStore()
-            store.bufferSliceSize = 1024
             assertTrue(store.open(path.toAbsolutePath().toString()))
 
             store.allocate(java.lang.Long.BYTES)
@@ -30,7 +29,7 @@ class MemoryMappedStoreCacheTest {
             val allocatedSize = store.getFileSize()
 
             assertEquals((java.lang.Long.BYTES + payload.size).toLong(), allocatedSize)
-            assertTrue(Files.size(path) >= store.bufferSliceSize)
+            assertTrue(Files.size(path) >= allocatedSize)
             assertTrue(store.close())
             store = null
 
@@ -42,69 +41,58 @@ class MemoryMappedStoreCacheTest {
     }
 
     @Test
-    fun constructorOpenedStoreRemovesChunksOnClose() {
-        val previousMax = MemoryMappedStore.maxCachedFileChunks
+    fun constructorOpenedStoreReleasesMappingAndTruncatesOnClose() {
         val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-constructor")
         var store: MemoryMappedStore? = null
 
         try {
-            MemoryMappedStore.maxCachedFileChunks = 2
-            store = MemoryMappedStore(tempDirectory.resolve("constructor.db").toString(), null, false)
+            val path = tempDirectory.resolve("constructor.db")
+            store = MemoryMappedStore(path.toString(), null, false)
 
-            assertTrue(MemoryMappedStore.cachedFileChunkCount > 0)
+            assertTrue(Files.size(path) >= java.lang.Long.BYTES)
             assertTrue(store.close())
             store = null
 
-            assertEquals(0, MemoryMappedStore.cachedFileChunkCount)
+            assertEquals(java.lang.Long.BYTES.toLong(), Files.size(path))
         } finally {
             store?.close()
-            MemoryMappedStore.maxCachedFileChunks = previousMax
             deleteDirectory(tempDirectory)
         }
     }
 
     @Test
-    fun evictsFileChunksGloballyAndRemapsData() {
-        val previousMax = MemoryMappedStore.maxCachedFileChunks
-        val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-cache")
-        val stores = ArrayList<MemoryMappedStore>()
+    fun growsWholeFileMappingAndPreservesData() {
+        val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-whole-file")
+        val path = tempDirectory.resolve("growth.db")
+        var store: MemoryMappedStore? = null
 
         try {
-            MemoryMappedStore.maxCachedFileChunks = 2
-
-            val first = openStore(tempDirectory.resolve("first.db")).also(stores::add)
-            val second = openStore(tempDirectory.resolve("second.db")).also(stores::add)
-
-            first.write(ByteBuffer.wrap(ByteArray(8) { 1 }), 0)
-            first.write(ByteBuffer.wrap(ByteArray(8) { 2 }), 16)
-            second.write(ByteBuffer.wrap(ByteArray(8) { 3 }), 0)
-
-            assertTrue(MemoryMappedStore.cachedFileChunkCount <= 2)
+            store = openStore(path)
+            store.allocate(java.lang.Long.BYTES)
+            val payloadPosition = store.allocate(80)
+            store.write(ByteBuffer.wrap(ByteArray(8) { 1 }), payloadPosition)
+            store.write(ByteBuffer.wrap(ByteArray(8) { 2 }), payloadPosition + 64)
 
             val remapped = ByteBuffer.allocate(8)
-            first.read(remapped, 0)
+            store.read(remapped, payloadPosition)
 
             assertContentEquals(ByteArray(8) { 1 }, remapped.array())
-            assertTrue(MemoryMappedStore.cachedFileChunkCount <= 2)
+            assertTrue(Files.size(path) >= java.lang.Long.BYTES + 80)
+            assertTrue(store.close())
+            store = null
 
-            stores.forEach {
-                assertTrue(it.close())
-            }
-            stores.clear()
-
-            assertEquals(0, MemoryMappedStore.cachedFileChunkCount)
+            store = MemoryMappedStore(path.toString(), null, false)
+            val afterReopen = ByteBuffer.allocate(8)
+            store.read(afterReopen, payloadPosition + 64)
+            assertContentEquals(ByteArray(8) { 2 }, afterReopen.array())
         } finally {
-            stores.forEach {
-                it.close()
-            }
-            MemoryMappedStore.maxCachedFileChunks = previousMax
+            store?.close()
             deleteDirectory(tempDirectory)
         }
     }
 
     private fun openStore(path: Path): MemoryMappedStore {
         val store = MemoryMappedStore()
-        store.bufferSliceSize = 16
         assertTrue(store.open(path.toAbsolutePath().toString()))
         return store
     }

@@ -1,8 +1,10 @@
 package com.onyx.diskmap.factory.impl
 
+import com.onyx.diskmap.IndexPostingMap
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.data.Header
-import com.onyx.diskmap.impl.DiskSkipListMap
+import com.onyx.diskmap.impl.DiskBTreeMap
+import com.onyx.diskmap.impl.DiskIndexPostingMap
 import com.onyx.diskmap.store.*
 import com.onyx.diskmap.store.impl.*
 import com.onyx.extension.common.metadata
@@ -12,6 +14,7 @@ import com.onyx.persistence.context.SchemaContext
 import java.io.File
 import java.lang.ref.WeakReference
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -30,12 +33,17 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      */
     open protected lateinit var store: Store
     open protected lateinit var nodeStore: Store
+    private val commitLock = Any()
 
     // Contains all initialized maps
     open protected val maps = OptimisticLockingMap<String, Map<*, *>>(WeakHashMap())
 
+    // Retain native posting trees until flush/close so their page caches remain
+    // stable throughout large write batches.
+    open protected val indexMaps = ConcurrentHashMap<String, IndexPostingMap>()
+
     // Contains all initialized maps
-    open protected val mapsByHeader = OptimisticLockingMap(WeakHashMap<Header, Map<*, *>>())
+    open protected val mapsByHeader = ConcurrentHashMap<Long, WeakReference<Map<*, *>>>()
 
     // Internal map that runs on storage
     protected open var internalMaps: MutableMap<String, Long> = hashMapOf()
@@ -48,7 +56,7 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      * @param filePath Where the file is located to store the maps
      * @since 1.0.0
      */
-    constructor(filePath: String) : this(filePath, StoreType.FILE, null)
+    constructor(filePath: String) : this(filePath, StoreType.MEMORY_MAPPED_FILE, null)
 
     /**
      * Constructor
@@ -163,9 +171,11 @@ open class DefaultDiskMapFactory : DiskMapFactory {
     /**
      * Force the storage to persist
      */
-    override fun commit() {
+    override fun commit() = synchronized(commitLock) {
+        store.prepareRetiredObjects()
         store.commit()
         nodeStore.commit()
+        store.publishRetiredObjects()
     }
 
     /**
@@ -186,6 +196,10 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      * @since 1.3.0
      */
     override fun reset() {
+        maps.clear()
+        indexMaps.clear()
+        mapsByHeader.clear()
+
         // Reset the file size
         nodeStore.reset()
 
@@ -212,7 +226,7 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      * @since 1.1.0
      *
      * Note, this was changed to use what was being referred to as a DefaultDiskMap which was a parent of AbstractBitmap.
-     * It is now an implementation of an inter-changeable index followed by a skip list.
+     * It is now implemented by a persistent B-tree.
      */
     override fun <T : Map<*, *>> getHashMap(keyType: Class<*>, name: String): T = getMapWithType(keyType, name)
 
@@ -224,11 +238,50 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      *
      * @since 1.0.0
      */
-    override fun <T : Map<*, *>> getHashMap(keyType: Class<*>, header: Header): T = mapsByHeader.getOrPut(header) {
-        DiskSkipListMap<Any, Any>(
-            WeakReference(nodeStore), WeakReference(store), header, keyType
+    override fun <T : Map<*, *>> getHashMap(keyType: Class<*>, header: Header): T {
+        mapsByHeader[header.position]?.get()?.let { return it as T }
+
+        // A rehydrated Header value can lag behind a root split. On a cache miss,
+        // attach using the canonical bytes before publishing the map instance.
+        val canonicalHeader = nodeStore.read(header.position, Header.HEADER_SIZE, Header()) as? Header ?: header
+        val created = DiskBTreeMap<Any, Any>(
+            WeakReference(nodeStore), WeakReference(store), canonicalHeader, keyType
         )
-    } as T
+        while (true) {
+            val existingReference = mapsByHeader.putIfAbsent(header.position, WeakReference(created))
+                ?: return created as T
+            existingReference.get()?.let { return it as T }
+            if (mapsByHeader.replace(header.position, existingReference, WeakReference(created))) return created as T
+        }
+    }
+
+    override fun getIndexMap(valueType: Class<*>, name: String): IndexPostingMap {
+        indexMaps[name]?.let { return validateIndexMapType(it, valueType, name) }
+
+        return requireNotNull(indexMaps.compute(name) { _, existing ->
+            if (existing != null) {
+                validateIndexMapType(existing, valueType, name)
+            } else {
+                DiskIndexPostingMap(
+                    WeakReference(nodeStore),
+                    WeakReference(store),
+                    getOrCreateHeader(name),
+                    valueType
+                )
+            }
+        })
+    }
+
+    private fun validateIndexMapType(
+        indexMap: IndexPostingMap,
+        valueType: Class<*>,
+        name: String
+    ): IndexPostingMap {
+        require(indexMap.valueType.kotlin == valueType.kotlin) {
+            "Index posting map '$name' uses ${indexMap.valueType.name}, not ${valueType.name}"
+        }
+        return indexMap
+    }
 
     /**
      * Default Map factory.  This creates or gets a map based on the name and puts it into a map
@@ -239,21 +292,20 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      * @since 1.2.0
      */
     open protected fun <T : Map<*, *>> getMapWithType(keyType: Class<*>, name: String): T = maps.getOrPut(name) {
-        var header: Header? = null
-        val headerReference = internalMaps[name]
-        if (headerReference != null)
-            header = nodeStore.read(headerReference, Header.HEADER_SIZE, Header()) as Header?
+        DiskBTreeMap<Any, Any>(WeakReference(nodeStore), WeakReference(store), getOrCreateHeader(name), keyType)
+    } as T
 
-        // Create a new header for the new structure we are creating
-        if (header == null) {
-            header = Header()
+    private fun getOrCreateHeader(name: String): Header {
+        internalMaps[name]?.let { headerReference ->
+            (nodeStore.read(headerReference, Header.HEADER_SIZE, Header()) as? Header)?.let { return it }
+        }
+
+        return Header().also { header ->
             header.position = nodeStore.allocate(Header.HEADER_SIZE)
             nodeStore.write(header, header.position)
             internalMaps[name] = header.position
         }
-
-        return@getOrPut DiskSkipListMap<Any, Any>(WeakReference(nodeStore), WeakReference(store), header, keyType)
-    } as T
+    }
 
     // endregion
 
@@ -285,6 +337,7 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      */
     override fun flush() {
         maps.clear()
+        indexMaps.clear()
         mapsByHeader.clear()
     }
 }

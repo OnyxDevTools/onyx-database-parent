@@ -1,15 +1,13 @@
 package com.onyx.interactors.transaction.impl
 
 import com.onyx.exception.TransactionException
-import com.onyx.extension.common.closeAndFlush
 import com.onyx.extension.common.Block
-import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.openFileChannel
 import com.onyx.interactors.transaction.TransactionStore
 import java.io.File
 import java.io.IOException
 import java.nio.channels.FileChannel
-import java.util.*
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -23,6 +21,7 @@ open class DefaultTransactionStore(val location:String): TransactionStore {
 
     private val journalFileIndex = AtomicLong(0L)
     private var lastWalFileChannel: FileChannel? = null
+    private var lastWalFile: File? = null
     private val transactionFileLock = Block()
 
     private val walDirectory: String
@@ -47,45 +46,58 @@ open class DefaultTransactionStore(val location:String): TransactionStore {
                     journalingDirector.mkdirs()
                 }
 
-                // Grab the last used WAL File
-                val directoryListing = File(directory).list()
-                Arrays.sort(directoryListing!!)
-
-                if (directoryListing.isNotEmpty()) {
-                    var fileName = directoryListing[directoryListing.size - 1]
-                    fileName = fileName.replace(".wal", "")
-
-                    journalFileIndex.addAndGet(Integer.valueOf(fileName).toLong())
+                val walFiles = journalingDirector.listWalFiles()
+                walFiles.dropLast(1).forEach { sealedWalFile ->
+                    if (!sealedWalFile.file.toPath().isCompressedWal()) {
+                        compressWalFileOrThrow(sealedWalFile.file.toPath())
+                    }
                 }
 
-                val lastWalFile = File(directory + journalFileIndex.get() + ".wal")
-
-                if (!lastWalFile.exists()) {
-                    lastWalFile.createNewFile()
+                val latestWalFile = walFiles.lastOrNull()
+                if (latestWalFile != null) {
+                    journalFileIndex.set(
+                        if (latestWalFile.file.toPath().isCompressedWal()) {
+                            latestWalFile.index + 1L
+                        } else {
+                            latestWalFile.index
+                        }
+                    )
                 }
 
-                // Open file channel
-                lastWalFileChannel = lastWalFile.path.openFileChannel()
+                lastWalFile = File(directory + journalFileIndex.get() + WAL_FILE_EXTENSION)
+                lastWalFileChannel = lastWalFile!!.path.openFileChannel()
+                    ?: throw IOException("Unable to open WAL file channel")
             }
 
             // If the last wal file exceeds longSize limit threshold, create a new one
-            if (lastWalFileChannel!!.size() > MAX_JOURNAL_SIZE) {
+            if (lastWalFileChannel!!.size() >= maxJournalSize) {
+                val toppedOffWalFile = lastWalFile!!
 
                 // Close the previous
                 lastWalFileChannel!!.force(true)
                 lastWalFileChannel!!.close()
+                lastWalFileChannel = null
+                lastWalFile = null
 
-                val directory = walDirectory
-                val lastWalFile = File(directory + journalFileIndex.addAndGet(1) + ".wal")
-                lastWalFile.createNewFile()
+                compressWalFileOrThrow(toppedOffWalFile.toPath())
 
-                lastWalFileChannel = lastWalFile.path.openFileChannel()
+                val nextJournalFileIndex = journalFileIndex.get() + 1L
+                val nextWalFile = File(walDirectory + nextJournalFileIndex + WAL_FILE_EXTENSION)
+                val nextWalFileChannel = nextWalFile.path.openFileChannel()
+                    ?: throw IOException("Unable to open WAL file channel")
+                journalFileIndex.set(nextJournalFileIndex)
+                lastWalFile = nextWalFile
+                lastWalFileChannel = nextWalFileChannel
             }
 
             return lastWalFileChannel!!
 
-        } catch (e: IOException) {
-            throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_OPEN_FILE)
+        } catch (cause: IOException) {
+            throw TransactionException(
+                TransactionException.TRANSACTION_FAILED_TO_OPEN_FILE,
+                null,
+                cause
+            )
         }
 
     }
@@ -96,15 +108,79 @@ open class DefaultTransactionStore(val location:String): TransactionStore {
      * @since 2.0.0
      */
     override fun close() {
-        if (lastWalFileChannel != null) {
-            catchAll {
-                lastWalFileChannel!!.closeAndFlush()
+        synchronized(transactionFileLock) {
+            val walFileChannel = lastWalFileChannel ?: return@synchronized
+            val walFile = lastWalFile
+            var failure: Throwable? = null
+            fun recordFailure(cause: Throwable) {
+                val currentFailure = failure
+                if (currentFailure == null) {
+                    failure = cause
+                } else {
+                    currentFailure.addSuppressed(cause)
+                }
             }
+
+            val toppedOff = try {
+                walFileChannel.size() >= maxJournalSize
+            } catch (cause: Throwable) {
+                recordFailure(cause)
+                false
+            }
+            try {
+                walFileChannel.force(true)
+            } catch (cause: Throwable) {
+                recordFailure(cause)
+            }
+            try {
+                walFileChannel.close()
+            } catch (cause: Throwable) {
+                recordFailure(cause)
+            }
+
+            if (failure == null && toppedOff && walFile != null) {
+                try {
+                    compressWalFileOrThrow(walFile.toPath())
+                } catch (cause: Throwable) {
+                    recordFailure(cause)
+                }
+            }
+
+            lastWalFileChannel = null
+            lastWalFile = null
+
+            failure?.let { cause ->
+                if (cause is TransactionException) throw cause
+                throw TransactionException(
+                    TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE,
+                    null,
+                    cause
+                )
+            }
+        }
+    }
+
+    protected open val maxJournalSize: Long
+        get() = MAX_JOURNAL_SIZE
+
+    protected open fun compressWalFile(walFile: Path) {
+        replaceWithCompressedWal(walFile)
+    }
+
+    private fun compressWalFileOrThrow(walFile: Path) {
+        try {
+            compressWalFile(walFile)
+        } catch (cause: Exception) {
+            throw TransactionException(
+                TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE,
+                null,
+                cause
+            )
         }
     }
 
     companion object {
         // Maximum WAL File longSize
-        private const val MAX_JOURNAL_SIZE = 1024 * 1024 * 20
+        private const val MAX_JOURNAL_SIZE = 1024L * 1024L * 20L
     }
 }

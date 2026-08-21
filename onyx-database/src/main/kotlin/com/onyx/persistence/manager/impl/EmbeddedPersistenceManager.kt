@@ -2,7 +2,7 @@ package com.onyx.persistence.manager.impl
 
 import com.onyx.descriptor.truncateData
 import com.onyx.descriptor.truncatePartitionData
-import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
+import com.onyx.diskmap.DiskMapEntry
 import com.onyx.exception.*
 import com.onyx.extension.*
 import com.onyx.extension.common.instance
@@ -75,7 +75,13 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                 context.transactionInteractor.writeSave(entity)
             }
 
-            entity.saveIndexes(context, if (putResult.isInsert) 0L else putResult.recordId, putResult.recordId, descriptor)
+            entity.saveIndexes(
+                context,
+                if (putResult.isInsert) 0L else putResult.recordId,
+                putResult.recordId,
+                descriptor,
+                putResult.previousValue as? IManagedEntity
+            )
             entity.saveRelationships(context, descriptor = descriptor)
 
             // Update Cached queries
@@ -137,10 +143,13 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
         val previousReferenceId = entity.referenceId(context, descriptor)
 
         if (previousReferenceId > 0) {
+            val persistedEntity = requireNotNull(
+                entity.recordInteractor(context, descriptor).getWithReferenceId(previousReferenceId)
+            ) { "Record $previousReferenceId disappeared before its indexes could be deleted" }
             journal {
                 context.transactionInteractor.writeDelete(entity)
             }
-            entity.deleteAllIndexes(context, previousReferenceId, descriptor)
+            persistedEntity.deleteAllIndexes(context, previousReferenceId, descriptor)
             entity.deleteRelationships(context)
             entity.recordInteractor(context, descriptor).delete(entity)
         }
@@ -601,11 +610,11 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                     descriptor.partition!!.partitionValue
                 )!!.index else 0L
                 context.getRecordInteractor(descriptor).forEach<T> record@{ it ->
-                    val entry = it as? AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any?, IManagedEntity>
+                    val entry = it as? DiskMapEntry<Any?, IManagedEntity?>
 
                     if (entry != null) {
-                        val reference = Reference(partitionId, entry.node?.position ?: 0)
-                        if (query.criteria == null || entry.node != null && query.meetsCriteria(
+                        val reference = Reference(partitionId, entry.recordId)
+                        if (query.criteria == null || query.meetsCriteria(
                                 entry.value!!,
                                 reference,
                                 context,

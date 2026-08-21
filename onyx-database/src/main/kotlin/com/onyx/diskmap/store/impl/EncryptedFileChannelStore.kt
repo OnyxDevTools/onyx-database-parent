@@ -3,7 +3,6 @@ package com.onyx.diskmap.store.impl
 import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.EncryptedBufferStream
-import com.onyx.extension.withBuffer
 import com.onyx.persistence.context.SchemaContext
 
 /**
@@ -47,22 +46,17 @@ class EncryptedFileChannelStore(filePath: String, context: SchemaContext, delete
      */
     override fun writeObject(value: Any?): Long {
         val stream = EncryptedBufferStream()
-        stream.putObject(value, context)
-        stream.flip()
-
-        return withBuffer(stream.byteBuffer) { valueBuffer ->
-            val size = valueBuffer.limit()
-            val position = this.allocate(size + Integer.BYTES)
-
-            BufferPool.withIntBuffer {
-                it.putInt(size)
-                it.rewind()
-                this.write(it, position)
-            }
-
-            this.write(valueBuffer, position + Integer.BYTES)
-
-            return@withBuffer position
+        try {
+            stream.byteBuffer.position(Integer.BYTES)
+            stream.putObject(value, context)
+            stream.flip()
+            val valueBuffer = stream.byteBuffer
+            valueBuffer.putInt(0, valueBuffer.limit() - Integer.BYTES)
+            val position = allocateObject(valueBuffer.remaining())
+            write(valueBuffer, position)
+            return position
+        } finally {
+            stream.recycle()
         }
     }
 

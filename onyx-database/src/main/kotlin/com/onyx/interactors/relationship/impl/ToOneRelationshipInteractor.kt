@@ -50,7 +50,12 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
                 && !transaction.contains(relationshipObject, context)) {
             val putResult = relationshipObject.save(context)
             currentRelationshipReference!!.identifier = putResult.key
-            relationshipObject.saveIndexes(context, if(putResult.isInsert) 0L else putResult.recordId, putResult.recordId)
+            relationshipObject.saveIndexes(
+                context,
+                if (putResult.isInsert) 0L else putResult.recordId,
+                putResult.recordId,
+                previousEntity = putResult.previousValue as? IManagedEntity
+            )
             relationshipObject.saveRelationships(context, RelationshipTransaction(entity, context))
 
             val relationshipDescriptor = relationshipObject.descriptor(context)

@@ -44,7 +44,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
         }
 
 
-        return scan(records.references.map { Reference(partitionId, it.position) }.toHashSet())
+        return scan(records.references.map { Reference(partitionId, it) }.toHashSet())
     }
 
     /**
