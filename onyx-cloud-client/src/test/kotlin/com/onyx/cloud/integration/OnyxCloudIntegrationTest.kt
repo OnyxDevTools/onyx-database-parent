@@ -1,6 +1,5 @@
 package com.onyx.cloud.integration
 
-import com.onyx.cloud.impl.OnyxClient
 import com.onyx.cloud.api.*
 import kotlin.test.*
 import java.util.Date
@@ -10,12 +9,7 @@ import java.util.UUID
  * Integration tests exercising the Onyx Cloud backend.
  */
 class OnyxCloudIntegrationTest {
-    private val client = onyx.init(
-        baseUrl = "https://api.onyx.dev",
-        databaseId = "bbabca0e-82ce-11f0-0000-a2ce78b61b6a",
-        apiKey = "Hj52NXaqB",
-        apiSecret = "bEJiEsuE28z1XeT/MHujy+1/6sqFMsZ4WK7M/M8BS34="
-    )
+    private val client by lazy { CloudIntegrationFixture.client() }
 
     private fun safeDelete(table: String, id: String) {
         try {
@@ -248,12 +242,13 @@ class OnyxCloudIntegrationTest {
     fun cascadeSavesUserWithProfileAndRoles() {
         val now = Date()
         val role = client.save(newRole(now))
+        val email = "cascade-${UUID.randomUUID()}@example.com"
         try {
             // Prepare nested payload for user with profile and roles
             val user = newUser(now)
                 .apply {
                     id = ""
-                    email = "cascade@example.com"
+                    this.email = email
                     userRoles = listOf(newUserRole("", role.id!!, Date()))
                     profile = UserProfile().apply { firstName = "Cascaded" }
                 }
@@ -275,7 +270,7 @@ class OnyxCloudIntegrationTest {
             assertTrue(rolesAssigned.getAllRecords().any { it.roleId == role.id })
         } finally {
             // Clean up
-            client.run { from<User>().where("email" eq "cascade@example.com").delete() }
+            client.run { from<User>().where("email" eq email).delete() }
             safeDelete("Role", role.id!!)
         }
     }
@@ -299,11 +294,11 @@ class OnyxCloudIntegrationTest {
 
     @Test
     fun groupByActiveUsers() {
-        client.from<User>().delete()
         val now = Date()
-        val active1 = newUser(now, isActive = true)
-        val active2 = newUser(now, isActive = true)
-        val inactive = newUser(now, isActive = false)
+        val usernamePrefix = "group-${UUID.randomUUID()}-"
+        val active1 = newUser(now, isActive = true).apply { username = "${usernamePrefix}active-1" }
+        val active2 = newUser(now, isActive = true).apply { username = "${usernamePrefix}active-2" }
+        val inactive = newUser(now, isActive = false).apply { username = "${usernamePrefix}inactive" }
 
         client.save(active1)
         client.save(active2)
@@ -312,6 +307,7 @@ class OnyxCloudIntegrationTest {
         try {
             val results = client.from<User>()
                 .select("isActive", count("id"))
+                .where("username" startsWith usernamePrefix)
                 .groupBy("isActive")
                 .list<Map<String, Any>>()
 

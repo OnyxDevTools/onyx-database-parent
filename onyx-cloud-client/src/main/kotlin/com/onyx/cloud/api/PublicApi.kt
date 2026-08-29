@@ -39,6 +39,7 @@ enum class QueryCriteriaOperator {
     MATCHES,
     NOT_MATCHES,
     BETWEEN,
+    NOT_BETWEEN,
     LIKE,
     NOT_LIKE,
     CONTAINS,
@@ -1549,6 +1550,14 @@ infix fun <T : Any> String.between(bounds: Pair<T, T>): IConditionBuilder =
 /** Creates a `BETWEEN x AND y` condition using two arguments. */
 fun <T : Any> String.between(from: T, to: T): IConditionBuilder =
     ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.BETWEEN, listOf(from, to)))
+
+/** Creates a `NOT BETWEEN x AND y` condition using a [Pair]. */
+infix fun <T : Any> String.notBetween(bounds: Pair<T, T>): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.NOT_BETWEEN, listOf(bounds.first, bounds.second)))
+
+/** Creates a `NOT BETWEEN x AND y` condition using two arguments. */
+fun <T : Any> String.notBetween(from: T, to: T): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(this, QueryCriteriaOperator.NOT_BETWEEN, listOf(from, to)))
 
 /** Creates a greater than (`>`) condition. */
 infix fun String.gt(value: Any): IConditionBuilder =

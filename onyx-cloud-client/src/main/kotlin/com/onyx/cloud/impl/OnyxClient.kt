@@ -1254,7 +1254,9 @@ class QueryBuilder(
      * Replaces existing conditions with [condition].
      */
     override fun where(condition: IConditionBuilder): IQueryBuilder {
-        this.conditions = condition.toCondition()
+        val replacement = condition.toCondition()
+        replacement?.requireCandidateSoleRoot()
+        this.conditions = replacement
         return this
     }
 
@@ -1356,6 +1358,7 @@ class QueryBuilder(
     private fun addCondition(builderToAdd: IConditionBuilder, logicalOperator: LogicalOperator) {
         val conditionToAdd = builderToAdd.toCondition() ?: return
         val currentCondition = this.conditions
+        requireCandidateCompositionIsValid(currentCondition, conditionToAdd)
         this.conditions = when {
             currentCondition == null -> conditionToAdd
             currentCondition is QueryCondition.CompoundCondition && currentCondition.operator == logicalOperator ->
@@ -1367,8 +1370,41 @@ class QueryBuilder(
         }
     }
 
-    private fun serializableConditions(): QueryCondition? =
-        this.conditions?.normalizeSubQueries()
+    private fun requireCandidateCompositionIsValid(
+        currentCondition: QueryCondition?,
+        incomingCondition: QueryCondition?,
+    ) {
+        currentCondition?.requireCandidateSoleRoot()
+        incomingCondition?.requireCandidateSoleRoot()
+        val candidateOperator = currentCondition?.candidateOperator()
+            ?: incomingCondition?.candidateOperator()
+        require(currentCondition == null || candidateOperator == null) {
+            "$candidateOperator must be the sole root criterion"
+        }
+    }
+
+    private fun QueryCondition.requireCandidateSoleRoot() {
+        val candidateOperator = candidateOperator() ?: return
+        require(
+            this is QueryCondition.SingleCondition && criteria.operator == candidateOperator
+        ) {
+            "$candidateOperator must be the sole root criterion"
+        }
+    }
+
+    private fun QueryCondition.candidateOperator(): QueryCriteriaOperator? = when (this) {
+        is QueryCondition.SingleCondition -> criteria.operator.takeIf { it.isCandidateAdmission }
+        is QueryCondition.CompoundCondition -> conditions.firstNotNullOfOrNull { it.candidateOperator() }
+    }
+
+    private val QueryCriteriaOperator.isCandidateAdmission: Boolean
+        get() = this == QueryCriteriaOperator.CANDIDATES ||
+            this == QueryCriteriaOperator.SEARCH_CANDIDATES ||
+            this == QueryCriteriaOperator.HNSW_CANDIDATES
+
+    private fun serializableConditions(): QueryCondition? = this.conditions?.also {
+        it.requireCandidateSoleRoot()
+    }?.normalizeSubQueries()
 
     private fun QueryCondition.normalizeSubQueries(): QueryCondition =
         when (this) {

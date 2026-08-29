@@ -1,6 +1,5 @@
 package com.onyx.cloud.integration
 
-import com.onyx.cloud.impl.OnyxClient
 import com.onyx.cloud.api.*
 import java.util.Date
 import java.util.UUID
@@ -10,12 +9,7 @@ import kotlin.test.*
  * Integration tests validating various query operators against the cloud backend.
  */
 class QueryCriteriaOperatorIntegrationTest {
-    private val client = onyx.init(
-        baseUrl = "https://api.onyx.dev",
-        databaseId = "bbabca0e-82ce-11f0-0000-a2ce78b61b6a",
-        apiKey = "Hj52NXaqB",
-        apiSecret = "bEJiEsuE28z1XeT/MHujy+1/6sqFMsZ4WK7M/M8BS34="
-    )
+    private val client by lazy { CloudIntegrationFixture.client() }
 
     @Suppress("SameParameterValue")
     private fun safeDelete(table: String, id: String) {
@@ -185,4 +179,3 @@ class QueryCriteriaOperatorIntegrationTest {
         }
     }
 }
-
