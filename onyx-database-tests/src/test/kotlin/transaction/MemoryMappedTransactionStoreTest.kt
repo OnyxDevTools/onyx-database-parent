@@ -1,6 +1,7 @@
 package transaction
 
 import com.onyx.diskmap.store.StoreType
+import com.onyx.exception.TransactionException
 import com.onyx.extension.common.decompressLz77
 import com.onyx.interactors.transaction.TransactionStore
 import com.onyx.interactors.transaction.impl.DefaultTransactionStore
@@ -176,6 +177,116 @@ class MemoryMappedTransactionStoreTest {
     }
 
     @Test
+    fun reopeningPaddedActiveWalResumesAtLogicalTransactionEnd() {
+        val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-transaction-reopen-padding")
+        val walDirectory = Files.createDirectories(tempDirectory.resolve("wal"))
+        val walPath = walDirectory.resolve("0.wal")
+        val firstRecord = walRecord(ByteArray(31) { 3 })
+        val secondRecord = walRecord(ByteArray(17) { 4 })
+        val mappedCapacity = 8 * 1024 * 1024
+        val paddedWal = ByteArray(mappedCapacity)
+        firstRecord.copyInto(paddedWal)
+        Files.write(walPath, paddedWal)
+        val transactionStore = MemoryMappedTransactionStore(tempDirectory.toString())
+
+        try {
+            val transactionFile = transactionStore.getTransactionFile()
+
+            assertEquals(firstRecord.size.toLong(), transactionFile.position())
+            transactionFile.write(ByteBuffer.wrap(secondRecord))
+            transactionStore.close()
+
+            assertContentEquals(firstRecord + secondRecord, Files.readAllBytes(walPath))
+        } finally {
+            runCatching { transactionStore.close() }
+            deleteDirectory(tempDirectory)
+        }
+    }
+
+    @Test
+    fun reopeningNormalizesPaddedSealedWalBeforeCompression() {
+        val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-transaction-sealed-padding")
+        val walDirectory = Files.createDirectories(tempDirectory.resolve("wal"))
+        val sealedRecord = walRecord(ByteArray(23) { 5 })
+        val currentRecord = walRecord(ByteArray(19) { 6 })
+        val paddedSealedWal = ByteArray(4 * 1024 * 1024)
+        sealedRecord.copyInto(paddedSealedWal)
+        Files.write(walDirectory.resolve("0.wal"), paddedSealedWal)
+        Files.write(walDirectory.resolve("1.wal"), currentRecord)
+        val transactionStore = MemoryMappedTransactionStore(tempDirectory.toString())
+
+        try {
+            transactionStore.getTransactionFile()
+            transactionStore.close()
+
+            assertContentEquals(
+                sealedRecord,
+                Files.readAllBytes(walDirectory.resolve("0.wal")).decompressLz77()
+            )
+            assertContentEquals(currentRecord, Files.readAllBytes(walDirectory.resolve("1.wal")))
+        } finally {
+            runCatching { transactionStore.close() }
+            deleteDirectory(tempDirectory)
+        }
+    }
+
+    @Test
+    fun reopeningDropsIncompleteFinalTransactionBeforeAppending() {
+        val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-transaction-incomplete-tail")
+        val walDirectory = Files.createDirectories(tempDirectory.resolve("wal"))
+        val walPath = walDirectory.resolve("0.wal")
+        val completeRecord = walRecord(ByteArray(13) { 7 })
+        val interruptedRecord = ByteBuffer.allocate(8)
+            .put(1.toByte())
+            .putInt(20)
+            .put(byteArrayOf(8, 8, 8))
+            .array()
+        val appendedRecord = walRecord(ByteArray(11) { 9 })
+        Files.write(walPath, completeRecord + interruptedRecord)
+        val transactionStore = MemoryMappedTransactionStore(tempDirectory.toString())
+
+        try {
+            val transactionFile = transactionStore.getTransactionFile()
+
+            assertEquals(completeRecord.size.toLong(), transactionFile.position())
+            transactionFile.write(ByteBuffer.wrap(appendedRecord))
+            transactionStore.close()
+
+            assertContentEquals(completeRecord + appendedRecord, Files.readAllBytes(walPath))
+        } finally {
+            runCatching { transactionStore.close() }
+            deleteDirectory(tempDirectory)
+        }
+    }
+
+    @Test
+    fun reopeningRefusesToDiscardTransactionsAfterInternalPadding() {
+        val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-transaction-internal-padding")
+        val walDirectory = Files.createDirectories(tempDirectory.resolve("wal"))
+        val walPath = walDirectory.resolve("0.wal")
+        val firstRecord = walRecord(ByteArray(29) { 10 })
+        val laterRecord = walRecord(ByteArray(27) { 11 })
+        val laterRecordPosition = 128 * 1024
+        val malformedWal = ByteArray(laterRecordPosition + laterRecord.size)
+        firstRecord.copyInto(malformedWal)
+        laterRecord.copyInto(malformedWal, laterRecordPosition)
+        Files.write(walPath, malformedWal)
+        val transactionStore = MemoryMappedTransactionStore(tempDirectory.toString())
+
+        try {
+            val failure = assertFailsWith<TransactionException> {
+                transactionStore.getTransactionFile()
+            }
+
+            assertTrue(failure.cause?.message.orEmpty().contains("non-zero data after padding"))
+            assertContentEquals(malformedWal, Files.readAllBytes(walPath))
+        } finally {
+            runCatching { transactionStore.close() }
+            deleteDirectory(tempDirectory)
+        }
+    }
+
+    @Test
     fun rotatingWalFileIsSealedAndFinalizedWithoutBlockingTheWriter() {
         val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-transaction-async-rotation")
         val finalizationStarted = CountDownLatch(1)
@@ -343,6 +454,13 @@ class MemoryMappedTransactionStoreTest {
         MemoryMappedTransactionStore(location) {
         protected override val maxJournalSize: Long = 128L
     }
+
+    private fun walRecord(payload: ByteArray): ByteArray =
+        ByteBuffer.allocate(5 + payload.size)
+            .put(1.toByte())
+            .putInt(payload.size)
+            .put(payload)
+            .array()
 
     companion object {
         private fun deleteDirectory(path: Path) {

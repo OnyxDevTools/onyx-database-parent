@@ -21,6 +21,10 @@ private val LZ77_MAGIC = byteArrayOf(
     '7'.code.toByte(),
     '7'.code.toByte()
 )
+private const val WAL_TRANSACTION_HEADER_SIZE = 5
+private const val WAL_PADDING_TYPE = 0
+private val WAL_TRANSACTION_TYPES = 1..4
+private const val WAL_SCAN_BUFFER_SIZE = 64 * 1024
 
 internal fun ByteArray.isCompressedWalFrame(): Boolean =
     size >= LZ77_MAGIC.size && LZ77_MAGIC.indices.all { this[it] == LZ77_MAGIC[it] }
@@ -56,6 +60,103 @@ internal fun Path.isCompressedWal(): Boolean {
         }
         return header.array().isCompressedWalFrame()
     }
+}
+
+/**
+ * Removes unused memory-mapped capacity or an incomplete final transaction from a regular WAL.
+ *
+ * A writable memory mapping may leave the physical file larger than the logical transaction stream
+ * when the process exits before normal WAL finalization. Reopening at that physical size would put a
+ * zero-filled hole between the old and new transactions. Only a terminal tail is removed here; data
+ * after a padding marker is treated as corruption and is never discarded automatically.
+ */
+@Throws(IOException::class)
+internal fun Path.normalizeRegularWalForReopen(): Long {
+    if (isCompressedWal()) {
+        throw IOException("Cannot normalize compressed WAL $this as a writable WAL")
+    }
+
+    FileChannel.open(
+        this,
+        StandardOpenOption.READ,
+        StandardOpenOption.WRITE
+    ).use { channel ->
+        val physicalSize = channel.size()
+        val logicalSize = channel.regularWalLogicalSize(this)
+        if (logicalSize < physicalSize) {
+            channel.truncate(logicalSize)
+            channel.force(true)
+        }
+        return logicalSize
+    }
+}
+
+@Throws(IOException::class)
+private fun FileChannel.regularWalLogicalSize(walFile: Path): Long {
+    val physicalSize = size()
+    val header = ByteBuffer.allocate(WAL_TRANSACTION_HEADER_SIZE)
+    var position = 0L
+
+    while (position < physicalSize) {
+        if (physicalSize - position < WAL_TRANSACTION_HEADER_SIZE) {
+            // A crash can leave only part of the final transaction header durable.
+            return position
+        }
+
+        header.clear()
+        var readPosition = position
+        while (header.hasRemaining()) {
+            val bytesRead = read(header, readPosition)
+            if (bytesRead < 0) return position
+            if (bytesRead == 0) continue
+            readPosition += bytesRead
+        }
+        header.flip()
+
+        val transactionType = header.get().toInt() and 0xff
+        val transactionLength = header.int
+        if (transactionType == WAL_PADDING_TYPE && transactionLength == 0) {
+            if (hasNonZeroBytes(position, physicalSize)) {
+                throw IOException(
+                    "WAL $walFile contains non-zero data after padding at byte $position"
+                )
+            }
+            return position
+        }
+        if (transactionType !in WAL_TRANSACTION_TYPES || transactionLength <= 0) {
+            throw IOException(
+                "WAL $walFile has an invalid transaction header at byte $position"
+            )
+        }
+
+        val nextPosition = position + WAL_TRANSACTION_HEADER_SIZE + transactionLength.toLong()
+        if (nextPosition > physicalSize) {
+            // The final transaction was interrupted before its complete payload reached the file.
+            return position
+        }
+        position = nextPosition
+    }
+
+    return position
+}
+
+@Throws(IOException::class)
+private fun FileChannel.hasNonZeroBytes(startPosition: Long, endPosition: Long): Boolean {
+    val buffer = ByteBuffer.allocate(WAL_SCAN_BUFFER_SIZE)
+    var position = startPosition
+    while (position < endPosition) {
+        buffer.clear()
+        buffer.limit(minOf(buffer.capacity().toLong(), endPosition - position).toInt())
+        val bytesRead = read(buffer, position)
+        if (bytesRead < 0) break
+        if (bytesRead == 0) continue
+        buffer.flip()
+        while (buffer.hasRemaining()) {
+            if (buffer.get() != 0.toByte()) return true
+        }
+        position += bytesRead
+    }
+    return false
 }
 
 /**
