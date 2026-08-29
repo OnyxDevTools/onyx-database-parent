@@ -1,7 +1,7 @@
 package com.onyx.persistence.query
 
 /**
- * Defines a Lucene full-text query with an optional minimum match score.
+ * Defines a full-text query with an optional minimum match score.
  */
 data class FullTextQuery(
     val queryText: String,
@@ -11,6 +11,9 @@ data class FullTextQuery(
 internal fun resolveFullTextQuery(value: Any?): FullTextQuery? = when (value) {
     is FullTextQuery -> value
     is String -> FullTextQuery(value)
+    is Map<*, *> -> resolveVectorSearchQuery(value)?.let { search ->
+        search.text?.let { text -> FullTextQuery(text, search.minScore) }
+    }
     null -> null
     else -> FullTextQuery(value.toString())
 }

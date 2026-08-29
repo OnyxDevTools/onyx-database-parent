@@ -5,7 +5,6 @@ import com.onyx.buffer.BufferObjectType
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.ExpandableByteBuffer
 import com.onyx.exception.BufferUnderflowException
-import com.onyx.exception.BufferingException
 import org.junit.Test
 import pojo.Simple
 import java.nio.ByteBuffer
@@ -154,14 +153,12 @@ class BufferStreamOptimizationTest {
     }
 
     @Test
-    fun framedReaderRejectsLegacyFormat() {
+    fun framedReaderAcceptsLegacyFormat() {
         val legacyFrame = ByteBuffer.wrap(
             byteArrayOf(0, 0, 0, 9, BufferObjectType.INT.ordinal.toByte(), 0, 0, 0, 1)
         )
 
-        assertFailsWith<BufferingException> {
-            BufferStream.fromBuffer(legacyFrame)
-        }
+        assertEquals(1, BufferStream.fromBuffer(legacyFrame))
     }
 
     @Test

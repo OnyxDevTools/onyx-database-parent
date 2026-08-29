@@ -11,6 +11,20 @@ import com.onyx.exception.OnyxException
 interface IndexInteractor {
 
     /**
+     * Validate an index mutation before the containing entity record is overwritten.
+     *
+     * Implementations must not mutate persistent state here. This hook exists for indexes whose
+     * persisted topology has invariants (for example, one vector dimension per calibration) that
+     * cannot be checked safely after the authoritative entity bytes have already changed.
+     */
+    @Throws(OnyxException::class)
+    fun validateSave(oldIndexValue: Any?, indexValue: Any?, existingReferenceId: Long) = Unit
+
+    /** Arms any durable mutation guard after every index has passed [validateSave]. */
+    @Throws(OnyxException::class)
+    fun prepareSave(oldIndexValue: Any?, indexValue: Any?, existingReferenceId: Long) = Unit
+
+    /**
      * Save an index key with the record reference
      *
      * @param indexValue Index value to save
@@ -99,6 +113,42 @@ interface IndexInteractor {
     fun findAllValues(): Set<Any>
 
     /**
+     * Visit an explicitly approximate candidate prefix for one or more exact index values.
+     *
+     * [maxCandidates] is a shared physical posting-visit budget across [indexValues], not a
+     * per-value limit. Implementations that cannot stop their physical posting traversal should
+     * leave this unsupported rather than silently materializing an exhaustive result.
+     *
+     * @return number of posting IDs passed to [visitor]
+     */
+    fun visitApproximateCandidates(
+        indexValues: List<Any>,
+        maxCandidates: Int,
+        visitor: (Long) -> Boolean
+    ): Int = throw UnsupportedOperationException(
+        "${this::class.java.name} does not support bounded approximate index candidates"
+    )
+
+    /**
+     * Stream every posting for one or more exact index values until [visitor] returns `false`.
+     *
+     * Unlike [visitApproximateCandidates], this operation has no candidate-prefix semantics: a
+     * `true` return from every callback means the supplied posting routes were exhausted. This is
+     * used by bounded mutations that may have to inspect more postings than they ultimately mutate
+     * before they can truthfully report that fewer than the requested number of rows remain.
+     * Implementations must stop physical traversal when [visitor] returns `false` and must not
+     * materialize a complete posting before invoking it.
+     *
+     * @return number of posting IDs passed to [visitor]
+     */
+    fun visitExactPostings(
+        indexValues: List<Any>,
+        visitor: (Long) -> Boolean
+    ): Int = throw UnsupportedOperationException(
+        "${this::class.java.name} does not support streaming exact index postings"
+    )
+
+    /**
      * ReBuilds an index by iterating through all the values and re-mapping index values
      *
      */
@@ -122,14 +172,14 @@ interface IndexInteractor {
     /**
      * Delete all resources associated with this index.
      * This should delete any external files or resources that the index manages
-     * outside of the main data file (e.g., Lucene index directories).
+     * outside of the main data file.
      *
      * @since 3.9.10
      */
     fun deleteResources()
 
     /**
-     * Match all items that have similar vectors as the search value
+     * Match indexed records against a lexical or semantic vector query.
      *
      * @param indexValue search text
      * @param limit Maximum number of items returned

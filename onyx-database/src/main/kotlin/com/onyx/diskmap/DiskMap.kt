@@ -46,6 +46,34 @@ interface DiskMap<K, V> : MutableMap<K, V> {
     }
 
     /**
+     * Walks stable record IDs until [visitor] returns false, without materializing the map.
+     * The return value is the number of records passed to [visitor].
+     */
+    fun visitReferencesWhile(visitor: (Long, V) -> Boolean): Int {
+        var visits = 0
+        val iterator = entries.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            val recordId = (entry as? DiskMapEntry<K, V>)?.recordId ?: getRecID(entry.key)
+            visits++
+            if (!visitor(recordId, entry.value)) break
+        }
+        return visits
+    }
+
+    /**
+     * Walks stable record IDs with mutable live entries without materializing the map.
+     * Implementations should hold their write lock for the traversal so callers may replace an
+     * existing value without invalidating the current leaf position.
+     */
+    fun forEachMutableReference(action: (Long, MutableMap.MutableEntry<K, V>) -> Unit) {
+        entries.forEach { entry ->
+            val recordId = (entry as? DiskMapEntry<K, V>)?.recordId ?: getRecID(entry.key)
+            action(recordId, entry)
+        }
+    }
+
+    /**
      * Put key value.  This is the same as map.put(K,V) except
      * rather than the value you just put into the map, it will
      * return the record id.  The purpose of this is so you

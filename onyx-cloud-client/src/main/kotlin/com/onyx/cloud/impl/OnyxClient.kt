@@ -3,8 +3,11 @@
 package com.onyx.cloud.impl
 
 import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import com.onyx.cloud.api.ApproximateIndexCandidateQuery
 import com.onyx.cloud.api.DeleteOptions
 import com.onyx.cloud.api.DocumentOptions
+import com.onyx.cloud.api.EntityWireFormat
 import com.onyx.cloud.api.FetchImpl
 import com.onyx.cloud.api.FetchInit
 import com.onyx.cloud.api.FindOptions
@@ -12,6 +15,7 @@ import com.onyx.cloud.api.FullTextQuery
 import com.onyx.cloud.api.FULL_TEXT_ALL_TABLE
 import com.onyx.cloud.api.FULL_TEXT_ATTRIBUTE
 import com.onyx.cloud.api.FullTextSearchResult
+import com.onyx.cloud.api.HnswSearchQuery
 import com.onyx.cloud.api.ICascadeBuilder
 import com.onyx.cloud.api.IConditionBuilder
 import com.onyx.cloud.api.IOnyxDatabase
@@ -24,7 +28,10 @@ import com.onyx.cloud.api.QueryCriteria
 import com.onyx.cloud.api.QueryCriteriaOperator
 import com.onyx.cloud.api.SaveOptions
 import com.onyx.cloud.api.Sort
+import com.onyx.cloud.api.VectorSearchQuery
 import com.onyx.cloud.exceptions.NotFoundException
+import com.onyx.cloud.extensions.ENTITY_MESSAGE_PACK_MEDIA_TYPE
+import com.onyx.cloud.extensions.EntityMessagePack
 import com.onyx.cloud.extensions.fromJson
 import com.onyx.cloud.extensions.fromJsonList
 import com.onyx.cloud.extensions.gson
@@ -79,6 +86,7 @@ import kotlin.reflect.KClass
  * transport.
  * @param defaultPartition Default partition applied to queries when none is specified
  * explicitly.
+ * @param entityWireFormat Wire representation for entity CRUD/query/stream routes. JSON remains the default.
  * @param requestLoggingEnabled When `true`, the client logs outgoing requests (with
  * sensitive headers redacted).
  * @param responseLoggingEnabled When `true`, the client logs responses received from the
@@ -104,7 +112,8 @@ class OnyxClient(
     requestTimeoutMsOverride: Int? = null,
     connectTimeoutMsOverride: Int? = null,
     aiBaseUrl: String = "https://ai.onyx.dev",
-    private val defaultModel: String = "onyx"
+    private val defaultModel: String = "onyx",
+    private val entityWireFormat: EntityWireFormat = EntityWireFormat.JSON,
 ) : IOnyxDatabase<Any> {
 
     private val baseUrl: String = baseUrl.replace(Regex("/+$"), "")
@@ -202,12 +211,12 @@ class OnyxClient(
      */
     @Suppress("UNCHECKED_CAST")
     fun <T : Any> save(table: KClass<*>, entityOrEntities: T): T {
-        val path = "/data/${encode(databaseId)}/${encode(table)}"
+        val path = "/data/${encode(databaseId)}/${encode(table.simpleName!!)}"
         return if (entityOrEntities is List<*>) {
-            makeRequest(HttpMethod.Put, path, entityOrEntities)
+            makeRequest(HttpMethod.Put, path, entityOrEntities, entityRoute = true)
             entityOrEntities
         } else {
-            makeRequest(HttpMethod.Put, path, entityOrEntities).fromJson(table)
+            makeRequest(HttpMethod.Put, path, entityOrEntities, entityRoute = true).fromJson(table)
                 ?: throw IllegalStateException("Failed to parse response for save single entity")
         }
     }
@@ -223,7 +232,13 @@ class OnyxClient(
     fun <T> save(table: KClass<*>, entityOrEntities: T, options: Map<String, Any?>): Any? {
         val queryString = buildQueryString(options)
         val path = "/data/${encode(databaseId)}/${encode(table.simpleName!!)}"
-        val response = makeRequest(HttpMethod.Put, path, entityOrEntities, queryString = queryString)
+        val response = makeRequest(
+            HttpMethod.Put,
+            path,
+            entityOrEntities,
+            queryString = queryString,
+            entityRoute = true,
+        )
 
         // Try to parse a sensible value back for common cases.
         return when (entityOrEntities) {
@@ -289,7 +304,7 @@ class OnyxClient(
         val queryString = buildQueryString(options)
         val path = "/data/${encode(databaseId)}/${encode(type.java.simpleName)}/${encode(primaryKey.toString())}"
         return try {
-            makeRequest(HttpMethod.Get, path, queryString = queryString).fromJson(type)
+            makeRequest(HttpMethod.Get, path, queryString = queryString, entityRoute = true).fromJson(type)
         } catch (_: NotFoundException) {
             null
         }
@@ -301,7 +316,7 @@ class OnyxClient(
      * @param table Table name.
      * @param primaryKey Primary key value.
      * @param options Optional delete options (partition/relationships).
-     * @return `true` when the server reports success, otherwise `false`.
+     * @return `true` when the server accepts the delete. Non-success responses throw.
      */
     override fun delete(
         table: String,
@@ -310,7 +325,8 @@ class OnyxClient(
     ): Boolean {
         val queryString = buildQueryString(options)
         val path = "/data/${encode(databaseId)}/${encode(table)}/${encode(primaryKey)}"
-        return makeRequest(HttpMethod.Delete, path, queryString = queryString).equals("true", ignoreCase = true)
+        makeRequest(HttpMethod.Delete, path, queryString = queryString, entityRoute = true)
+        return true
     }
 
     // ---------------------------------------------------------------------
@@ -331,7 +347,7 @@ class OnyxClient(
     ): String {
         val queryString = buildQueryString(options)
         val path = "/data/${encode(databaseId)}/query/${encode(table)}"
-        return makeRequest(HttpMethod.Put, path, selectQuery, queryString = queryString)
+        return makeRequest(HttpMethod.Put, path, selectQuery, queryString = queryString, entityRoute = true)
     }
 
     /**
@@ -349,7 +365,8 @@ class OnyxClient(
     ): Int {
         val queryString = buildQueryString(options)
         val path = "/data/${encode(databaseId)}/query/count/${encode(table)}"
-        return makeRequest(HttpMethod.Put, path, selectQuery, queryString = queryString).toIntOrNull() ?: 0
+        return makeRequest(HttpMethod.Put, path, selectQuery, queryString = queryString, entityRoute = true)
+            .toIntOrNull() ?: 0
     }
 
     /**
@@ -367,7 +384,8 @@ class OnyxClient(
     ): Int {
         val queryString = buildQueryString(options)
         val path = "/data/${encode(databaseId)}/query/update/${encode(table)}"
-        return makeRequest(HttpMethod.Put, path, updateQuery, queryString = queryString).toIntOrNull() ?: 0
+        return makeRequest(HttpMethod.Put, path, updateQuery, queryString = queryString, entityRoute = true)
+            .toIntOrNull() ?: 0
     }
 
     /**
@@ -385,7 +403,8 @@ class OnyxClient(
     ): Int {
         val queryString = buildQueryString(options)
         val path = "/data/${encode(databaseId)}/query/delete/${encode(table)}"
-        return makeRequest(HttpMethod.Put, path, selectQuery, queryString = queryString).toIntOrNull() ?: 0
+        return makeRequest(HttpMethod.Put, path, selectQuery, queryString = queryString, entityRoute = true)
+            .toIntOrNull() ?: 0
     }
 
     // ---------------------------------------------------------------------
@@ -393,7 +412,7 @@ class OnyxClient(
     // ---------------------------------------------------------------------
 
     /**
-     * Opens a NDJSON (JSON Lines) stream for a query and invokes [onLine] for each line.
+     * Opens a live-query stream and invokes [onLine] with each JSON-shaped event.
      *
      * The stream runs on a dedicated daemon thread; use the returned [StreamSubscription] to
      * cancel or wait for completion. The client uses fixed-length streaming for the request body,
@@ -403,7 +422,11 @@ class OnyxClient(
      * @param selectQuery Query body.
      * @param includeQueryResults Emit initial results first (if supported by the server).
      * @param keepAlive Keep connection open for change events after initial results.
-     * @param onLine Callback invoked with each raw line from the stream (already UTF-8 decoded).
+     * In [EntityWireFormat.MESSAGE_PACK] mode the wire is a concatenation of self-delimiting
+     * MessagePack values. The transport skips the initial nil flush frame and converts each event
+     * to JSON text before invoking [onLine], preserving the existing callback contract.
+     *
+     * @param onLine Callback invoked with each event as JSON text.
      * @return A [StreamSubscription] that controls the stream lifecycle and exposes the last error (if any).
      */
     fun stream(
@@ -443,8 +466,13 @@ class OnyxClient(
                 val url = URI(urlStr).toURL()
                 conn = (url.openConnection() as HttpURLConnection).also { connectionRef.set(it) }
 
-                val payload = selectQuery.toJson()
-                val payloadBytes = payload.toByteArray(StandardCharsets.UTF_8)
+                val binaryWire = entityWireFormat == EntityWireFormat.MESSAGE_PACK
+                val payload = if (binaryWire) null else selectQuery.toJson()
+                val payloadBytes = if (binaryWire) {
+                    EntityMessagePack.encode(selectQuery)
+                } else {
+                    payload!!.toByteArray(StandardCharsets.UTF_8)
+                }
 
                 conn.requestMethod = "PUT"
                 conn.instanceFollowRedirects = false // avoid silent body drop on 30x
@@ -455,8 +483,16 @@ class OnyxClient(
                 conn.useCaches = false
 
                 applyHeaders(conn, defaultHeaders())
-                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-                conn.setRequestProperty("Accept", "application/x-ndjson, application/json")
+                if (binaryWire) {
+                    conn.setRequestProperty("Content-Type", ENTITY_MESSAGE_PACK_MEDIA_TYPE)
+                    conn.setRequestProperty(
+                        "Accept",
+                        "$ENTITY_MESSAGE_PACK_MEDIA_TYPE, application/json;q=0.9",
+                    )
+                } else {
+                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                    conn.setRequestProperty("Accept", "application/x-ndjson, application/json")
+                }
 
                 // send exact length (safer than chunked for small JSON)
                 conn.setFixedLengthStreamingMode(payloadBytes.size)
@@ -468,20 +504,28 @@ class OnyxClient(
 
                 val code = conn.responseCode
                 if (code !in 200..299) {
-                    val errorBody = conn.bodyAsString()
+                    val errorBody = decodeResponseBody(conn.bodyAsBytes(), conn.contentType)
                     throw RuntimeException("HTTP Error: $code ${conn.responseMessage}. Body: $errorBody")
                 }
 
-                BufferedReader(InputStreamReader(conn.inputStream, StandardCharsets.UTF_8)).use { reader ->
-                    while (isActive.get() && !Thread.currentThread().isInterrupted) {
-                        val line = reader.readLine() ?: break
-                        if (!isActive.get()) break
-                        try {
-                            onLine(line)
-                        } catch (consumerError: Throwable) {
-                            errorRef.compareAndSet(null, consumerError)
-                            isActive.set(false)
-                            break
+                if (isMessagePackContentType(conn.contentType)) {
+                    EntityMessagePack.decodeSequence(conn.inputStream) { value ->
+                        if (value != null && isActive.get() && !Thread.currentThread().isInterrupted) {
+                            onLine(gson.toJson(value))
+                        }
+                    }
+                } else {
+                    BufferedReader(InputStreamReader(conn.inputStream, StandardCharsets.UTF_8)).use { reader ->
+                        while (isActive.get() && !Thread.currentThread().isInterrupted) {
+                            val line = reader.readLine() ?: break
+                            if (!isActive.get()) break
+                            try {
+                                onLine(line)
+                            } catch (consumerError: Throwable) {
+                                errorRef.compareAndSet(null, consumerError)
+                                isActive.set(false)
+                                break
+                            }
                         }
                     }
                 }
@@ -564,9 +608,13 @@ class OnyxClient(
     }
 
     /**
-     * URL-encodes a string for safe inclusion in paths or querystrings.
+     * RFC 3986-encodes a string for safe inclusion in paths or query strings.
+     *
+     * [URLEncoder] emits `+` for spaces because it implements HTML form encoding. A `+` in a
+     * path segment is literal, so use `%20`, which is valid in both paths and query strings.
      */
-    fun encode(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8.name())
+    fun encode(value: String): String =
+        URLEncoder.encode(value, StandardCharsets.UTF_8.name()).replace("+", "%20")
 
     /**
      * URL-encodes a class simple name (table).
@@ -860,14 +908,12 @@ class OnyxClient(
         headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
     }
 
-    private fun HttpURLConnection.bodyAsString(): String {
-        fun readAll(input: InputStream): String =
-            input.bufferedReader(StandardCharsets.UTF_8).use(BufferedReader::readText)
+    private fun HttpURLConnection.bodyAsBytes(): ByteArray {
         return try {
-            readAll(inputStream)
+            inputStream.use(InputStream::readBytes)
         } catch (_: Exception) {
             val err = errorStream
-            if (err != null) readAll(err) else ""
+            if (err != null) err.use(InputStream::readBytes) else ByteArray(0)
         }
     }
 
@@ -929,26 +975,45 @@ class OnyxClient(
         path: String,
         body: Any? = null,
         extraHeaders: Map<String, String> = emptyMap(),
-        queryString: String = ""
+        queryString: String = "",
+        entityRoute: Boolean = false,
     ): String {
         val url = "$baseUrl$path$queryString"
         val methodValue = method.value
         val headers = defaultHeaders(extraHeaders)
-        val payload = if ((methodValue == "POST" || methodValue == "PUT") && body != null) {
+        val binaryWire = entityRoute && entityWireFormat == EntityWireFormat.MESSAGE_PACK
+        val hasRequestBody = (methodValue == "POST" || methodValue == "PUT") && body != null
+        val payloadText = if (hasRequestBody && !binaryWire) {
             (body as? String) ?: body.toJson()
-        } else null
+        } else {
+            null
+        }
+        val payloadBytes = when {
+            !hasRequestBody -> null
+            binaryWire && body is String -> EntityMessagePack.encode(JsonParser.parseString(body))
+            binaryWire -> EntityMessagePack.encode(body)
+            else -> payloadText!!.toByteArray(StandardCharsets.UTF_8)
+        }
 
-        if (headers["Accept"].isNullOrEmpty()) {
-            headers["Accept"] = "application/json"
+        headers.remove("Content-Type")
+        headers["Accept"] = if (binaryWire) {
+            "$ENTITY_MESSAGE_PACK_MEDIA_TYPE, application/json;q=0.9"
+        } else {
+            "application/json"
         }
-        if (payload != null && headers["Content-Type"].isNullOrEmpty()) {
-            headers["Content-Type"] = "application/json; charset=utf-8"
+        if (payloadBytes != null) {
+            headers["Content-Type"] = if (binaryWire) {
+                ENTITY_MESSAGE_PACK_MEDIA_TYPE
+            } else {
+                "application/json; charset=utf-8"
+            }
         }
+        val requestPreview = payloadText ?: payloadBytes?.let { "<${it.size} MessagePack bytes>" }
 
         return if (fetch != null) {
-            executeWithFetch(url, methodValue, headers, payload)
+            executeWithFetch(url, methodValue, headers, payloadText, payloadBytes, binaryWire, requestPreview)
         } else {
-            executeWithHttpUrlConnection(url, methodValue, headers, payload)
+            executeWithHttpUrlConnection(url, methodValue, headers, payloadBytes, requestPreview)
         }
     }
 
@@ -956,14 +1021,26 @@ class OnyxClient(
         url: String,
         method: String,
         headers: MutableMap<String, String>,
-        payload: String?
+        payloadText: String?,
+        payloadBytes: ByteArray?,
+        binaryWire: Boolean,
+        requestPreview: String?,
     ): String {
         if (requestLoggingEnabled) {
-            logRequest(method, url, headers, payload)
+            logRequest(method, url, headers, requestPreview)
         }
-        val init = FetchInit(method = method, headers = headers.toMap(), body = payload)
+        val init = FetchInit(
+            method = method,
+            headers = headers.toMap(),
+            body = payloadText,
+            bodyBytes = if (binaryWire) payloadBytes else null,
+        )
         val response = fetch!!.invoke(url, init)
-        val text = response.text()
+        val text = if (isMessagePackContentType(response.header("Content-Type"))) {
+            decodeResponseBody(response.bytes(), ENTITY_MESSAGE_PACK_MEDIA_TYPE)
+        } else {
+            response.text()
+        }
         if (responseLoggingEnabled) {
             logResponse(response.status, url, text)
         }
@@ -981,12 +1058,12 @@ class OnyxClient(
         url: String,
         method: String,
         headers: MutableMap<String, String>,
-        payload: String?
+        bodyBytes: ByteArray?,
+        requestPreview: String?,
     ): String {
         var currentUrl = URI(url).toURL()
         var methodToUse = method
         var redirects = 0
-        val bodyBytes = payload?.toByteArray(StandardCharsets.UTF_8)
 
         while (true) {
             val conn = (currentUrl.openConnection() as HttpURLConnection)
@@ -1001,7 +1078,7 @@ class OnyxClient(
 
                 applyHeaders(conn, headers)
                 if (requestLoggingEnabled) {
-                    logRequest(methodToUse, currentUrl.toString(), headers, payload)
+                    logRequest(methodToUse, currentUrl.toString(), headers, requestPreview)
                 }
 
                 if (bodyBytes != null) {
@@ -1036,7 +1113,9 @@ class OnyxClient(
 
                 if ((code == 301 || code == 303) && bodyBytes != null) {
                     val location = conn.getHeaderField("Location")
-                    val txt = try { conn.errorStream?.use { String(it.readBytes(), StandardCharsets.UTF_8) } } catch (_: Exception) { null } ?: ""
+                    val bytes = try { conn.errorStream?.use(InputStream::readBytes) } catch (_: Exception) { null }
+                        ?: ByteArray(0)
+                    val txt = decodeResponseBody(bytes, conn.contentType)
                     if (responseLoggingEnabled) {
                         logResponse(code, conn.url.toString(), txt)
                     }
@@ -1046,14 +1125,15 @@ class OnyxClient(
 
                 // For error responses, try errorStream first, fall back to inputStream
                 // Both can throw FileNotFoundException for 404s
-                val text = try {
+                val responseBytes = try {
                     val stream = if (code >= 400) (conn.errorStream ?: conn.inputStream) else conn.inputStream
-                    stream?.use { String(it.readBytes(), StandardCharsets.UTF_8) } ?: ""
+                    stream?.use(InputStream::readBytes) ?: ByteArray(0)
                 } catch (_: java.io.FileNotFoundException) {
                     // FileNotFoundException is thrown for 404 responses when accessing inputStream
-                    ""
+                    ByteArray(0)
                 }
-                
+                val text = decodeResponseBody(responseBytes, conn.contentType)
+
                 if (responseLoggingEnabled) {
                     logResponse(code, conn.url.toString(), text)
                 }
@@ -1077,6 +1157,18 @@ class OnyxClient(
             }
         }
     }
+
+    private fun decodeResponseBody(bytes: ByteArray, contentType: String?): String {
+        if (bytes.isEmpty()) return ""
+        return if (isMessagePackContentType(contentType)) {
+            EntityMessagePack.decodeToJson(bytes)
+        } else {
+            String(bytes, StandardCharsets.UTF_8)
+        }
+    }
+
+    private fun isMessagePackContentType(contentType: String?): Boolean =
+        contentType?.substringBefore(';')?.trim()?.equals(ENTITY_MESSAGE_PACK_MEDIA_TYPE, ignoreCase = true) == true
 
     private fun maskSensitiveHeaders(headers: Map<String, String>): Map<String, String> =
         headers.mapValues { (key, value) ->
@@ -1181,6 +1273,67 @@ class QueryBuilder(
         } else {
             addCondition(condition, LogicalOperator.AND)
         }
+        return this
+    }
+
+    /** Adds a bounded semantic or hybrid search clause to the query. */
+    override fun search(searchQuery: VectorSearchQuery): IQueryBuilder {
+        val searchCriteria = QueryCriteria(
+            FULL_TEXT_ATTRIBUTE,
+            QueryCriteriaOperator.MATCHES,
+            searchQuery
+        )
+        val condition = ConditionBuilderImpl(searchCriteria)
+        if (conditions == null) {
+            conditions = condition.toCondition()
+        } else {
+            addCondition(condition, LogicalOperator.AND)
+        }
+        return this
+    }
+
+    /** Seeds a physically bounded lexical candidate request. */
+    override fun approximateSearch(searchQuery: VectorSearchQuery): IQueryBuilder {
+        require(conditions == null) { "SEARCH_CANDIDATES must be the sole root criterion" }
+        require(!searchQuery.text.isNullOrBlank() && searchQuery.semantic == null) {
+            "SEARCH_CANDIDATES supports text-only VectorSearchQuery values"
+        }
+        conditions = ConditionBuilderImpl(
+            QueryCriteria(
+                FULL_TEXT_ATTRIBUTE,
+                QueryCriteriaOperator.SEARCH_CANDIDATES,
+                searchQuery
+            )
+        ).toCondition()
+        return this
+    }
+
+    /** Seeds a physically bounded native-HNSW candidate request. */
+    override fun hnswCandidates(searchQuery: HnswSearchQuery): IQueryBuilder {
+        require(conditions == null) { "HNSW_CANDIDATES must be the sole root criterion" }
+        conditions = ConditionBuilderImpl(
+            QueryCriteria(
+                FULL_TEXT_ATTRIBUTE,
+                QueryCriteriaOperator.HNSW_CANDIDATES,
+                searchQuery
+            )
+        ).toCondition()
+        return this
+    }
+
+    /** Seeds the request with one explicitly approximate bounded index route. */
+    override fun approximateCandidates(
+        attribute: String,
+        candidateQuery: ApproximateIndexCandidateQuery
+    ): IQueryBuilder {
+        require(conditions == null) { "CANDIDATES must be the sole root criterion" }
+        conditions = ConditionBuilderImpl(
+            QueryCriteria(
+                attribute,
+                QueryCriteriaOperator.CANDIDATES,
+                candidateQuery
+            )
+        ).toCondition()
         return this
     }
 

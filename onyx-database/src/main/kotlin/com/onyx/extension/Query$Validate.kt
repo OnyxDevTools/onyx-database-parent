@@ -8,6 +8,10 @@ import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.QueryPartitionMode
+import com.onyx.persistence.query.resolveApproximateIndexCandidateQuery
+import com.onyx.persistence.query.resolveVectorSearchQuery
+import com.onyx.persistence.query.resolveHnswSearchQuery
+import com.onyx.persistence.VectorManagedEntity
 
 /**
  * Validates a query to ensure it is valid before executing it
@@ -25,7 +29,98 @@ fun Query.validate(context: SchemaContext, descriptor: EntityDescriptor = contex
 
     definePartition(context)
 
-    this.getAllCriteria()
+    val allCriteria = this.getAllCriteria()
+    val approximateCandidates = allCriteria.filter {
+        it.operator == QueryCriteriaOperator.CANDIDATES
+    }
+    if (approximateCandidates.isNotEmpty()) {
+        require(approximateCandidates.size == 1 && criteria === approximateCandidates.single() &&
+            approximateCandidates.single().subCriteria.isEmpty()) {
+            "CANDIDATES must be the sole root criterion; filter its admitted rows in the caller"
+        }
+        require(!isUpdateOrDelete) {
+            "CANDIDATES is a read-only approximate admission operation"
+        }
+        require(!cache && changeListener == null) {
+            "CANDIDATES does not support query caching or live listeners"
+        }
+        require(!approximateCandidates.single().isNot && !approximateCandidates.single().flip) {
+            "Approximate CANDIDATES criteria cannot be negated"
+        }
+        resolveApproximateIndexCandidateQuery(approximateCandidates.single().value)
+        if (descriptor.hasPartition) {
+            require(partition != QueryPartitionMode.ALL && partition.toString().isNotBlank()) {
+                "CANDIDATES requires one concrete partition for partitioned entities"
+            }
+        }
+    }
+
+    val approximateSearches = allCriteria.filter {
+        it.operator == QueryCriteriaOperator.SEARCH_CANDIDATES
+    }
+    if (approximateSearches.isNotEmpty()) {
+        require(approximateSearches.size == 1 && criteria === approximateSearches.single() &&
+            approximateSearches.single().subCriteria.isEmpty()) {
+            "SEARCH_CANDIDATES must be the sole root criterion; filter its admitted rows in the caller"
+        }
+        require(!isUpdateOrDelete) {
+            "SEARCH_CANDIDATES is a read-only approximate admission operation"
+        }
+        require(!cache && changeListener == null) {
+            "SEARCH_CANDIDATES does not support query caching or live listeners"
+        }
+        require(!approximateSearches.single().isNot && !approximateSearches.single().flip) {
+            "Approximate SEARCH_CANDIDATES criteria cannot be negated"
+        }
+        require(approximateSearches.single().attribute == Query.FULL_TEXT_ATTRIBUTE) {
+            "SEARCH_CANDIDATES requires the ${Query.FULL_TEXT_ATTRIBUTE} field"
+        }
+        require(VectorManagedEntity::class.java.isAssignableFrom(requireNotNull(entityType))) {
+            "SEARCH_CANDIDATES requires a VectorManagedEntity"
+        }
+        val searchQuery = requireNotNull(
+            resolveVectorSearchQuery(approximateSearches.single().value)
+        ) { "SEARCH_CANDIDATES requires a lexical VectorSearchQuery" }
+        require(!searchQuery.text.isNullOrBlank() && searchQuery.semantic == null) {
+            "SEARCH_CANDIDATES supports text-only VectorSearchQuery values"
+        }
+        if (descriptor.hasPartition) {
+            require(partition != QueryPartitionMode.ALL && partition.toString().isNotBlank()) {
+                "SEARCH_CANDIDATES requires one concrete partition for partitioned entities"
+            }
+        }
+    }
+
+    val hnswSearches = allCriteria.filter {
+        it.operator == QueryCriteriaOperator.HNSW_CANDIDATES
+    }
+    if (hnswSearches.isNotEmpty()) {
+        require(hnswSearches.size == 1 && criteria === hnswSearches.single() &&
+            hnswSearches.single().subCriteria.isEmpty()) {
+            "HNSW_CANDIDATES must be the sole root criterion; filter its admitted rows in the caller"
+        }
+        require(!isUpdateOrDelete) {
+            "HNSW_CANDIDATES is a read-only approximate admission operation"
+        }
+        require(!cache && changeListener == null) {
+            "HNSW_CANDIDATES does not support query caching or live listeners"
+        }
+        require(!hnswSearches.single().isNot && !hnswSearches.single().flip) {
+            "Approximate HNSW_CANDIDATES criteria cannot be negated"
+        }
+        require(hnswSearches.single().attribute == Query.FULL_TEXT_ATTRIBUTE) {
+            "HNSW_CANDIDATES requires the ${Query.FULL_TEXT_ATTRIBUTE} field"
+        }
+        require(VectorManagedEntity::class.java.isAssignableFrom(requireNotNull(entityType))) {
+            "HNSW_CANDIDATES requires a VectorManagedEntity"
+        }
+        resolveHnswSearchQuery(hnswSearches.single().value)
+        if (descriptor.hasPartition) {
+            require(partition != QueryPartitionMode.ALL && partition.toString().isNotBlank()) {
+                "HNSW_CANDIDATES requires one concrete partition for partitioned entities"
+            }
+        }
+    }
 
     this.updates.forEach {
         val attribute = descriptor.attributes[it.fieldName]
@@ -101,4 +196,3 @@ fun Query.hasPartitionField(context: SchemaContext): Boolean = context.getBaseDe
 fun Query.isDefaultQuery(descriptor: EntityDescriptor): Boolean = this.criteria == null
         || (this.criteria!!.subCriteria.size <= 0 && this.criteria!!.operator === QueryCriteriaOperator.NOT_NULL && this.criteria!!.attribute == descriptor.identifier!!.name)
         || (this.criteria!!.subCriteria.size <= 0 && this.criteria!!.operator === QueryCriteriaOperator.NOT_EQUAL && this.criteria!!.value == null && this.criteria!!.attribute == descriptor.identifier!!.name)
-

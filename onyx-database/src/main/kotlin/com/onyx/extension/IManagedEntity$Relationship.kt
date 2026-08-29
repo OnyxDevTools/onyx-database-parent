@@ -9,6 +9,7 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.interactors.relationship.data.RelationshipTransaction
 import com.onyx.interactors.relationship.RelationshipInteractor
 import com.onyx.interactors.relationship.data.RelationshipReference
+import com.onyx.interactors.record.withRelationshipMutationLock
 import java.util.ArrayList
 
 /**
@@ -30,7 +31,8 @@ fun IManagedEntity.relationshipInteractor(context: SchemaContext, name:String, d
  */
 @JvmOverloads
 fun IManagedEntity.saveRelationships(context: SchemaContext, transaction: RelationshipTransaction = RelationshipTransaction(), descriptor: EntityDescriptor = descriptor(context)) {
-    if (descriptor.hasRelationships) {
+    if (!descriptor.hasRelationships) return
+    context.withRelationshipMutationLock {
         if(!transaction.contains(this, context)) {
             transaction.add(this, context)
             descriptor.relationships.values.forEach { relationshipInteractor(context, it.name, descriptor).saveRelationshipForEntity(this, transaction) }
@@ -46,7 +48,16 @@ fun IManagedEntity.saveRelationships(context: SchemaContext, transaction: Relati
  * @since 2.0.0
  */
 @JvmOverloads
-fun IManagedEntity.deleteRelationships(context: SchemaContext, transaction: RelationshipTransaction = RelationshipTransaction(), descriptor: EntityDescriptor = descriptor(context)) = descriptor.relationships.values.forEach { relationshipInteractor(context, it.name, descriptor).deleteRelationshipForEntity(this, transaction) }
+fun IManagedEntity.deleteRelationships(context: SchemaContext, transaction: RelationshipTransaction = RelationshipTransaction(), descriptor: EntityDescriptor = descriptor(context)) =
+    if (!descriptor.hasRelationships) {
+        Unit
+    } else {
+        context.withRelationshipMutationLock {
+            descriptor.relationships.values.forEach {
+                relationshipInteractor(context, it.name, descriptor).deleteRelationshipForEntity(this, transaction)
+            }
+        }
+    }
 
 /**
  * Retrieve a relationship descriptor for an entity given the property name

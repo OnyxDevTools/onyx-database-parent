@@ -12,6 +12,7 @@ import com.onyx.interactors.relationship.RelationshipInteractor
 import com.onyx.interactors.relationship.data.RelationshipReference
 import com.onyx.extension.*
 import com.onyx.extension.common.catchAll
+import com.onyx.interactors.record.withRecordMutationLock
 import com.onyx.persistence.annotations.values.CascadePolicy
 import com.onyx.persistence.query.QueryListenerEvent
 
@@ -62,19 +63,27 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
 
                 // Cascade save the entity
                 val entityDoesExist = if (relationshipDescriptor.shouldSaveEntity && !transaction.contains(it, context)) {
-                    val relationshipDescriptor = it.descriptor(context)
-                    val putResult = it.save(context, relationshipDescriptor)
+                    val childDescriptor = it.descriptor(context)
+                    val putResult = context.withRecordMutationLock(childDescriptor) {
+                        val result = it.save(context, childDescriptor)
+                        val reference = it.reference(result.recordId, context, childDescriptor)
+                        it.saveIndexes(
+                            context,
+                            if (result.isInsert) 0L else result.recordId,
+                            result.recordId,
+                            childDescriptor,
+                            previousEntity = result.previousValue as? IManagedEntity,
+                        )
+                        it.saveRelationships(context, RelationshipTransaction(entity, context))
+                        context.queryCacheInteractor.updateCachedQueryResultsForEntity(
+                            it,
+                            childDescriptor,
+                            reference,
+                            if (result.isInsert) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE,
+                        )
+                        result
+                    }
                     relationshipObjectIdentifier.identifier = putResult.key
-
-                    val reference = it.reference(putResult.recordId, context, relationshipDescriptor)
-                    it.saveIndexes(
-                        context,
-                        if (putResult.isInsert) 0L else putResult.recordId,
-                        putResult.recordId,
-                        previousEntity = putResult.previousValue as? IManagedEntity
-                    )
-                    it.saveRelationships(context, RelationshipTransaction(entity, context))
-                    context.queryCacheInteractor.updateCachedQueryResultsForEntity(it, relationshipDescriptor, reference, if(putResult.isInsert) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE)
                     true
                 } else {
                     it.reference(context).reference > 0L
@@ -102,9 +111,15 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
                 deleteInverseRelationshipReference(entity, parentRelationshipReference, it)
                 if(relationshipDescriptor.shouldDeleteEntity) {
                     val entityToDelete = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
-                    entityToDelete?.deleteAllIndexes(context, entityToDelete.referenceId(context))
-                    entityToDelete?.deleteRelationships(context, transaction)
-                    entityToDelete?.recordInteractor(context)?.delete(entityToDelete)
+                    if (entityToDelete != null) {
+                        val childDescriptor = entityToDelete.descriptor(context)
+                        context.withRecordMutationLock(childDescriptor) {
+                            val referenceId = entityToDelete.referenceId(context, childDescriptor)
+                            entityToDelete.deleteAllIndexes(context, referenceId, childDescriptor)
+                            entityToDelete.deleteRelationships(context, transaction)
+                            entityToDelete.recordInteractor(context, childDescriptor).delete(entityToDelete)
+                        }
+                    }
                 }
             }
         }

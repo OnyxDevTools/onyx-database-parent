@@ -161,11 +161,16 @@ class Query : BufferStreamable {
     @Transient
     private var functions: List<QueryFunction>? = null
 
-    /**
-     * Full-text search scores keyed by record reference.
-     */
+    /** Search scores keyed by record reference. */
     @Transient
     var fullTextScores: Map<Reference, Float>? = null
+
+    /**
+     * Candidate membership for each search clause. Identity semantics are used by the
+     * executor so two distinct clauses with equal text remain independently evaluable.
+     */
+    @Transient
+    internal var vectorSearchMatches: Map<QueryCriteria, Set<Reference>>? = null
 
     /**
      * Get the functions associated to the query selection

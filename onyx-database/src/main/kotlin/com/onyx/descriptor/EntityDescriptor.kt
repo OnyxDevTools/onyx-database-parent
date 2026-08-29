@@ -8,11 +8,13 @@ import com.onyx.persistence.annotations.*
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.extension.validate
 import com.onyx.extension.validateIsManagedEntity
+import com.onyx.persistence.VectorManagedEntity
 import java.io.File
 import java.io.Serializable
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.util.*
+import com.onyx.vector.VectorManagedConfiguration
 
 /**
  * Created by timothy.osborn on 12/11/14.
@@ -142,6 +144,7 @@ constructor(
                 attribute.name = it.name
                 attribute.type = it.type
                 attribute.isNullable = annotation?.nullable != false
+                attribute.isInternal = annotation?.internal == true
                 attribute.size = annotation?.size ?: -1
                 attribute.isEnum = attribute.type.isEnum
 
@@ -193,11 +196,17 @@ constructor(
             index.name = it.name
             index.type = it.type
             index.indexType = indexAnnotation.type
-            index.embeddingDimensions = indexAnnotation.embeddingDimensions
-            index.minimumScore = indexAnnotation.minimumScore
-            index.maxNeighbors = indexAnnotation.maxNeighbors
-            index.searchRadius = indexAnnotation.searchRadius
-            index.quantization = indexAnnotation.quantization
+            if (
+                index.indexType == com.onyx.persistence.annotations.values.IndexType.VECTOR &&
+                VectorManagedEntity::class.java.isAssignableFrom(entityClass) &&
+                index.name == VectorManagedEntity.REPRESENTATION_FIELD
+            ) {
+                val vectorConfiguration = VectorManagedConfiguration.forClass(entityClass)
+                index.entropy = vectorConfiguration.entropy.bitCount
+                index.encodingVersion = vectorConfiguration.encodingVersion
+                index.configurationId = vectorConfiguration.configurationId
+                index.configurationSignature = vectorConfiguration.signature
+            }
             index.entityDescriptor = this
             it.isAccessible = true
             index.field = it
@@ -285,9 +294,6 @@ constructor(
 
     val hasPartition:Boolean
         get() = partition != null
-
-    val entityType: EntityType
-        get() = entity?.type ?: EntityType.DEFAULT
 }
 
 const val DEFAULT_DATA_FILE = "data.dat"

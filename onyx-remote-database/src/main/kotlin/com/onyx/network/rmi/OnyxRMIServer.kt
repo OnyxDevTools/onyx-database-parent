@@ -136,7 +136,10 @@ class OnyxRMIServer : PushPublisher {
                         // as the cause rather than wrapping it.
                         if (t.cause is OnyxException) {
                             t.cause
-                        } else MethodInvocationException(MethodInvocationException.UNHANDLED_EXCEPTION, t)
+                        } else MethodInvocationException(
+                            MethodInvocationException.UNHANDLED_EXCEPTION,
+                            t.cause ?: t
+                        )
                     }
 
                 }

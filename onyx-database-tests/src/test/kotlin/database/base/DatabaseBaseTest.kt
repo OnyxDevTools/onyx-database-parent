@@ -112,7 +112,7 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
                 delete(database)
             }
             database.delete()
-            Contexts.clear()
+            Contexts.get(location)?.let { Contexts.remove(it) }
         }
 
         /**

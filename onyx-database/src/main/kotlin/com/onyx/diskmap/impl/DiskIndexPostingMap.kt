@@ -95,7 +95,28 @@ class DiskIndexPostingMap(
     ) = lock.readLock {
         val from = fromValue?.let(::normalize)
         val to = toValue?.let(::normalize)
-        visitRecordIds(from, fromRecordId, includeFrom, to, toRecordId, includeTo, action)
+        visitRecordIds(from, fromRecordId, includeFrom, to, toRecordId, includeTo, Int.MAX_VALUE) {
+            action(it)
+            true
+        }
+        Unit
+    }
+
+    override fun visitRecordIdsInRange(
+        fromValue: Any?,
+        fromRecordId: Long,
+        includeFrom: Boolean,
+        toValue: Any?,
+        toRecordId: Long,
+        includeTo: Boolean,
+        maxVisits: Int,
+        visitor: (Long) -> Boolean
+    ): Int = lock.readLock {
+        require(maxVisits >= 0) { "maxVisits must be non-negative" }
+        if (maxVisits == 0) return@readLock 0
+        val from = fromValue?.let(::normalize)
+        val to = toValue?.let(::normalize)
+        visitRecordIds(from, fromRecordId, includeFrom, to, toRecordId, includeTo, maxVisits, visitor)
     }
 
     override fun forEachDistinctValue(action: (Any) -> Unit) = lock.readLock {
@@ -649,10 +670,13 @@ class DiskIndexPostingMap(
         toValue: Any?,
         toRecordId: Long,
         includeTo: Boolean,
-        action: (Long) -> Unit
-    ) {
+        maxVisits: Int,
+        visitor: (Long) -> Boolean
+    ): Int {
+        if (maxVisits == 0) return 0
         val fromToken = fromValue?.let(::queryToken)
         val toToken = toValue?.let(::queryToken)
+        var visits = 0
         var page: IndexPostingPage? = if (fromValue == null) {
             leftMostLeaf()
         } else {
@@ -668,13 +692,16 @@ class DiskIndexPostingMap(
             while (index < page.keyCount) {
                 if (toValue != null) {
                     val comparison = compareStoredToQuery(page, index, toValue, toToken!!, toRecordId)
-                    if (comparison > 0 || comparison == 0 && !includeTo) return
+                    if (comparison > 0 || comparison == 0 && !includeTo) return visits
                 }
-                action(page.recordIds[index++])
+                val continueVisiting = visitor(page.recordIds[index++])
+                visits++
+                if (!continueVisiting || visits >= maxVisits) return visits
             }
             page = findPageOrNull(page.nextLeaf)
             index = 0
         }
+        return visits
     }
 
     private fun findLeaf(

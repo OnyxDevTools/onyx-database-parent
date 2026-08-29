@@ -1,7 +1,6 @@
 package database.index
 
 import com.onyx.persistence.IManagedEntity
-import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import entities.index.Bar
 import org.junit.Assume.assumeTrue
@@ -87,7 +86,6 @@ class BarBTreeIndexSizeBenchmarkTest {
             closed = true
         } finally {
             if (!closed) factory.close()
-            Contexts.clear()
         }
 
         val elapsed = Duration.ofNanos(System.nanoTime() - startedAt)

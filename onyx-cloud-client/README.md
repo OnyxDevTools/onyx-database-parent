@@ -13,7 +13,7 @@ Kotlin/JVM client SDK for **Onyx Cloud Database** — a typed, builder-pattern A
 - Schema API for managing database schemas
 - Secrets API for secure credential storage
 - Document storage for binary assets
-- Full-text (Lucene) search capabilities
+- Vector-managed whole-record lexical search with structured filters
 
 - **Website:** https://onyx.dev/
 - **Cloud Console:** https://cloud.onyx.dev
@@ -136,6 +136,7 @@ val db = onyx.init<Any>()
 ```kotlin
 import com.onyx.cloud.api.onyx
 import com.onyx.cloud.api.OnyxConfig
+import com.onyx.cloud.api.EntityWireFormat
 
 val db = onyx.init<Any>(OnyxConfig(
     baseUrl = "https://api.onyx.dev",
@@ -145,6 +146,7 @@ val db = onyx.init<Any>(OnyxConfig(
     partition = "tenantA",                // optional default partition
     requestLoggingEnabled = true,         // optional request logging
     responseLoggingEnabled = true,        // optional response logging
+    entityWireFormat = EntityWireFormat.MESSAGE_PACK, // optional entity binary protocol
     aiBaseUrl = "https://ai.onyx.dev",    // optional AI endpoint
     defaultModel = "onyx"                 // optional default model
 ))
@@ -176,8 +178,37 @@ val db = onyx.init(
 | `responseLoggingEnabled` | Log HTTP responses |
 | `requestTimeoutMs` | Non-streaming read timeout (default: 120,000ms) |
 | `connectTimeoutMs` | Socket connect timeout (default: 30,000ms) |
+| `entityWireFormat` | `JSON` (default) or opt-in `MESSAGE_PACK` for entity routes |
 | `aiBaseUrl` | AI API endpoint (defaults to `https://ai.onyx.dev`) |
 | `defaultModel` | Default AI model (defaults to `onyx`) |
+
+### Binary entity protocol
+
+Set `entityWireFormat = EntityWireFormat.MESSAGE_PACK` to use the registered
+`application/vnd.msgpack` media type for entity save/find/delete, select/count/update/delete queries,
+and live-query streams. JSON remains the default, so updating the SDK does not change existing
+deployments. Documents, schemas, secrets, and AI/model APIs always remain JSON.
+
+The representation is schema-free and recursive like JSON. Its portable v1 profile supports null,
+booleans, signed 64-bit integers, finite floating-point values, UTF-8 strings, arrays, and string-keyed
+maps; dates are ISO-8601 strings. Binary blobs, MessagePack extensions, non-string map keys, malformed
+UTF-8, and values beyond the safety limits are rejected.
+
+The client sends `Accept: application/vnd.msgpack, application/json;q=0.9` and decodes each response
+according to its actual `Content-Type`, so JSON errors and transitional JSON success responses remain
+readable. It never retries a mutating binary request automatically. Live streams contain concatenated
+self-delimiting MessagePack values; the SDK skips the initial nil flush frame.
+
+Custom `fetch` adapters can support binary calls through `FetchInit.bodyBytes` and
+`FetchResponse.bytes()`. Existing JSON-only adapters remain source-compatible.
+
+Run the focused interoperability, transport, packet-size, and codec timing checks with:
+
+```shell
+./gradlew :onyx-cloud-client:test \
+  --tests com.onyx.cloud.extensions.EntityMessagePackTest \
+  --tests com.onyx.cloud.EntityMessagePackTransportTest
+```
 
 #### Debug mode
 
@@ -540,9 +571,13 @@ db.cascade("orders", "profile").delete<User>("user_123")
 
 ---
 
-## Full-text (Lucene) search
+## Vector-managed record search
 
-Use `.search(...)` for full-text queries across indexed fields.
+Use `.search(...)` for normalized lexical queries across the persisted fields of a vector-managed server entity. The wire syntax is unchanged: search can be combined with ordinary equality, range, partition, and compound criteria.
+
+On the server, the model extends `VectorManagedEntity` and uses its existing `@Entity(entropy = N)` annotation. Every persisted identifier, partition, and attribute is encoded automatically by type. Entropy is the only vector setting: the requested positive bit count is rounded and bounded to 64, 128, 192, or 256 bits, then shared by structured features and semantic SimHash.
+
+The server stores sparse term and structured-feature fingerprints rather than a dense embedding for each record. One inherited internal vector index routes all public scalar operators across numeric, date, character, Boolean, string, and enum fields; the normal query evaluator then verifies compound predicates before returning records. It never substitutes a full-table scan for an unroutable vector predicate. Application fields do not declare their own vector indexes.
 
 ### Table-specific search
 
@@ -571,6 +606,39 @@ val filteredSearch = db.from<User>()
     .and("status" eq "active")
     .list<User>()
 ```
+
+`minScore` filters the server's candidate score; it is not a probability. The cloud client's `.search(...)` shorthand sends lexical text. Applications that also need semantic PCA/SimHash candidates use the embedded/server `VectorSearchQuery` integration and may rerank returned content with their embedding model.
+
+### Native HNSW candidates
+
+Use `hnswCandidates(...)` when the server entity has been ingested with native HNSW vectors. The
+calibration ID must identify the same embedding model and vector space used for the records.
+
+```kotlin
+val candidates = db.from<ChunkAttentionHash>()
+    .hnswCandidates(
+        HnswSearchQuery(
+            calibrationId = embeddingSpaceId,
+            vector = queryEmbedding,
+            maxCandidates = 100,
+            efSearch = 400,
+            minScore = 0.2f,
+        )
+    )
+    .inPartition(headRevisionId)
+    .list<ChunkAttentionHash>()
+```
+
+`HNSW_CANDIDATES` is approximate admission and must be the positive, read-only, sole root
+criterion. Partitioned entities require one concrete partition. Query vectors contain `1..16384`
+finite values with a non-zero norm; `maxCandidates` is bounded to `1..5000`, `efSearch` must be
+between `maxCandidates` and `20000`, and `minScore`, when present, is in `[-1, 1]`. Exactly rerank
+the bounded candidates when full-precision query/document embeddings are available.
+
+Rows written before native HNSW metadata was available are not HNSW-addressable. Re-embed and
+reingest those rows; rebuilding the index cannot recover an embedding from a legacy fingerprint.
+
+See [Vector-managed search](../docs/vector-managed-search.md) for automatic type encoding, entropy scaling, interval-tree predicates, semantic calibration, rebuild behavior, and the downstream reranking contract.
 
 ---
 

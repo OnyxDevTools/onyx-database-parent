@@ -9,6 +9,7 @@ import com.onyx.extension.common.ClassMetadata
  */
 data class AttributeDescriptor(
     var isNullable: Boolean = false,
+    var isInternal: Boolean = false,
     var size: Int = 0,
     var isEnum: Boolean = false,
     var enumValues: String? = null,

@@ -2,6 +2,7 @@
 
 package com.onyx.cloud.impl
 
+import com.onyx.cloud.api.EntityWireFormat
 import com.onyx.cloud.api.OnyxConfig
 import com.onyx.cloud.extensions.fromJson
 import java.io.File
@@ -64,6 +65,7 @@ object ConfigResolver {
         val apiKey: String,
         val apiSecret: String,
         val partition: String?,
+        val entityWireFormat: EntityWireFormat,
         val requestLoggingEnabled: Boolean,
         val responseLoggingEnabled: Boolean,
         val sources: Map<String, String> = emptyMap()
@@ -173,6 +175,7 @@ object ConfigResolver {
             apiKey = apiKey,
             apiSecret = apiSecret,
             partition = partition,
+            entityWireFormat = explicitConfig?.entityWireFormat ?: EntityWireFormat.JSON,
             requestLoggingEnabled = explicitConfig?.requestLoggingEnabled ?: debugEnabled,
             responseLoggingEnabled = explicitConfig?.responseLoggingEnabled ?: debugEnabled,
             sources = sources

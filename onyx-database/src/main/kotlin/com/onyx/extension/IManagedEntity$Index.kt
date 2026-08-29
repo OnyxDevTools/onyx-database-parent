@@ -2,6 +2,7 @@ package com.onyx.extension
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.VectorManagedEntity
 import com.onyx.persistence.context.SchemaContext
 
 /**
@@ -40,7 +41,13 @@ fun IManagedEntity.saveIndexes(
         descriptor.indexes.values.forEach {
             val indexInteractor = indexInteractor(context, it.name, descriptor)
             val oldIndexValue: Any? = previousEntity?.get(context, descriptor, it.name)
-            val indexValue: Any? = get(context, descriptor, it.name)
+            val indexValue: Any? = if (
+                this is VectorManagedEntity && it.name == VectorManagedEntity.REPRESENTATION_FIELD
+            ) {
+                consumePreparedVectorIndexValue()
+            } else {
+                get(context, descriptor, it.name)
+            }
             indexInteractor.save(oldIndexValue, indexValue, previousReferenceId, newReferenceId)
         }
     }

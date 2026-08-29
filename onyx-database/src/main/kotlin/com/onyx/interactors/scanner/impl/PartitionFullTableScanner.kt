@@ -9,6 +9,8 @@ import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.TableScanner
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
+import com.onyx.persistence.context.QueryExecutionEvent
+import com.onyx.persistence.context.reportQueryExecution
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
@@ -38,7 +40,7 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
         val context = Contexts.get(contextId)!!
         val maxCardinality = context.maxCardinality
 
-        records.forEachReference { recordId, value ->
+        records.visitReferencesWhile { recordId, value ->
             val reference = Reference(partitionId, recordId)
             if(query.meetsCriteria(value, reference, context, descriptor)) {
                 collector?.collect(reference, value)
@@ -47,6 +49,7 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
                 if(collector == null)
                     matching.add(reference)
             }
+            shouldContinueBoundedMutationScan()
         }
 
         records.clearCache()
@@ -65,6 +68,7 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
         val context = Contexts.get(contextId)!!
 
         if (query.partition === QueryPartitionMode.ALL) {
+            context.reportQueryExecution(QueryExecutionEvent.FULL_TABLE_SCAN)
             val matching = HashSet<Reference>()
             val units = ArrayList<Future<Set<Reference>>>()
 
@@ -91,6 +95,7 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
             if(partitionId == 0L) // Partition does not exist, lets do a full scan of default partition
                 return super.scan()
 
+            context.reportQueryExecution(QueryExecutionEvent.FULL_TABLE_SCAN)
             val partitionDescriptor = context.getDescriptorForEntity(query.entityType, query.partition)
             val dataFile = context.getDataFile(partitionDescriptor)
             val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(descriptor.identifier!!.type, partitionDescriptor.entityClass.name)

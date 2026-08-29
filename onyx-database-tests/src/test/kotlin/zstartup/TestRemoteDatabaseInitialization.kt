@@ -12,6 +12,7 @@ import org.junit.Before
 import org.junit.FixMethodOrder
 import org.junit.Test
 import org.junit.runners.MethodSorters
+import java.net.ServerSocket
 import kotlin.test.assertEquals
 
 /**
@@ -29,9 +30,10 @@ class TestRemoteDatabaseInitialization {
         val REMOTE_DATABASE_LOCATION = "C:/Sandbox/Onyx/Tests/remoteOnyxInitialize.oxd"
         val REMOTE_DATABASE_ENDPOINT = "onx://localhost:8012"
         val INVALID_DATABASE_LOCATION = "onx://localhost:8081"
-        val PERSIST_CONN_DATABASE_LOCATION = "onx://localhost:8082"
         val CONN_BEFORE_START_LOCATION = "onx://localhost:8083"
         val PERSIST_CONN_NOT_REOPEN_DATABASE_LOCATION = "onx://localhost:8084"
+
+        private fun availablePort(): Int = ServerSocket(0).use { it.localPort }
     }
 
     /**
@@ -76,11 +78,12 @@ class TestRemoteDatabaseInitialization {
 
     @Test
     fun testPersistentConnection() {
+        val port = availablePort()
         var server = DatabaseServer(REMOTE_DATABASE_LOCATION)
-        server.port = 8082
+        server.port = port
         server.start()
 
-        val factory = RemotePersistenceManagerFactory(PERSIST_CONN_DATABASE_LOCATION)
+        val factory = RemotePersistenceManagerFactory("onx://localhost:$port")
         factory.setCredentials("admin", "admin")
         factory.initialize()
 
@@ -93,7 +96,7 @@ class TestRemoteDatabaseInitialization {
         server.stop()
 
         server = DatabaseServer(REMOTE_DATABASE_LOCATION)
-        server.port = 8082
+        server.port = port
         server.start()
 
         Thread.sleep(1000)

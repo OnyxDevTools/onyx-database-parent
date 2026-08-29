@@ -3,6 +3,7 @@ package com.onyx.extension
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.VectorManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
@@ -11,9 +12,12 @@ import com.onyx.extension.common.get
 import com.onyx.extension.identifier
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.query.QueryCriteriaOperator
-import com.onyx.persistence.query.resolveFullTextQuery
+import com.onyx.persistence.query.resolveVectorSearchQuery
 import com.onyx.persistence.query.relationship
-import com.onyx.interactors.record.FullTextRecordInteractor
+import com.onyx.vector.VectorEntityEncoder
+import com.onyx.vector.VectorSearchEvaluator
+import com.onyx.vector.VectorValueCodec
+import java.util.Date
 
 /**
  * Entity meets the query criteria.  This method is used to determine whether the entity meets all the
@@ -33,6 +37,8 @@ import com.onyx.interactors.record.FullTextRecordInteractor
 fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, context: SchemaContext, descriptor: EntityDescriptor): Boolean = synchronized(this) {
 
     var subCriteria: Boolean
+    var evaluatedVectorSearch = false
+    var evaluatedVectorSearchScore: Float? = null
 
     // Iterate through
     for(it in this.getAllCriteria()) {
@@ -45,7 +51,37 @@ fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, con
                 graphMeetsCriteria(entity, it)
             }
         }
-        else {
+        else if (it.attribute == Query.FULL_TEXT_ATTRIBUTE) {
+            val evaluatedScore = if (entity is VectorManagedEntity) {
+                evaluatedVectorSearch = true
+                resolveVectorSearchQuery(it.value)?.let { searchQuery ->
+                    VectorSearchEvaluator.evaluate(entity, descriptor, searchQuery)
+                }
+            } else {
+                null
+            }
+            if (evaluatedScore != null) {
+                evaluatedVectorSearchScore = maxOf(evaluatedVectorSearchScore ?: evaluatedScore, evaluatedScore)
+            }
+            val matches = if (entity is VectorManagedEntity) {
+                evaluatedScore != null
+            } else {
+                vectorSearchMatches?.get(it)?.contains(entityReference)
+                    ?: (fullTextScores?.containsKey(entityReference) == true)
+            }
+            subCriteria = when (it.operator) {
+                QueryCriteriaOperator.NOT_MATCHES,
+                QueryCriteriaOperator.NOT_LIKE,
+                QueryCriteriaOperator.NOT_CONTAINS,
+                QueryCriteriaOperator.NOT_CONTAINS_IGNORE_CASE,
+                QueryCriteriaOperator.NOT_STARTS_WITH,
+                QueryCriteriaOperator.NOT_EQUAL,
+                QueryCriteriaOperator.NOT_IN,
+                QueryCriteriaOperator.NOT_BETWEEN,
+                QueryCriteriaOperator.NOT_NULL -> !matches
+                else -> matches
+            }
+        } else {
             // Compare operator for attribute value
             if (it.attributeDescriptor == null)
                 it.attributeDescriptor = descriptor.attributes[it.attribute!!]
@@ -56,30 +92,52 @@ fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, con
                 entity?.get<Any?>(it.attribute!!) // Use Kotlin property accessors
             }
 
-            val comparableAttribute = attribute.normalizeForComparison(it.operator, context)
-            subCriteria = it.value.compare(comparableAttribute, it.operator!!)
+            val usesStableVectorDateText = entity is VectorManagedEntity &&
+                attribute is Date &&
+                it.operator in VECTOR_TEXT_OPERATORS
+            val comparableAttribute = if (usesStableVectorDateText) {
+                VectorValueCodec.predicateText(attribute)
+            } else {
+                attribute.normalizeForComparison(it.operator, context)
+            }
+            val comparisonValue = if (usesStableVectorDateText && it.value is Date) {
+                VectorValueCodec.predicateText(it.value as Date)
+            } else {
+                it.value
+            }
+            subCriteria = if (
+                entity is VectorManagedEntity &&
+                it.operator in setOf(QueryCriteriaOperator.LIKE, QueryCriteriaOperator.NOT_LIKE) &&
+                attribute is CharSequence
+            ) {
+                val queryTerms = VectorEntityEncoder.tokens(comparisonValue?.toString() ?: "null").distinct()
+                val matches = if (queryTerms.isEmpty()) {
+                    comparisonValue.compare(comparableAttribute, it.operator!!)
+                } else {
+                    val attributeTerms = VectorEntityEncoder.tokens(comparableAttribute.toString()).toSet()
+                    queryTerms.all(attributeTerms::contains)
+                }
+                if (it.operator == QueryCriteriaOperator.NOT_LIKE && queryTerms.isNotEmpty()) !matches else matches
+            } else {
+                comparisonValue.compare(comparableAttribute, it.operator!!)
+            }
         }
         it.meetsCriteria = subCriteria
     }
 
+    if (evaluatedVectorSearch) {
+        @Suppress("UNCHECKED_CAST")
+        val mutableScores = (fullTextScores as? MutableMap<Reference, Float>)
+            ?: fullTextScores?.toMutableMap()
+            ?: HashMap()
+        fullTextScores = mutableScores.apply {
+            if (evaluatedVectorSearchScore == null) remove(entityReference)
+            else put(entityReference, evaluatedVectorSearchScore!!)
+        }
+    }
+
     this.criteria ?: return@synchronized true
     return calculateCriteriaMet(this.criteria!!)
-}
-
-private fun Query.resolveFullTextMatches(
-    criteria: QueryCriteria,
-    context: SchemaContext,
-    descriptor: EntityDescriptor
-): Set<Long> {
-    val fullTextQuery = resolveFullTextQuery(criteria.value)
-    val queryText = fullTextQuery?.queryText?.trim().orEmpty()
-    if (queryText.isEmpty()) return emptySet()
-    val interactor = context.getRecordInteractor(descriptor) as? FullTextRecordInteractor ?: return emptySet()
-    val maxResults = if (maxResults > 0) maxResults else context.maxCardinality - 1
-    val minScore = fullTextQuery?.minScore
-    return interactor.searchAll(queryText, maxResults)
-        .filter { (_, score) -> minScore == null || score >= minScore }
-        .keys
 }
 
 /**
@@ -200,3 +258,16 @@ private fun Any?.normalizeForComparison(operator: QueryCriteriaOperator?, contex
         else -> this
     }
 }
+
+private val VECTOR_TEXT_OPERATORS = setOf(
+    QueryCriteriaOperator.STARTS_WITH,
+    QueryCriteriaOperator.NOT_STARTS_WITH,
+    QueryCriteriaOperator.CONTAINS,
+    QueryCriteriaOperator.NOT_CONTAINS,
+    QueryCriteriaOperator.CONTAINS_IGNORE_CASE,
+    QueryCriteriaOperator.NOT_CONTAINS_IGNORE_CASE,
+    QueryCriteriaOperator.LIKE,
+    QueryCriteriaOperator.NOT_LIKE,
+    QueryCriteriaOperator.MATCHES,
+    QueryCriteriaOperator.NOT_MATCHES
+)

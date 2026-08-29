@@ -11,8 +11,8 @@ import com.onyx.persistence.query.gt
 import com.onyx.persistence.query.search
 import com.onyx.persistence.query.searchAllTables
 import database.base.DatabaseBaseTest
-import entities.LuceneDataTypeEntity
-import entities.LuceneSearchEntity
+import entities.VectorDataTypeEntity
+import entities.VectorSearchEntity
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -27,8 +27,8 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
 
     @Before
     fun prepare() {
-        manager.from<LuceneSearchEntity>().delete()
-        manager.from<LuceneDataTypeEntity>().delete()
+        manager.from<VectorSearchEntity>().delete()
+        manager.from<VectorDataTypeEntity>().delete()
     }
 
     companion object {
@@ -39,37 +39,37 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
 
 
     @Test
-    fun testLuceneSearchDataSurvivesFactoryCloseAndReopenInSameProcess() {
-        val saved = manager.saveEntity<IManagedEntity>(LuceneSearchEntity().apply {
+    fun testVectorSearchDataSurvivesFactoryCloseAndReopenInSameProcess() {
+        val saved = manager.saveEntity<IManagedEntity>(VectorSearchEntity().apply {
             title = "reopen safety"
-            body = "lucene record interactor should not corrupt persisted data"
+            body = "fingerprint record interactor should not corrupt persisted data"
             category = "regression"
-        }) as LuceneSearchEntity
+        }) as VectorSearchEntity
 
         // Close and re-open in the same JVM process.
         factory.close()
         initialize()
 
-        val byId = manager.from<LuceneSearchEntity>()
+        val byId = manager.from<VectorSearchEntity>()
             .where("id" eq saved.id)
-            .firstOrNull<LuceneSearchEntity>()
+            .firstOrNull<VectorSearchEntity>()
 
         assertTrue(byId != null, "Entity should still be readable after reopen")
         assertEquals("reopen safety", byId!!.title)
-        assertEquals("lucene record interactor should not corrupt persisted data", byId.body)
+        assertEquals("fingerprint record interactor should not corrupt persisted data", byId.body)
         assertEquals("regression", byId.category)
 
-        val searchResults = manager.from<LuceneSearchEntity>()
+        val searchResults = manager.from<VectorSearchEntity>()
             .search("persisted data")
-            .list<LuceneSearchEntity>()
+            .list<VectorSearchEntity>()
 
-        assertTrue(searchResults.any { it.id == saved.id }, "Re-opened factory should return the saved record in Lucene search")
+        assertTrue(searchResults.any { it.id == saved.id }, "Re-opened factory should return the saved record in Vector search")
     }
 
     @Test
     fun testFullTextSearchWithDifferentDataTypes() {
         // Create entities with different data types
-        val entity1 = LuceneDataTypeEntity().apply {
+        val entity1 = VectorDataTypeEntity().apply {
             title = "quick brown fox"
             description = "First test entity"
             longValue = 123456789L
@@ -83,7 +83,7 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
             charValue = 'A'
         }
 
-        val entity2 = LuceneDataTypeEntity().apply {
+        val entity2 = VectorDataTypeEntity().apply {
             title = "lazy dog"
             description = "Second test entity"
             longValue = 987654321L
@@ -97,7 +97,7 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
             charValue = 'Z'
         }
 
-        val entity3 = LuceneDataTypeEntity().apply {
+        val entity3 = VectorDataTypeEntity().apply {
             title = "jumping fox"
             description = "Third test entity"
             longValue = 111111111L
@@ -116,32 +116,32 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
         manager.saveEntity<IManagedEntity>(entity3)
 
         // Test search on string value
-        val stringResults = manager.from<LuceneDataTypeEntity>()
+        val stringResults = manager.from<VectorDataTypeEntity>()
             .search("fox")
-            .list<LuceneDataTypeEntity>()
+            .list<VectorDataTypeEntity>()
         assertEquals(2, stringResults.size)
         assertTrue(stringResults.any { it.title?.contains("fox") == true })
 
         // Test search on numeric values (should find entities containing those numbers in any field)
-        val numericResults = manager.from<LuceneDataTypeEntity>()
+        val numericResults = manager.from<VectorDataTypeEntity>()
             .search("123456789")
-            .list<LuceneDataTypeEntity>()
+            .list<VectorDataTypeEntity>()
         // Should find entity1 because it contains 123456789 in longValue field
         assertEquals(1, numericResults.size)
         assertEquals(123456789L, numericResults[0].longValue)
 
         // Test search on boolean values
-        val booleanResults = manager.from<LuceneDataTypeEntity>()
+        val booleanResults = manager.from<VectorDataTypeEntity>()
             .search("true")
-            .list<LuceneDataTypeEntity>()
+            .list<VectorDataTypeEntity>()
         // Should find entities with booleanValue = true
         assertEquals(2, booleanResults.size)
         assertTrue(booleanResults.all { it.booleanValue == true })
 
         // Test search on date values (partial match)
-        val dateResults = manager.from<LuceneDataTypeEntity>()
+        val dateResults = manager.from<VectorDataTypeEntity>()
             .search("2001")
-            .list<LuceneDataTypeEntity>()
+            .list<VectorDataTypeEntity>()
         // Should find entity1 which has date 2001-09-09
         assertEquals(1, dateResults.size)
         assertEquals(Date(1000000000000L), dateResults[0].dateValue)
@@ -150,7 +150,7 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
     @Test
     fun testFullTextSearchWithAndPredicateOnDifferentDataTypes() {
         // Create entities with different data types
-        val entity1 = LuceneDataTypeEntity().apply {
+        val entity1 = VectorDataTypeEntity().apply {
             title = "important document"
             description = "First priority item"
             longValue = 1000000L
@@ -159,7 +159,7 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
             booleanValue = true
         }
 
-        val entity2 = LuceneDataTypeEntity().apply {
+        val entity2 = VectorDataTypeEntity().apply {
             title = "unimportant document"
             description = "Low priority item"
             longValue = 2000000L
@@ -168,7 +168,7 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
             booleanValue = false
         }
 
-        val entity3 = LuceneDataTypeEntity().apply {
+        val entity3 = VectorDataTypeEntity().apply {
             title = "important memo"
             description = "Medium priority item"
             longValue = 1500000L
@@ -182,20 +182,20 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
         manager.saveEntity<IManagedEntity>(entity3)
 
         // Test full-text search combined with AND predicate on numeric field
-        val andResults = manager.from<LuceneDataTypeEntity>()
+        val andResults = manager.from<VectorDataTypeEntity>()
             .where(search("important"))
             .and("intValue" gt 55)
-            .list<LuceneDataTypeEntity>()
+            .list<VectorDataTypeEntity>()
         // Should find entity3 ("important memo" with intValue=60 > 55)
         assertEquals(1, andResults.size)
         assertTrue(andResults[0].title?.contains("important") == true)
         assertTrue(andResults[0].intValue!! > 55)
 
         // Test full-text search combined with AND predicate on boolean field
-        val andBooleanResults = manager.from<LuceneDataTypeEntity>()
+        val andBooleanResults = manager.from<VectorDataTypeEntity>()
             .where(search("document"))
             .and("booleanValue" eq true)
-            .list<LuceneDataTypeEntity>()
+            .list<VectorDataTypeEntity>()
         assertEquals(1, andBooleanResults.size)
         assertEquals(true, andBooleanResults[0].booleanValue)
         assertTrue(andBooleanResults[0].title?.contains("document") == true)
@@ -204,7 +204,7 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
     @Test
     fun testFullTextSearchWithOrPredicateOnDifferentDataTypes() {
         // Create entities with different data types
-        val entity1 = LuceneDataTypeEntity().apply {
+        val entity1 = VectorDataTypeEntity().apply {
             title = "red car"
             description = "Fast vehicle"
             longValue = 100L
@@ -213,7 +213,7 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
             booleanValue = true
         }
 
-        val entity2 = LuceneDataTypeEntity().apply {
+        val entity2 = VectorDataTypeEntity().apply {
             title = "blue truck"
             description = "Heavy vehicle"
             longValue = 200L
@@ -222,7 +222,7 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
             booleanValue = false
         }
 
-        val entity3 = LuceneDataTypeEntity().apply {
+        val entity3 = VectorDataTypeEntity().apply {
             title = "green bike"
             description = "Light vehicle"
             longValue = 300L
@@ -238,9 +238,9 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
         // Test full-text search combined with OR predicate on numeric field
         val orCriteria = QueryCriteria("intValue", QueryCriteriaOperator.GREATER_THAN, 25)
             .or(QueryCriteria(Query.FULL_TEXT_ATTRIBUTE, QueryCriteriaOperator.MATCHES, "red"))
-        val orResults = manager.from<LuceneDataTypeEntity>()
+        val orResults = manager.from<VectorDataTypeEntity>()
             .where(orCriteria)
-            .list<LuceneDataTypeEntity>()
+            .list<VectorDataTypeEntity>()
         assertEquals(2, orResults.size)
         assertTrue(orResults.any { it.title?.contains("red") == true }) // matches "red"
         assertTrue(orResults.any { it.intValue!! > 25 }) // intValue=30 > 25
@@ -248,9 +248,9 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
         // Test full-text search combined with OR predicate on boolean field
         val orBooleanCriteria = QueryCriteria("booleanValue", QueryCriteriaOperator.EQUAL, false)
             .or(QueryCriteria(Query.FULL_TEXT_ATTRIBUTE, QueryCriteriaOperator.MATCHES, "bike"))
-        val orBooleanResults = manager.from<LuceneDataTypeEntity>()
+        val orBooleanResults = manager.from<VectorDataTypeEntity>()
             .where(orBooleanCriteria)
-            .list<LuceneDataTypeEntity>()
+            .list<VectorDataTypeEntity>()
         assertEquals(2, orBooleanResults.size)
         assertTrue(orBooleanResults.any { it.booleanValue == false }) // booleanValue=false
         assertTrue(orBooleanResults.any { it.title?.contains("bike") == true }) // matches "bike"
@@ -259,7 +259,7 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
     @Test
     fun testFullTextSearchWithComplexAndOrPredicates() {
         // Create entities with different data types
-        val entity1 = LuceneDataTypeEntity().apply {
+        val entity1 = VectorDataTypeEntity().apply {
             title = "urgent project"
             description = "High priority work"
             longValue = 1000L
@@ -269,7 +269,7 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
             dateValue = Date(1500000000000L) // 2017-07-14
         }
 
-        val entity2 = LuceneDataTypeEntity().apply {
+        val entity2 = VectorDataTypeEntity().apply {
             title = "normal task"
             description = "Regular work"
             longValue = 500L
@@ -279,7 +279,7 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
             dateValue = Date(1400000000000L) // 2014-05-13
         }
 
-        val entity3 = LuceneDataTypeEntity().apply {
+        val entity3 = VectorDataTypeEntity().apply {
             title = "urgent meeting"
             description = "Important discussion"
             longValue = 750L
@@ -299,9 +299,9 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
         val booleanCriteria = QueryCriteria("booleanValue", QueryCriteriaOperator.EQUAL, true)
 
         val complexCriteria = urgentCriteria.and(intValueCriteria.or(booleanCriteria))
-        val complexResults = manager.from<LuceneDataTypeEntity>()
+        val complexResults = manager.from<VectorDataTypeEntity>()
             .where(complexCriteria)
-            .list<LuceneDataTypeEntity>()
+            .list<VectorDataTypeEntity>()
 
         // Should return entities that match "urgent" and either have intValue > 80 or booleanValue = true
         assertTrue(complexResults.isNotEmpty())
@@ -311,7 +311,7 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
     @Test
     fun testFullTextSearchAllTablesWithDifferentDataTypes() {
         // Create entities with different data types
-        val entity1 = LuceneDataTypeEntity().apply {
+        val entity1 = VectorDataTypeEntity().apply {
             title = "database search"
             description = "Searching databases"
             longValue = 123456L
@@ -319,9 +319,9 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
             booleanValue = true
         }
 
-        val entity2 = LuceneDataTypeEntity().apply {
-            title = "lucene indexing"
-            description = "Indexing with Lucene"
+        val entity2 = VectorDataTypeEntity().apply {
+            title = "fingerprint indexing"
+            description = "Indexing with Vector"
             longValue = 789012L
             intValue = 24
             booleanValue = false
@@ -342,7 +342,7 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
     @Test
     fun testFullTextSearchWithFloatAndByteDataTypes() {
         // Create entities with float and byte data types
-        val entity1 = LuceneDataTypeEntity().apply {
+        val entity1 = VectorDataTypeEntity().apply {
             title = "scientific calculation"
             description = "Mathematical constants"
             floatValue = 3.14159f
@@ -351,7 +351,7 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
             charValue = 'π'
         }
 
-        val entity2 = LuceneDataTypeEntity().apply {
+        val entity2 = VectorDataTypeEntity().apply {
             title = "mathematical constant"
             description = "Scientific numbers"
             floatValue = 2.71828f
@@ -364,23 +364,23 @@ class FullTextSearchDataTypeTest(override var factoryClass: KClass<*>) : Databas
         manager.saveEntity<IManagedEntity>(entity2)
 
         // Test search on float values
-        val floatResults = manager.from<LuceneDataTypeEntity>()
+        val floatResults = manager.from<VectorDataTypeEntity>()
             .search("3.14159")
-            .list<LuceneDataTypeEntity>()
+            .list<VectorDataTypeEntity>()
         assertEquals(1, floatResults.size)
         assertEquals(3.14159f, floatResults[0].floatValue)
 
         // Test search on byte values
-        val byteResults = manager.from<LuceneDataTypeEntity>()
+        val byteResults = manager.from<VectorDataTypeEntity>()
             .search("127")
-            .list<LuceneDataTypeEntity>()
+            .list<VectorDataTypeEntity>()
         assertEquals(1, byteResults.size)
         assertEquals(127, byteResults[0].byteValue)
 
         // Test search on char values
-        val charResults = manager.from<LuceneDataTypeEntity>()
+        val charResults = manager.from<VectorDataTypeEntity>()
             .search("π")
-            .list<LuceneDataTypeEntity>()
+            .list<VectorDataTypeEntity>()
         assertEquals(1, charResults.size)
         assertEquals('π', charResults[0].charValue)
     }

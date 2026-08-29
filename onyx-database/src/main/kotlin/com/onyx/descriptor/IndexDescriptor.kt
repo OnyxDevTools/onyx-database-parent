@@ -2,7 +2,6 @@ package com.onyx.descriptor
 
 import com.onyx.extension.common.ClassMetadata
 import com.onyx.persistence.annotations.values.IndexType
-import com.onyx.persistence.annotations.values.VectorQuantization
 
 /**
  * Created by timothy.osborn on 12/11/14.
@@ -13,11 +12,10 @@ open class IndexDescriptor(
     override var name: String = "",
     open var type: Class<*> = ClassMetadata.ANY_CLASS,
     open var indexType: IndexType = IndexType.DEFAULT,
-    open var embeddingDimensions: Int = -1,
-    open var minimumScore: Float = -1f,
-    open var maxNeighbors: Int = 16,
-    open var searchRadius: Int = 128,
-    open var quantization: VectorQuantization = VectorQuantization.NONE
+    open var entropy: Int = 0,
+    open var encodingVersion: Int = 0,
+    open var configurationId: Long = 0L,
+    open var configurationSignature: String = ""
 ) : AbstractBaseDescriptor(), BaseDescriptor {
 
     open lateinit var entityDescriptor: EntityDescriptor

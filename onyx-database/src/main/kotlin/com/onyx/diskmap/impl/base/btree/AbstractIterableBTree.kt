@@ -49,6 +49,19 @@ abstract class AbstractIterableBTree<K, V>(
         }
     }
 
+    override fun visitReferencesWhile(visitor: (Long, V) -> Boolean): Int {
+        var visits = 0
+        var page: BTreePage? = leftMostLeaf()
+        while (page != null) {
+            for (index in 0 until page.keyCount) {
+                visits++
+                if (!visitor(entryIdAt(page, index), valueAt(page, index))) return visits
+            }
+            page = findPageAtPositionOrNull(page.nextLeaf)
+        }
+        return visits
+    }
+
     abstract inner class AbstractEntryCollection<T> : AbstractSet<T>() {
         override val size: Int
             get() = this@AbstractIterableBTree.longSize().toInt()

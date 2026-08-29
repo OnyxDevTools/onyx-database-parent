@@ -28,6 +28,9 @@ data class SystemAttribute @JvmOverloads constructor(
     var isNullable: Boolean = false,
 
     @Attribute
+    var isInternal: Boolean = false,
+
+    @Attribute
     @Suppress("MemberVisibilityCanPrivate")
     var isEnum: Boolean = false,
 
@@ -45,6 +48,7 @@ data class SystemAttribute @JvmOverloads constructor(
         size = descriptor.size,
         dataType = descriptor.type.canonicalName,
         isNullable = descriptor.isNullable,
+        isInternal = descriptor.isInternal,
         isEnum = descriptor.isEnum,
         enumValues = descriptor.enumValues)
 
@@ -61,6 +65,7 @@ data class SystemAttribute @JvmOverloads constructor(
         if (isPartition != other.isPartition) return false
         if (size != other.size) return false
         if (isNullable != other.isNullable) return false
+        if (isInternal != other.isInternal) return false
 
         return true
     }
@@ -73,6 +78,7 @@ data class SystemAttribute @JvmOverloads constructor(
         result = 31 * result + isPartition.hashCode()
         result = 31 * result + size.hashCode()
         result = 31 * result + isNullable.hashCode()
+        result = 31 * result + isInternal.hashCode()
         return result
     }
 }

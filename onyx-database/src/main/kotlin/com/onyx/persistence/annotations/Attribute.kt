@@ -36,4 +36,11 @@ annotation class Attribute(
      * @since 1.0.0
      * @return Attribute max size
      */
-    val size: Int = -1)
+    val size: Int = -1,
+
+    /**
+     * Marks storage owned by the persistence engine rather than by the entity's public model.
+     * Internal attributes are serialized and versioned like every other attribute, but are
+     * omitted from wildcard selections and [com.onyx.persistence.ManagedEntity.toMap].
+     */
+    val internal: Boolean = false)

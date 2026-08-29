@@ -4,10 +4,11 @@ import com.onyx.entity.SystemEntity
 import com.onyx.extension.common.async
 import com.onyx.extension.common.get
 import com.onyx.extension.identifier
-import com.onyx.interactors.record.FullTextRecordInteractor
 import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.VectorManagedEntity
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.stream.QueryMapStream
+import com.onyx.vector.SemanticVectorSignature
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.reflect.KClass
@@ -276,13 +277,118 @@ class QueryBuilder(
     }
 
     /**
-     * Apply a Lucene full-text query across the entire record.
+     * Apply a fingerprint-backed full-text query across the entire record.
      */
     fun fullText(queryText: String, minScore: Float? = null): QueryBuilder {
+        return appendSearchCriteria(FullTextQuery(queryText, minScore))
+    }
+
+    /** Apply sparse lexical and/or semantic fingerprint routing across the record. */
+    fun search(searchQuery: VectorSearchQuery): QueryBuilder = appendSearchCriteria(searchQuery)
+
+    /**
+     * Admit a physically bounded lexical candidate sample. This must be the sole root criterion.
+     */
+    fun approximateSearch(searchQuery: VectorSearchQuery): QueryBuilder {
+        require(query.criteria == null) { "SEARCH_CANDIDATES must be the sole root criterion" }
+        require(!searchQuery.text.isNullOrBlank() && searchQuery.semantic == null) {
+            "SEARCH_CANDIDATES supports text-only VectorSearchQuery values"
+        }
+        query.criteria = QueryCriteria(
+            Query.FULL_TEXT_ATTRIBUTE,
+            QueryCriteriaOperator.SEARCH_CANDIDATES,
+            searchQuery
+        )
+        return this
+    }
+
+    /** Convenience overload for bounded lexical candidate admission. */
+    @JvmOverloads
+    fun approximateSearch(
+        queryText: String,
+        minScore: Float? = null,
+        maxCandidates: Int = 1_000,
+        requireAllTerms: Boolean = true
+    ): QueryBuilder = approximateSearch(
+        VectorSearchQuery(
+            text = queryText,
+            minScore = minScore,
+            maxCandidates = maxCandidates,
+            requireAllTerms = requireAllTerms
+        )
+    )
+
+    /** Admit a bounded native-HNSW nearest-neighbor candidate list. */
+    fun hnswCandidates(searchQuery: HnswSearchQuery): QueryBuilder {
+        require(query.criteria == null) { "HNSW_CANDIDATES must be the sole root criterion" }
+        query.criteria = QueryCriteria(
+            Query.FULL_TEXT_ATTRIBUTE,
+            QueryCriteriaOperator.HNSW_CANDIDATES,
+            searchQuery
+        )
+        return this
+    }
+
+    /**
+     * Admit an explicitly approximate, physically bounded prefix from one ordinary index.
+     * This must be the query's sole criterion; use caller-side filtering after admission.
+     */
+    fun approximateCandidates(
+        attribute: String,
+        candidateQuery: ApproximateIndexCandidateQuery
+    ): QueryBuilder {
+        require(query.criteria == null) { "CANDIDATES must be the sole root criterion" }
+        query.criteria = QueryCriteria(
+            attribute,
+            QueryCriteriaOperator.CANDIDATES,
+            candidateQuery
+        )
+        return this
+    }
+
+    /** Bounded `EQUAL`-style candidate admission. */
+    @JvmOverloads
+    fun approximateCandidates(
+        attribute: String,
+        value: Any,
+        maxCandidates: Int = DEFAULT_APPROXIMATE_INDEX_CANDIDATES
+    ): QueryBuilder = approximateCandidates(
+        attribute,
+        ApproximateIndexCandidateQuery(value, maxCandidates)
+    )
+
+    /** Bounded `IN`-style candidate admission with one shared visit budget. */
+    @JvmOverloads
+    fun approximateCandidates(
+        attribute: String,
+        values: Collection<Any>,
+        maxCandidates: Int = DEFAULT_APPROXIMATE_INDEX_CANDIDATES
+    ): QueryBuilder = approximateCandidates(
+        attribute,
+        ApproximateIndexCandidateQuery(values.toList(), maxCandidates)
+    )
+
+    /** Apply an already encoded semantic query signature without persisting a dense vector. */
+    @JvmOverloads
+    fun search(
+        signature: SemanticVectorSignature,
+        minScore: Float? = null,
+        nearbyBucketRadius: Int = 1,
+        maxCandidates: Int = 1_000
+    ): QueryBuilder = search(
+        VectorSearchQuery(
+            semantic = signature,
+            minScore = minScore,
+            nearbyBucketRadius = nearbyBucketRadius,
+            maxCandidates = maxCandidates
+        )
+    )
+
+    private fun appendSearchCriteria(value: Any): QueryBuilder {
         val criteria = QueryCriteria(
             Query.FULL_TEXT_ATTRIBUTE,
             QueryCriteriaOperator.MATCHES,
-            FullTextQuery(queryText, minScore)
+            value
         )
         if (query.criteria == null) {
             query.criteria = criteria
@@ -293,7 +399,7 @@ class QueryBuilder(
     }
 
     /**
-     * Apply a Lucene full-text query across the entire record.
+     * Apply a fingerprint-backed full-text query across the entire record.
      */
     fun search(queryText: String, minScore: Float? = null): QueryBuilder = fullText(queryText, minScore)
 
@@ -369,7 +475,7 @@ fun PersistenceManager.select(vararg properties: String): QueryBuilder {
 }
 
 /**
- * Execute a full-text search across all tables that support Lucene-backed record interactors.
+ * Execute a full-text search across all vector-managed tables.
  */
 fun PersistenceManager.searchAllTables(
     queryText: String,
@@ -395,7 +501,7 @@ fun PersistenceManager.searchAllTables(
             .getOrNull()
             ?: return@forEach
 
-        if (context.getRecordInteractor(descriptor) !is FullTextRecordInteractor) {
+        if (!VectorManagedEntity::class.java.isAssignableFrom(descriptor.entityClass)) {
             return@forEach
         }
 
@@ -417,7 +523,7 @@ fun PersistenceManager.searchAllTables(
 }
 
 /**
- * Execute a full-text search across all tables that support Lucene-backed record interactors.
+ * Build a full-text search across all vector-managed tables.
  */
 fun PersistenceManager.search(queryText: String, minScore: Float? = null): FullTextSearchBuilder {
     return FullTextSearchBuilder(this, queryText, minScore)
@@ -453,6 +559,94 @@ fun search(queryText: String, minScore: Float? = null): QueryCriteria {
         FullTextQuery(queryText, minScore)
     )
 }
+
+fun search(searchQuery: VectorSearchQuery): QueryCriteria = QueryCriteria(
+    Query.FULL_TEXT_ATTRIBUTE,
+    QueryCriteriaOperator.MATCHES,
+    searchQuery
+)
+
+/** Creates the sole root criterion for physically bounded lexical search admission. */
+fun approximateSearch(searchQuery: VectorSearchQuery): QueryCriteria {
+    require(!searchQuery.text.isNullOrBlank() && searchQuery.semantic == null) {
+        "SEARCH_CANDIDATES supports text-only VectorSearchQuery values"
+    }
+    return QueryCriteria(
+        Query.FULL_TEXT_ATTRIBUTE,
+        QueryCriteriaOperator.SEARCH_CANDIDATES,
+        searchQuery
+    )
+}
+
+/** Convenience criterion for physically bounded lexical search admission. */
+@JvmOverloads
+fun approximateSearch(
+    queryText: String,
+    minScore: Float? = null,
+    maxCandidates: Int = 1_000,
+    requireAllTerms: Boolean = true
+): QueryCriteria = approximateSearch(
+    VectorSearchQuery(
+        text = queryText,
+        minScore = minScore,
+        maxCandidates = maxCandidates,
+        requireAllTerms = requireAllTerms
+    )
+)
+
+/** Creates the sole root criterion for bounded native-HNSW candidate admission. */
+fun hnswCandidates(searchQuery: HnswSearchQuery): QueryCriteria = QueryCriteria(
+    Query.FULL_TEXT_ATTRIBUTE,
+    QueryCriteriaOperator.HNSW_CANDIDATES,
+    searchQuery
+)
+
+/** Creates an explicitly approximate bounded secondary-index candidate criterion. */
+fun approximateCandidates(
+    attribute: String,
+    candidateQuery: ApproximateIndexCandidateQuery
+): QueryCriteria = QueryCriteria(
+    attribute,
+    QueryCriteriaOperator.CANDIDATES,
+    candidateQuery
+)
+
+/** Creates a bounded `EQUAL`-style candidate criterion. */
+@JvmOverloads
+fun approximateCandidates(
+    attribute: String,
+    value: Any,
+    maxCandidates: Int = DEFAULT_APPROXIMATE_INDEX_CANDIDATES
+): QueryCriteria = approximateCandidates(
+    attribute,
+    ApproximateIndexCandidateQuery(value, maxCandidates)
+)
+
+/** Creates a bounded `IN`-style candidate criterion with one shared visit budget. */
+@JvmOverloads
+fun approximateCandidates(
+    attribute: String,
+    values: Collection<Any>,
+    maxCandidates: Int = DEFAULT_APPROXIMATE_INDEX_CANDIDATES
+): QueryCriteria = approximateCandidates(
+    attribute,
+    ApproximateIndexCandidateQuery(values.toList(), maxCandidates)
+)
+
+@JvmOverloads
+fun search(
+    signature: SemanticVectorSignature,
+    minScore: Float? = null,
+    nearbyBucketRadius: Int = 1,
+    maxCandidates: Int = 1_000
+): QueryCriteria = search(
+    VectorSearchQuery(
+        semantic = signature,
+        minScore = minScore,
+        nearbyBucketRadius = nearbyBucketRadius,
+        maxCandidates = maxCandidates
+    )
+)
 infix fun <T> String.between(range: Pair<T, T>): QueryCriteria =
     QueryCriteria(this, QueryCriteriaOperator.BETWEEN, range)
 infix fun <T> String.notBetween(range: Pair<T, T>): QueryCriteria =

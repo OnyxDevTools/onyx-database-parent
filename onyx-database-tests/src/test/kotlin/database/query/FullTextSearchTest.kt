@@ -7,14 +7,15 @@ import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.QueryPartitionMode
+import com.onyx.persistence.query.VectorSearchQuery
 import com.onyx.persistence.query.eq
 import com.onyx.persistence.query.from
 import com.onyx.persistence.query.like
 import com.onyx.persistence.query.search
 import com.onyx.persistence.query.searchAllTables
 import database.base.DatabaseBaseTest
-import entities.LucenePartitionedEntity
-import entities.LuceneSearchEntity
+import entities.VectorPartitionedEntity
+import entities.VectorSearchEntity
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
@@ -41,8 +42,8 @@ class FullTextSearchTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Before
     fun prepare() {
-        manager.from<LuceneSearchEntity>().delete()
-        manager.from<LucenePartitionedEntity>()
+        manager.from<VectorSearchEntity>().delete()
+        manager.from<VectorPartitionedEntity>()
             .inPartition(QueryPartitionMode.ALL)
             .delete()
     }
@@ -55,17 +56,17 @@ class FullTextSearchTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Test
     fun testBasicSearchAllTables() {
-        val searchEntity = LuceneSearchEntity().apply {
+        val searchEntity = VectorSearchEntity().apply {
             title = "Breaking News"
             body = "quick fox jumps over the river"
             category = "news"
         }
-        val partitionedEntity = LucenePartitionedEntity().apply {
+        val partitionedEntity = VectorPartitionedEntity().apply {
             region = "north"
             tag = "alpha"
             body = "fox sightings in the north region"
         }
-        val nonMatchingEntity = LuceneSearchEntity().apply {
+        val nonMatchingEntity = VectorSearchEntity().apply {
             title = "Weather Report"
             body = "sunny skies and warm breeze"
             category = "weather"
@@ -77,8 +78,8 @@ class FullTextSearchTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
         val results = manager.searchAllTables("fox")
         assertTrue(results.isNotEmpty())
-        assertTrue(results.any { it.entityType == LuceneSearchEntity::class.java })
-        assertTrue(results.any { it.entityType == LucenePartitionedEntity::class.java })
+        assertTrue(results.any { it.entityType == VectorSearchEntity::class.java })
+        assertTrue(results.any { it.entityType == VectorPartitionedEntity::class.java })
         results.forEach { result -> assertNotNull(result.id) }
 
         val builderResults = manager.search("fox").list()
@@ -87,12 +88,12 @@ class FullTextSearchTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Test
     fun testPartitionSearchAll() {
-        val northEntity = LucenePartitionedEntity().apply {
+        val northEntity = VectorPartitionedEntity().apply {
             region = "north"
             tag = "delta"
             body = "delta payload in north partition"
         }
-        val southEntity = LucenePartitionedEntity().apply {
+        val southEntity = VectorPartitionedEntity().apply {
             region = "south"
             tag = "delta"
             body = "delta payload in south partition"
@@ -100,137 +101,137 @@ class FullTextSearchTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
         manager.saveEntity<IManagedEntity>(northEntity)
         manager.saveEntity<IManagedEntity>(southEntity)
 
-        val allPartitions = manager.from<LucenePartitionedEntity>()
+        val allPartitions = manager.from<VectorPartitionedEntity>()
             .search("delta")
             .inPartition(QueryPartitionMode.ALL)
-            .list<LucenePartitionedEntity>()
+            .list<VectorPartitionedEntity>()
         assertEquals(2, allPartitions.size)
 
-        val northOnly = manager.from<LucenePartitionedEntity>()
+        val northOnly = manager.from<VectorPartitionedEntity>()
             .search("delta")
             .inPartition("north")
-            .list<LucenePartitionedEntity>()
+            .list<VectorPartitionedEntity>()
         assertEquals(1, northOnly.size)
         assertEquals("north", northOnly.first().region)
     }
 
     @Test
     fun testDeleteSearchablePartitionPreservesOtherPartitionAndSurvivesReopen() {
-        val deleted = manager.saveEntity<IManagedEntity>(LucenePartitionedEntity().apply {
+        val deleted = manager.saveEntity<IManagedEntity>(VectorPartitionedEntity().apply {
             region = "individual-delete"
             tag = "deleted"
             body = "unique deleted searchable payload"
-        }) as LucenePartitionedEntity
-        val retained = manager.saveEntity<IManagedEntity>(LucenePartitionedEntity().apply {
+        }) as VectorPartitionedEntity
+        val retained = manager.saveEntity<IManagedEntity>(VectorPartitionedEntity().apply {
             region = "individual-retained"
             tag = "retained"
             body = "unique retained searchable payload"
-        }) as LucenePartitionedEntity
+        }) as VectorPartitionedEntity
 
         assertEquals(
             1,
-            manager.from<LucenePartitionedEntity>()
+            manager.from<VectorPartitionedEntity>()
                 .inPartition("individual-delete")
                 .delete()
         )
 
-        assertEquals(0L, manager.from<LucenePartitionedEntity>()
+        assertEquals(0L, manager.from<VectorPartitionedEntity>()
             .inPartition("individual-delete")
             .count())
-        assertTrue(manager.from<LucenePartitionedEntity>()
+        assertTrue(manager.from<VectorPartitionedEntity>()
             .inPartition("individual-delete")
             .search("unique deleted payload")
-            .list<LucenePartitionedEntity>()
+            .list<VectorPartitionedEntity>()
             .isEmpty())
 
-        val retainedImmediately = manager.from<LucenePartitionedEntity>()
+        val retainedImmediately = manager.from<VectorPartitionedEntity>()
             .inPartition("individual-retained")
             .search("unique retained payload")
-            .list<LucenePartitionedEntity>()
+            .list<VectorPartitionedEntity>()
         assertTrue(retainedImmediately.any { it.id == retained.id })
         assertEquals("retained", retainedImmediately.first { it.id == retained.id }.tag)
 
         factory.close()
         initialize()
 
-        assertEquals(0L, manager.from<LucenePartitionedEntity>()
+        assertEquals(0L, manager.from<VectorPartitionedEntity>()
             .inPartition("individual-delete")
             .count())
-        assertTrue(manager.from<LucenePartitionedEntity>()
+        assertTrue(manager.from<VectorPartitionedEntity>()
             .inPartition("individual-delete")
             .search("unique deleted payload")
-            .list<LucenePartitionedEntity>()
+            .list<VectorPartitionedEntity>()
             .none { it.id == deleted.id })
 
-        val retainedAfterReopen = manager.from<LucenePartitionedEntity>()
+        val retainedAfterReopen = manager.from<VectorPartitionedEntity>()
             .inPartition("individual-retained")
             .search("unique retained payload")
-            .list<LucenePartitionedEntity>()
+            .list<VectorPartitionedEntity>()
         assertTrue(retainedAfterReopen.any { it.id == retained.id })
 
-        val recreated = manager.saveEntity<IManagedEntity>(LucenePartitionedEntity().apply {
+        val recreated = manager.saveEntity<IManagedEntity>(VectorPartitionedEntity().apply {
             region = "individual-delete"
             tag = "recreated"
             body = "recreated searchable partition payload"
-        }) as LucenePartitionedEntity
+        }) as VectorPartitionedEntity
         assertTrue(
-            manager.from<LucenePartitionedEntity>()
+            manager.from<VectorPartitionedEntity>()
                 .inPartition("individual-delete")
                 .search("recreated partition payload")
-                .list<LucenePartitionedEntity>()
+                .list<VectorPartitionedEntity>()
                 .any { it.id == recreated.id }
         )
-        assertEquals(1L, manager.from<LucenePartitionedEntity>()
+        assertEquals(1L, manager.from<VectorPartitionedEntity>()
             .inPartition("individual-retained")
             .count())
     }
 
     @Test
     fun testDeleteAllSearchablePartitionsSurvivesReopen() {
-        manager.saveEntity<IManagedEntity>(LucenePartitionedEntity().apply {
+        manager.saveEntity<IManagedEntity>(VectorPartitionedEntity().apply {
             region = "delete-all-north"
             tag = "deleted"
             body = "north searchable partition"
         })
-        manager.saveEntity<IManagedEntity>(LucenePartitionedEntity().apply {
+        manager.saveEntity<IManagedEntity>(VectorPartitionedEntity().apply {
             region = "delete-all-south"
             tag = "deleted"
             body = "south searchable partition"
         })
 
-        assertEquals(2, manager.from<LucenePartitionedEntity>().delete())
+        assertEquals(2, manager.from<VectorPartitionedEntity>().delete())
 
         factory.close()
         initialize()
 
-        assertEquals(0L, manager.from<LucenePartitionedEntity>().count())
+        assertEquals(0L, manager.from<VectorPartitionedEntity>().count())
 
-        val savedAfterReopen = manager.saveEntity<IManagedEntity>(LucenePartitionedEntity().apply {
+        val savedAfterReopen = manager.saveEntity<IManagedEntity>(VectorPartitionedEntity().apply {
             region = "delete-all-recreated"
             tag = "recreated"
             body = "searchable data saved after deleting all partitions"
-        }) as LucenePartitionedEntity
+        }) as VectorPartitionedEntity
 
-        val searchResults = manager.from<LucenePartitionedEntity>()
+        val searchResults = manager.from<VectorPartitionedEntity>()
             .inPartition("delete-all-recreated")
             .search("saved after deleting")
-            .list<LucenePartitionedEntity>()
+            .list<VectorPartitionedEntity>()
         assertTrue(searchResults.any { it.id == savedAfterReopen.id })
     }
 
     @Test
     fun testSearchAllWithAdditionalPredicates() {
-        val stormNews = LuceneSearchEntity().apply {
+        val stormNews = VectorSearchEntity().apply {
             title = "Storm Alert"
             body = "storm warning across the coast"
             category = "news"
         }
-        val stormSports = LuceneSearchEntity().apply {
+        val stormSports = VectorSearchEntity().apply {
             title = "Storming Victory"
             body = "storm of goals in the final"
             category = "sports"
         }
-        val calmNews = LuceneSearchEntity().apply {
+        val calmNews = VectorSearchEntity().apply {
             title = "Calm Seas"
             body = "gentle waves and calm winds"
             category = "news"
@@ -239,49 +240,137 @@ class FullTextSearchTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
         manager.saveEntity<IManagedEntity>(stormSports)
         manager.saveEntity<IManagedEntity>(calmNews)
 
-        val andResults = manager.from<LuceneSearchEntity>()
+        val andResults = manager.from<VectorSearchEntity>()
             .where(search("storm"))
             .and("category" eq "news")
-            .list<LuceneSearchEntity>()
+            .list<VectorSearchEntity>()
         assertEquals(1, andResults.size)
         assertEquals("news", andResults.first().category)
 
         val orCriteria = QueryCriteria("category", QueryCriteriaOperator.EQUAL, "sports")
             .or(QueryCriteria(Query.FULL_TEXT_ATTRIBUTE, QueryCriteriaOperator.MATCHES, "storm"))
-        val orResults = manager.from<LuceneSearchEntity>()
+        val orResults = manager.from<VectorSearchEntity>()
             .where(orCriteria)
-            .list<LuceneSearchEntity>()
+            .list<VectorSearchEntity>()
         assertEquals(2, orResults.size)
         assertTrue(orResults.any { it.category == "sports" })
         assertTrue(orResults.any { it.category == "news" })
     }
 
     @Test
+    fun testComplementedSearchDoesNotLeakScoresIntoOrMatches() {
+        val searchMatchAdmittedByOr = manager.saveEntity<IManagedEntity>(VectorSearchEntity().apply {
+            title = "Foo anchor"
+            body = "foo payload"
+            category = "anchor"
+        }) as VectorSearchEntity
+        val complementMatch = manager.saveEntity<IManagedEntity>(VectorSearchEntity().apply {
+            title = "Plain document"
+            body = "ordinary payload"
+            category = "other"
+        }) as VectorSearchEntity
+        manager.saveEntity<IManagedEntity>(VectorSearchEntity().apply {
+            title = "Excluded foo"
+            body = "foo payload"
+            category = "other"
+        })
+
+        val criteria = QueryCriteria(
+            Query.FULL_TEXT_ATTRIBUTE,
+            QueryCriteriaOperator.NOT_MATCHES,
+            "foo"
+        ).or(QueryCriteria("category", QueryCriteriaOperator.EQUAL, "anchor"))
+        val results = manager.from<VectorSearchEntity>()
+            .where(criteria)
+            .select("id", Query.SCORE_SELECTION)
+            .list<Map<String, Any?>>()
+            .associateBy { it["id"] as Long }
+
+        assertEquals(setOf(searchMatchAdmittedByOr.id, complementMatch.id), results.keys)
+        assertEquals(null, results.getValue(searchMatchAdmittedByOr.id)[Query.SCORE_SELECTION])
+        assertEquals(null, results.getValue(complementMatch.id)[Query.SCORE_SELECTION])
+    }
+
+    @Test
+    fun testCompoundStructuredPredicateAcrossAllPartitionsKeepsPartitionRestrictions() {
+        val north = manager.saveEntity<IManagedEntity>(VectorPartitionedEntity().apply {
+            region = "compound-north"
+            tag = "compound-anchor"
+            body = "needle in north"
+        }) as VectorPartitionedEntity
+        val south = manager.saveEntity<IManagedEntity>(VectorPartitionedEntity().apply {
+            region = "compound-south"
+            tag = "compound-anchor"
+            body = "needle in south"
+        }) as VectorPartitionedEntity
+        manager.saveEntity<IManagedEntity>(VectorPartitionedEntity().apply {
+            region = "compound-decoy"
+            tag = "compound-anchor"
+            body = "unrelated payload"
+        })
+
+        val results = manager.from<VectorPartitionedEntity>()
+            .where(QueryCriteria("tag", QueryCriteriaOperator.EQUAL, "compound-anchor"))
+            .and(QueryCriteria("body", QueryCriteriaOperator.CONTAINS, "needle"))
+            .inPartition(QueryPartitionMode.ALL)
+            .list<VectorPartitionedEntity>()
+
+        assertEquals(setOf(north.id, south.id), results.map(VectorPartitionedEntity::id).toSet())
+        assertEquals(setOf("compound-north", "compound-south"), results.map(VectorPartitionedEntity::region).toSet())
+    }
+
+    @Test
     fun testMinScoreFiltersResults() {
-        val stormNews = LuceneSearchEntity().apply {
+        val stormNews = VectorSearchEntity().apply {
             title = "Storm Alert"
             body = "storm warning across the coast"
             category = "news"
         }
         manager.saveEntity<IManagedEntity>(stormNews)
 
-        val filtered = manager.from<LuceneSearchEntity>()
+        val filtered = manager.from<VectorSearchEntity>()
             .search("storm", Float.MAX_VALUE)
-            .list<LuceneSearchEntity>()
+            .list<VectorSearchEntity>()
 
         assertTrue(filtered.isEmpty())
     }
 
     @Test
+    fun testCompoundSearchKeepsGlobalScoreOrder() {
+        val weaker = VectorSearchEntity().apply {
+            title = "First inserted"
+            body = "alpha"
+            category = "ranking"
+        }
+        val stronger = VectorSearchEntity().apply {
+            title = "Second inserted"
+            body = "alpha beta"
+            category = "ranking"
+        }
+        manager.saveEntity<IManagedEntity>(weaker)
+        manager.saveEntity<IManagedEntity>(stronger)
+
+        val results = manager.from<VectorSearchEntity>()
+            .where(
+                ("category" eq "ranking").and(
+                    search(VectorSearchQuery(text = "alpha beta", requireAllTerms = false))
+                )
+            )
+            .list<VectorSearchEntity>()
+
+        assertEquals(listOf(stronger.id, weaker.id), results.map(VectorSearchEntity::id))
+    }
+
+    @Test
     fun testSelectScoreWithSearch() {
-        val searchEntity = LuceneSearchEntity().apply {
+        val searchEntity = VectorSearchEntity().apply {
             title = "Vector Database Guide"
             body = "quick fox search score"
             category = "docs"
         }
         manager.saveEntity<IManagedEntity>(searchEntity)
 
-        val results = manager.from<LuceneSearchEntity>()
+        val results = manager.from<VectorSearchEntity>()
             .search("fox")
             .select(Query.SCORE_SELECTION, Query.WILDCARD_SELECTION)
             .list<Map<String, Any?>>()

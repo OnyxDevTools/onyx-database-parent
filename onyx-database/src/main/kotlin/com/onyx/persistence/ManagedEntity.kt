@@ -82,7 +82,7 @@ abstract class ManagedEntity : IManagedEntity, BufferStreamable {
     fun fromMap(mapObj: Map<String, Any?>, context: SchemaContext) {
         val descriptor = getDescriptor(context)
 
-        descriptor.attributes.values.forEach {
+        descriptor.attributes.values.filterNot { it.isInternal }.forEach {
             catchAll {
                 if (mapObj.containsKey(it.name)) {
                     val attributeValueWithinMap = mapObj[it.name]
@@ -101,7 +101,7 @@ abstract class ManagedEntity : IManagedEntity, BufferStreamable {
         val mapObj = mutableMapOf<String, Any?>()
         val descriptor = getDescriptor(context)
 
-        descriptor.attributes.values.forEach {
+        descriptor.attributes.values.filterNot { it.isInternal }.forEach {
             catchAll {
                 mapObj[it.name] = this.get(context = context, descriptor = descriptor, name = it.name)
             }

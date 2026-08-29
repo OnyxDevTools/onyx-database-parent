@@ -102,6 +102,52 @@ class CompositeIndexKeyBTreeTest {
     }
 
     @Test
+    fun boundedPostingTraversalStopsAtVisitAndVisitorLimits() {
+        val nodeStore = InMemoryStore(null, "bounded-posting-node-${System.nanoTime()}")
+        val dataStore = InMemoryStore(null, "bounded-posting-data-${System.nanoTime()}")
+        try {
+            val map = directPostingMap(nodeStore, dataStore, Long::class.java)
+            val postingCount = BTreePage.MAX_KEYS * 3 + 17
+            (1L..postingCount.toLong()).forEach { map.add(MIDDLE_LONG_VALUE, it) }
+
+            val visitLimited = ArrayList<Long>()
+            val visitCount = map.visitRecordIdsInRange(
+                MIDDLE_LONG_VALUE,
+                Long.MIN_VALUE,
+                true,
+                MIDDLE_LONG_VALUE,
+                Long.MAX_VALUE,
+                true,
+                17
+            ) { recordId ->
+                visitLimited += recordId
+                true
+            }
+            assertEquals(17, visitCount)
+            assertEquals((1L..17L).toList(), visitLimited)
+
+            val visitorLimited = ArrayList<Long>()
+            val visitorCount = map.visitRecordIdsInRange(
+                MIDDLE_LONG_VALUE,
+                Long.MIN_VALUE,
+                true,
+                MIDDLE_LONG_VALUE,
+                Long.MAX_VALUE,
+                true,
+                100
+            ) { recordId ->
+                visitorLimited += recordId
+                visitorLimited.size < 5
+            }
+            assertEquals(5, visitorCount)
+            assertEquals((1L..5L).toList(), visitorLimited)
+        } finally {
+            nodeStore.close()
+            dataStore.close()
+        }
+    }
+
+    @Test
     fun dateComponentsUseInlineEpochTokensWithoutSerializingMutableDates() {
         val databasePath = temporaryFolder.root.resolve("native-date-postings").toPath()
         val dates = (-400L..400L).map { Date(it * MILLIS_PER_DAY) }

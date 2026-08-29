@@ -1,9 +1,23 @@
 package database.index
 
 import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.VectorManagedEntity
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
-import com.onyx.persistence.query.*
 import com.onyx.persistence.query.Query
+import com.onyx.persistence.query.QueryCriteria
+import com.onyx.persistence.query.cont
+import com.onyx.persistence.query.containsIgnoreCase
+import com.onyx.persistence.query.eq
+import com.onyx.persistence.query.from
+import com.onyx.persistence.query.like
+import com.onyx.persistence.query.match
+import com.onyx.persistence.query.notCont
+import com.onyx.persistence.query.notContainsIgnoreCase
+import com.onyx.persistence.query.notLike
+import com.onyx.persistence.query.notMatch
+import com.onyx.persistence.query.notStartsWith
+import com.onyx.persistence.query.search
+import com.onyx.persistence.query.startsWith
 import database.base.DatabaseBaseTest
 import entities.VectorIndexEntity
 import org.junit.Before
@@ -15,9 +29,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/**
- * Test for VECTOR index functionality
- */
+/** Deterministic integration coverage for the managed vector fingerprint index. */
 @RunWith(Parameterized::class)
 class VectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
 
@@ -29,86 +41,58 @@ class VectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(f
     companion object {
         @JvmStatic
         @Parameterized.Parameters
-        fun persistenceManagersToTest(): Collection<KClass<*>> = listOf(EmbeddedPersistenceManagerFactory::class)
+        fun persistenceManagersToTest(): Collection<KClass<*>> =
+            listOf(EmbeddedPersistenceManagerFactory::class)
     }
 
     @Test
-    fun testSaveEntityWithVectorIndex() {
-        val entity = VectorIndexEntity()
-        entity.label = "test_vector"
-        entity.vectorData = "This is a test vector string for embedding"
-        
-        val savedEntity = manager.saveEntity<IManagedEntity>(entity)
-        assertNotNull(savedEntity, "Entity should be saved successfully")
+    fun savesManagedVectorEntity() {
+        val saved = save(
+            label = "saved",
+            vectorData = "This is a test string for fingerprint indexing"
+        )
+
+        assertNotNull(saved)
+        assertTrue(saved.id > 0L)
     }
 
     @Test
-    fun testVectorIndexSimilaritySearch() {
-        // Save a few entities with different vector data
-        for (i in 0 until 5) {
-            val entity = VectorIndexEntity()
-            entity.label = "vector_$i"
-            entity.vectorData = "This is test vector string number $i with some content to differentiate"
-            
-            manager.saveEntity<IManagedEntity>(entity)
-        }
-        
-        // Create a query string similar to one of our saved strings
-        val queryString = "This is test vector string number 2 with some content to differentiate"
-        
-        // Get the schema context and descriptor to access the index interactor directly
-        val context = manager.context
-        val descriptor = context.getBaseDescriptorForEntity(VectorIndexEntity::class.java)
-        val indexInteractor = context.getIndexInteractor(descriptor?.indexes["vectorData"]!!)
-        
-        // Perform vector similarity search
-        val results = indexInteractor.matchAll(queryString)
-        assertTrue(results.isNotEmpty(), "Should find similar vectors")
-    }
-    
-    @Test
-    fun testVectorIndexSaveAndDelete() {
-        // Save an entity with vector data
-        val entity = VectorIndexEntity()
-        entity.label = "test_vector"
-        entity.vectorData = "This is a test vector string for embedding and deletion"
-        
-        val savedEntity = manager.saveEntity<IManagedEntity>(entity)
-        
-        // Create a query string similar to our saved string
-        val queryString = "vector string for embedding"
-        
-        // Get the schema context and descriptor to access the index interactor directly
-        val context = manager.context
-        val descriptor = context.getBaseDescriptorForEntity(VectorIndexEntity::class.java)
-        val indexInteractor = context.getIndexInteractor(descriptor?.indexes["vectorData"]!!)
-        
-        // Perform vector similarity search - should find our entity
-        val resultsBeforeDelete = indexInteractor.matchAll(queryString)
-
-        // Delete the entity
-        manager.deleteEntity(savedEntity)
-        
-        val resultsAfterDelete = indexInteractor.matchAll(queryString)
-        assertTrue(resultsAfterDelete.size != resultsBeforeDelete.size)
-    }
-    
-
-    @Test
-    fun testSelectScoreWithLuceneLikeOnIndexedAttribute() {
-        val entity1 = VectorIndexEntity().apply {
-            label = "score_test_1"
-            vectorData = "alpha delta"
-            vectorData2 = "unused"
-        }
-        val entity2 = VectorIndexEntity().apply {
-            label = "score_test_2"
-            vectorData = "beta gamma"
-            vectorData2 = "unused"
+    fun fingerprintInteractorReturnsOnlyRecordsContainingEveryQueryTerm() {
+        val distinguishingTerms = listOf("amber", "birch", "cedar", "dogwood", "elmwood")
+        distinguishingTerms.forEach { term ->
+            save(
+                label = "vector_$term",
+                vectorData = "This is test vector string with $term content to differentiate"
+            )
         }
 
-        manager.saveEntity<IManagedEntity>(entity1)
-        manager.saveEntity<IManagedEntity>(entity2)
+        val results = fingerprintInteractor().matchAll(
+            "test vector string cedar content"
+        )
+
+        assertEquals(1, results.size)
+        assertEquals(listOf(1.0f), results.values.toList())
+    }
+
+    @Test
+    fun deletingEntityRemovesItsFingerprintPostings() {
+        val saved = save(
+            label = "deleted",
+            vectorData = "This is a vector string for embedding and deletion"
+        )
+        val queryText = "vector string embedding"
+
+        assertEquals(1, fingerprintInteractor().matchAll(queryText).size)
+
+        manager.deleteEntity(saved)
+
+        assertTrue(fingerprintInteractor().matchAll(queryText).isEmpty())
+    }
+
+    @Test
+    fun selectingScoreForAttributeLikeReturnsExactScore() {
+        save("score_1", "alpha delta", "unused")
+        save("score_2", "beta gamma", "unused")
 
         val results = manager.from(VectorIndexEntity::class)
             .select(Query.SCORE_SELECTION, "id", "vectorData")
@@ -116,522 +100,258 @@ class VectorIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(f
             .list<Map<String, Any?>>()
 
         assertEquals(1, results.size)
-        val first = results.first()
-        assertNotNull(first[Query.SCORE_SELECTION] as Float?)
+        assertEquals("alpha delta", results.single()["vectorData"])
+        assertEquals(1.0f, results.single()[Query.SCORE_SELECTION] as Float)
     }
 
     @Test
-    fun testVectorIndexPartialMatch() {
-        // Save entities with similar but not identical vector data
-        val entity1 = VectorIndexEntity()
-        entity1.label = "partial_match_1"
-        entity1.vectorData = "This is a test vector string with partial matching content"
-        
-        val entity2 = VectorIndexEntity()
-        entity2.label = "partial_match_2"
-        entity2.vectorData = "This is a test vector string with different content"
-        
-        val entity3 = VectorIndexEntity()
-        entity3.label = "partial_match_3"
-        entity3.vectorData = "This is a test vector string with partial matching content and more"
-        
-        manager.saveEntity<IManagedEntity>(entity1)
-        manager.saveEntity<IManagedEntity>(entity2)
-        manager.saveEntity<IManagedEntity>(entity3)
-        
-        // Create a query string that should match partially with entity1 and entity3
-        val queryString = "test vector string partial matching"
-        
-        // Get the schema context and descriptor to access the index interactor directly
-        val context = manager.context
-        val descriptor = context.getBaseDescriptorForEntity(VectorIndexEntity::class.java)
-        val indexInteractor = context.getIndexInteractor(descriptor?.indexes["vectorData"]!!)
-        
-        // Perform vector similarity search
-        val results = indexInteractor.findAll(queryString)
-        
-        // Print results for debugging
-        println("Found ${results.size} results for partial match query")
-        results.forEach { (id, score) ->
-            println("  ID: $id, Score: $score")
-        }
-        
-        // The test should pass regardless of whether results are found
-        // since the vector similarity algorithm may not always find matches
-        // depending on the content and threshold
-    }
-    
-    @Test
-    fun testVectorIndexQueryWithEquals() {
-        // Save entities with vector data
-        val entity1 = VectorIndexEntity()
-        entity1.label = "query_test_1"
-        entity1.vectorData = "This is a test vector string for query testing"
-        
-        val entity2 = VectorIndexEntity()
-        entity2.label = "query_test_2"
-        entity2.vectorData = "vector string for testing"
-        
-        val entity3 = VectorIndexEntity()
-        entity3.label = "query_test_3"
-        entity3.vectorData = "This is a test vector string"
-        
-        manager.saveEntity<IManagedEntity>(entity1)
-        manager.saveEntity<IManagedEntity>(entity2)
-        manager.saveEntity<IManagedEntity>(entity3)
-        
-        // Query using the equals operator on vectorData
-        val queryVector = "This is a test vector string for query testing"
+    fun wholeRecordLexicalSearchRequiresEveryQueryTerm() {
+        save("partial_1", "This is a test vector string with partial matching content")
+        save("partial_2", "This is a test vector string with different content")
+        save("partial_3", "This is a test vector string with partial matching content and more")
+
         val results = manager.from(VectorIndexEntity::class)
-            .where("vectorData" eq queryVector)
+            .where(search("test vector string partial matching"))
             .list<VectorIndexEntity>()
-        
-        // Print results for debugging
-        println("Found ${results.size} results for query with equals")
-        results.forEach { entity ->
-            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
-        }
 
-        assertEquals(results.size, 1)
+        assertEquals(setOf("partial_1", "partial_3"), labels(results))
     }
-    
-    @Test
-    fun testVectorIndexMatch() {
-        // Save entities with identical vector data
-        val entity1 = VectorIndexEntity()
-        entity1.label = "exact_match_1"
-        entity1.vectorData = "Identical vector content for testing"
-        
-        val entity2 = VectorIndexEntity()
-        entity2.label = "exact_match_2"
-        entity2.vectorData = "Identical vector content for testing"
-        
-        val entity3 = VectorIndexEntity()
-        entity3.label = "exact_match_3"
-        entity3.vectorData = "Different vector content for testing"
-        
-        manager.saveEntity<IManagedEntity>(entity1)
-        manager.saveEntity<IManagedEntity>(entity2)
-        manager.saveEntity<IManagedEntity>(entity3)
-        
-        // Create a query string identical to the first two entities
-        val queryString = "Identical vector content for testing"
-        
-        // Get the schema context and descriptor to access the index interactor directly
-        val context = manager.context
-        val descriptor = context.getBaseDescriptorForEntity(VectorIndexEntity::class.java)
-        val indexInteractor = context.getIndexInteractor(descriptor?.indexes["vectorData"]!!)
-        
-        // Perform vector similarity search
-        val results = indexInteractor.matchAll(queryString)
-        
-        // Print results for debugging
-        println("Found ${results.size} results for exact match query")
-        results.forEach { (id, score) ->
-            println("  ID: $id, Score: $score")
-        }
 
-        assertEquals(results.size, 3)
-    }
-    
     @Test
-    fun testVectorIndexMatchesOperator() {
-        // Save entities with vector data
-        val entity1 = VectorIndexEntity()
-        entity1.label = "matches_test_1"
-        entity1.vectorData = "This is a test vector string for matches testing"
-        
-        val entity2 = VectorIndexEntity()
-        entity2.label = "matches_test_2"
-        entity2.vectorData = "vector string for testing matches"
-        
-        val entity3 = VectorIndexEntity()
-        entity3.label = "matches_test_3"
-        entity3.vectorData = "This is a test vector string"
-        
-        manager.saveEntity<IManagedEntity>(entity1)
-        manager.saveEntity<IManagedEntity>(entity2)
-        manager.saveEntity<IManagedEntity>(entity3)
-        
-        // Query using the matches operator on vectorData
-        val queryVector = "This is a test vector string for matches testing"
+    fun equalityReturnsTheExactPersistedRecord() {
+        save("equal_1", "This is a test vector string for query testing")
+        save("equal_2", "vector string for testing")
+        save("equal_3", "This is a test vector string")
+
         val results = manager.from(VectorIndexEntity::class)
-            .where("vectorData" match queryVector)
+            .where("vectorData" eq "This is a test vector string for query testing")
             .list<VectorIndexEntity>()
-        
-        // Print results for debugging
-        println("Found ${results.size} results for query with matches operator")
-        results.forEach { entity ->
-            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
-        }
-        
-        // We should get some results since we're doing a similarity search
-        // The exact number may vary depending on the similarity algorithm
-        assertTrue(results.isNotEmpty(), "Should find matching vectors")
+
+        assertEquals(setOf("equal_1"), labels(results))
     }
-    
+
     @Test
-    fun testVectorIndexLikeOperator() {
-        // Save entities with vector data
-        val entity1 = VectorIndexEntity()
-        entity1.label = "exact_match_1"
-        entity1.vectorData = "Identical vector content for testing"
+    fun fingerprintInteractorReturnsEveryExactLexicalDuplicate() {
+        save("duplicate_1", "Identical vector content for testing")
+        save("duplicate_2", "Identical vector content for testing")
+        save("different", "Different vector content for testing")
 
-        val entity2 = VectorIndexEntity()
-        entity2.label = "exact_match_2"
-        entity2.vectorData = "Identical vector content for testing"
+        val results = fingerprintInteractor().matchAll("Identical vector content for testing")
 
-        val entity3 = VectorIndexEntity()
-        entity3.label = "exact_match_3"
-        entity3.vectorData = "Different vector content for testing"
-        
-        manager.saveEntity<IManagedEntity>(entity1)
-        manager.saveEntity<IManagedEntity>(entity2)
-        manager.saveEntity<IManagedEntity>(entity3)
-        
-        // Query using the like operator on vectorData
-        val queryVector = "Different vector content for testing"
+        assertEquals(2, results.size)
+        assertTrue(results.values.all { it == 1.0f })
+    }
+
+    @Test
+    fun matchesOperatorUsesExactRegexSemantics() {
+        save("matches_1", "This is a test vector string for matches testing")
+        save("matches_2", "vector string for testing matches")
+        save("matches_3", "This is a test vector string")
+
         val results = manager.from(VectorIndexEntity::class)
-            .where("vectorData" like queryVector)
+            .where("vectorData" match "This is a test vector string for matches testing")
             .list<VectorIndexEntity>()
-        
-        // Print results for debugging
-        println("Found ${results.size} results for query with like operator")
-        results.forEach { entity ->
-            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
-        }
 
-        assertEquals(results.size, 3)
-        // We should get some results since we're doing a similarity search
-        // The exact number may vary depending on the similarity algorithm
+        assertEquals(setOf("matches_1"), labels(results))
     }
-    
+
     @Test
-    fun testVectorIndexContainsOperator() {
-        // Save entities with vector data
-        val entity1 = VectorIndexEntity()
-        entity1.label = "contains_test_1"
-        entity1.vectorData = "This is a test vector string for contains testing"
-        
-        val entity2 = VectorIndexEntity()
-        entity2.label = "contains_test_2"
-        entity2.vectorData = "vector string for testing contains"
-        
-        val entity3 = VectorIndexEntity()
-        entity3.label = "contains_test_3"
-        entity3.vectorData = "This is a test vector string"
-        
-        manager.saveEntity<IManagedEntity>(entity1)
-        manager.saveEntity<IManagedEntity>(entity2)
-        manager.saveEntity<IManagedEntity>(entity3)
-        
-        // Import the contains operator
+    fun likeOperatorRequiresEveryRequestedTerm() {
+        save("like_1", "Identical vector content for testing")
+        save("like_2", "Identical vector content for testing")
+        save("like_3", "Different vector content for testing")
+
+        val results = manager.from(VectorIndexEntity::class)
+            .where("vectorData" like "Different vector content for testing")
+            .list<VectorIndexEntity>()
+
+        assertEquals(setOf("like_3"), labels(results))
+    }
+
+    @Test
+    fun containsOperatorReturnsExactMatches() {
+        save("contains_1", "This is a test vector string for contains testing")
+        save("contains_2", "vector string for testing contains")
+        save("contains_3", "This is a test vector string")
+
         val results = manager.from(VectorIndexEntity::class)
             .where("vectorData" cont "contains")
             .list<VectorIndexEntity>()
-        
-        // Print results for debugging
-        println("Found ${results.size} results for query with contains operator")
-        results.forEach { entity ->
-            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
-        }
-        
-        // We should get entities 1 and 2 since they contain "contains"
-        assertEquals(2, results.size)
+
+        assertEquals(setOf("contains_1", "contains_2"), labels(results))
     }
-    
+
     @Test
-    fun testVectorIndexStartsWithOperator() {
-        // Save entities with vector data
-        val entity1 = VectorIndexEntity()
-        entity1.label = "startswith_test_1"
-        entity1.vectorData = "This is a test vector string for starts with testing"
-        
-        val entity2 = VectorIndexEntity()
-        entity2.label = "startswith_test_2"
-        entity2.vectorData = "vector string for testing starts with"
-        
-        val entity3 = VectorIndexEntity()
-        entity3.label = "startswith_test_3"
-        entity3.vectorData = "This is a test vector string"
-        
-        manager.saveEntity<IManagedEntity>(entity1)
-        manager.saveEntity<IManagedEntity>(entity2)
-        manager.saveEntity<IManagedEntity>(entity3)
-        
-        // Import the startsWith operator
+    fun startsWithOperatorReturnsExactMatches() {
+        save("starts_1", "This is a test vector string for starts with testing")
+        save("starts_2", "vector string for testing starts with")
+        save("starts_3", "This is a test vector string")
+
         val results = manager.from(VectorIndexEntity::class)
             .where("vectorData" startsWith "This is a")
             .list<VectorIndexEntity>()
-        
-        // Print results for debugging
-        println("Found ${results.size} results for query with startsWith operator")
-        results.forEach { entity ->
-            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
-        }
-        
-        // We should get entities 1 and 3 since they start with "This"
-        assertEquals(2, results.size)
+
+        assertEquals(setOf("starts_1", "starts_3"), labels(results))
     }
-    
+
     @Test
-    fun testVectorIndexNotContainsOperator() {
-        // Save entities with vector data
-        val entity1 = VectorIndexEntity()
-        entity1.label = "not_contains_test_1"
-        entity1.vectorData = "This is a test vector string for not contains testing"
-        
-        val entity2 = VectorIndexEntity()
-        entity2.label = "not_contains_test_2"
-        entity2.vectorData = "vector string for testing not contains"
-        
-        val entity3 = VectorIndexEntity()
-        entity3.label = "not_contains_test_3"
-        entity3.vectorData = "This is a test vector string"
-        
-        manager.saveEntity<IManagedEntity>(entity1)
-        manager.saveEntity<IManagedEntity>(entity2)
-        manager.saveEntity<IManagedEntity>(entity3)
-        
-        // Test the not contains operator
+    fun notContainsOperatorReturnsExactComplement() {
+        save("not_contains_1", "This is a test vector string for not contains testing")
+        save("not_contains_2", "vector string for testing not contains")
+        save("not_contains_3", "This is a test vector string")
+
         val results = manager.from(VectorIndexEntity::class)
             .where("vectorData" notCont "not contains")
             .list<VectorIndexEntity>()
-        
-        // Print results for debugging
-        println("Found ${results.size} results for query with notContains operator")
-        results.forEach { entity ->
-            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
-        }
-        
-        // We should get entity 3 since it doesn't contain "not contains"
-        assertEquals(1, results.size)
+
+        assertEquals(setOf("not_contains_3"), labels(results))
     }
-    
+
     @Test
-    fun testVectorIndexContainsIgnoreCaseOperator() {
-        // Save entities with vector data
-        val entity1 = VectorIndexEntity()
-        entity1.label = "contains_ignore_case_test_1"
-        entity1.vectorData = "This is a test vector string for contains ignore case testing"
-        
-        val entity2 = VectorIndexEntity()
-        entity2.label = "contains_ignore_case_test_2"
-        entity2.vectorData = "vector string for testing CONTAINS ignore case"
-        
-        val entity3 = VectorIndexEntity()
-        entity3.label = "contains_ignore_case_test_3"
-        entity3.vectorData = "This is a test vector string"
-        
-        manager.saveEntity<IManagedEntity>(entity1)
-        manager.saveEntity<IManagedEntity>(entity2)
-        manager.saveEntity<IManagedEntity>(entity3)
-        
-        // Test the contains ignore case operator
+    fun containsIgnoreCaseOperatorReturnsExactMatches() {
+        save("ignore_case_1", "This is a test vector string for contains ignore case testing")
+        save("ignore_case_2", "vector string for testing CONTAINS ignore case")
+        save("ignore_case_3", "This is a test vector string")
+
         val results = manager.from(VectorIndexEntity::class)
             .where("vectorData" containsIgnoreCase "CONTAINS")
             .list<VectorIndexEntity>()
-        
-        // Print results for debugging
-        println("Found ${results.size} results for query with containsIgnoreCase operator")
-        results.forEach { entity ->
-            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
-        }
-        
-        // We should get entities 1 and 2 since they contain "contains" (case insensitive)
-        assertEquals(2, results.size)
+
+        assertEquals(setOf("ignore_case_1", "ignore_case_2"), labels(results))
     }
-    
+
     @Test
-    fun testVectorIndexNotContainsIgnoreCaseOperator() {
-        // Save entities with vector data
-        val entity1 = VectorIndexEntity()
-        entity1.label = "not_contains_ignore_case_test_1"
-        entity1.vectorData = "This is a test vector string for not contains ignore case testing"
-        
-        val entity2 = VectorIndexEntity()
-        entity2.label = "not_contains_ignore_case_test_2"
-        entity2.vectorData = "vector string for testing NOT contains ignore case"
-        
-        val entity3 = VectorIndexEntity()
-        entity3.label = "not_contains_ignore_case_test_3"
-        entity3.vectorData = "This is a test vector string"
-        
-        manager.saveEntity<IManagedEntity>(entity1)
-        manager.saveEntity<IManagedEntity>(entity2)
-        manager.saveEntity<IManagedEntity>(entity3)
-        
-        // Test the not contains ignore case operator
+    fun notContainsIgnoreCaseOperatorReturnsExactComplement() {
+        save("not_ignore_case_1", "This is a test vector string for not contains ignore case testing")
+        save("not_ignore_case_2", "vector string for testing NOT contains ignore case")
+        save("not_ignore_case_3", "This is a test vector string")
+
         val results = manager.from(VectorIndexEntity::class)
             .where("vectorData" notContainsIgnoreCase "NOT")
             .list<VectorIndexEntity>()
-        
-        // Print results for debugging
-        println("Found ${results.size} results for query with notContainsIgnoreCase operator")
-        results.forEach { entity ->
-            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
-        }
-        
-        // We should get entity 3 since it doesn't contain "not" (case insensitive)
-        assertEquals(1, results.size)
+
+        assertEquals(setOf("not_ignore_case_3"), labels(results))
     }
-    
+
     @Test
-    fun testVectorIndexNotStartsWithOperator() {
-        // Save entities with vector data
-        val entity1 = VectorIndexEntity()
-        entity1.label = "not_startswith_test_1"
-        entity1.vectorData = "This is a test vector string for not starts with testing"
-        
-        val entity2 = VectorIndexEntity()
-        entity2.label = "not_startswith_test_2"
-        entity2.vectorData = "vector string for testing not starts with"
-        
-        val entity3 = VectorIndexEntity()
-        entity3.label = "not_startswith_test_3"
-        entity3.vectorData = "Another test vector string"
-        
-        manager.saveEntity<IManagedEntity>(entity1)
-        manager.saveEntity<IManagedEntity>(entity2)
-        manager.saveEntity<IManagedEntity>(entity3)
-        
-        // Test the not starts with operator
+    fun notStartsWithOperatorReturnsExactComplement() {
+        save("not_starts_1", "This is a test vector string for not starts with testing")
+        save("not_starts_2", "vector string for testing not starts with")
+        save("not_starts_3", "Another test vector string")
+
         val results = manager.from(VectorIndexEntity::class)
             .where("vectorData" notStartsWith "This")
             .list<VectorIndexEntity>()
-        
-        // Print results for debugging
-        println("Found ${results.size} results for query with notStartsWith operator")
-        results.forEach { entity ->
-            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
-        }
-        
-        // We should get entities 2 and 3 since they don't start with "This"
-        assertEquals(2, results.size)
+
+        assertEquals(setOf("not_starts_2", "not_starts_3"), labels(results))
     }
-    
+
     @Test
-    fun testVectorIndexNotMatchesOperator() {
-        // Save entities with vector data
-        val entity1 = VectorIndexEntity()
-        entity1.label = "not_matches_test_1"
-        entity1.vectorData = "This is a test vector string for not matches testing"
-        
-        val entity2 = VectorIndexEntity()
-        entity2.label = "not_matches_test_2"
-        entity2.vectorData = "vector string for testing not matches"
-        
-        val entity3 = VectorIndexEntity()
-        entity3.label = "not_matches_test_3"
-        entity3.vectorData = "This is a test vector string"
-        
-        manager.saveEntity<IManagedEntity>(entity1)
-        manager.saveEntity<IManagedEntity>(entity2)
-        manager.saveEntity<IManagedEntity>(entity3)
-        
-        // Test the not matches operator
-        val queryVector = "This is a test vector string for not matches testing"
+    fun notMatchesOperatorReturnsExactRegexComplement() {
+        save("not_matches_1", "This is a test vector string for not matches testing")
+        save("not_matches_2", "vector string for testing not matches")
+        save("not_matches_3", "This is a test vector string")
+
         val results = manager.from(VectorIndexEntity::class)
-            .where("vectorData" notMatch queryVector)
+            .where("vectorData" notMatch "This is a test vector string for not matches testing")
             .list<VectorIndexEntity>()
-        
-        // Print results for debugging
-        println("Found ${results.size} results for query with notMatches operator")
-        results.forEach { entity ->
-            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
-        }
-        
-        // We should get entities 2 and 3 since they don't match the query vector exactly
-        // Note: The exact number may vary depending on the similarity algorithm
-        assertTrue(results.isNotEmpty(), "Should find non-matching vectors")
+
+        assertEquals(setOf("not_matches_2", "not_matches_3"), labels(results))
     }
-    
+
     @Test
-    fun testVectorIndexNotLikeOperator() {
-        // Save entities with vector data
-        val entity1 = VectorIndexEntity()
-        entity1.label = "not_like_test_1"
-        entity1.vectorData = "This is a test vector string for not like testing"
-        
-        val entity2 = VectorIndexEntity()
-        entity2.label = "not_like_test_2"
-        entity2.vectorData = "vector string for testing not like"
-        
-        val entity3 = VectorIndexEntity()
-        entity3.label = "not_like_test_3"
-        entity3.vectorData = "This is a test vector string"
-        
-        manager.saveEntity<IManagedEntity>(entity1)
-        manager.saveEntity<IManagedEntity>(entity2)
-        manager.saveEntity<IManagedEntity>(entity3)
-        
-        // Test the not like operator
-        val queryVector = "not like"
+    fun notLikeOperatorReturnsExactTokenComplement() {
+        save("not_like_1", "This is a test vector string for not like testing")
+        save("not_like_2", "vector string for testing not like")
+        save("not_like_3", "This is a test vector string")
+
         val results = manager.from(VectorIndexEntity::class)
-            .where("vectorData" notLike queryVector)
+            .where("vectorData" notLike "not like")
             .list<VectorIndexEntity>()
-        
-        // Print results for debugging
-        println("Found ${results.size} results for query with notLike operator")
-        results.forEach { entity ->
-            println("  ID: ${entity.id}, Label: ${entity.label}, VectorData: ${entity.vectorData}")
-        }
-        
-        // We should get entities 1 and 3 since they don't match the query vector
-        // Note: The exact number may vary depending on the similarity algorithm
-        assertTrue(results.isNotEmpty(), "Should find non-matching vectors")
+
+        assertEquals(setOf("not_like_3"), labels(results))
     }
-    
+
     @Test
-    fun testVectorIndexWithPartition() {
-        // Save an entity with vector data in a specific partition
-        val entity = VectorIndexEntity()
-        entity.partitionId = 1L
-        entity.label = "partition_test"
-        entity.vectorData = "This is a test vector string for partition testing"
-        
-        val savedEntity = manager.saveEntity<IManagedEntity>(entity)
-        
-        // Close and reopen the database
+    fun partitionedFingerprintQuerySurvivesReopen() {
+        save(
+            label = "partitioned",
+            vectorData = "This is a test vector string for partition testing",
+            partitionId = 1L
+        )
+
         factory.close()
         initialize()
-        
-        // Query for the entity in the specific partition
+
         val results = manager.from(VectorIndexEntity::class)
             .where("partitionId" eq 1L)
             .and("vectorData" like "This is a test vector string for partition testing")
             .list<VectorIndexEntity>()
-        
-        // Verify we found the entity
-        assertEquals(1, results.size, "Should find exactly one entity in the partition")
-        assertEquals("partition_test", results[0].label, "Should have the correct label")
-        assertEquals(1L, results[0].partitionId, "Should have the correct partition ID")
+
+        assertEquals(setOf("partitioned"), labels(results))
+        assertEquals(setOf(1L), results.mapNotNull { it.partitionId }.toSet())
     }
-    
+
     @Test
-    fun testVectorIndexWithTwoVectorsInSameEntity() {
-        // Save an entity with two vector fields
-        val entity = VectorIndexEntity()
-        entity.label = "two_vectors_test"
-        entity.vectorData = "This is the first vector string for testing"
-        entity.vectorData2 = "This is the second vector string for testing"
-        
-        val savedEntity = manager.saveEntity<IManagedEntity>(entity)
-        
-        // Query using the first vector field
-        val results1 = manager.from(VectorIndexEntity::class)
+    fun predicatesCanTargetEitherManagedTextField() {
+        save(
+            label = "two_fields",
+            vectorData = "This is the first vector string for testing",
+            vectorData2 = "This is the second vector string for testing"
+        )
+
+        val firstResults = manager.from(VectorIndexEntity::class)
             .where("vectorData" like "first vector string")
             .list<VectorIndexEntity>()
-        
-        // Query using the second vector field
-        val results2 = manager.from(VectorIndexEntity::class)
+        val secondResults = manager.from(VectorIndexEntity::class)
             .where("vectorData2" like "second vector string")
             .list<VectorIndexEntity>()
-        
-        // Verify we found the entity with both queries
-        assertEquals(1, results1.size, "Should find exactly one entity with first vector")
-        assertEquals(1, results2.size, "Should find exactly one entity with second vector")
-        assertEquals("two_vectors_test", results1[0].label, "Should have the correct label")
-        assertEquals("two_vectors_test", results2[0].label, "Should have the correct label")
+
+        assertEquals(setOf("two_fields"), labels(firstResults))
+        assertEquals(setOf("two_fields"), labels(secondResults))
     }
+
+    @Test
+    fun fingerprintRebuildStreamsRecordsAndRestoresSearchRoutes() {
+        repeat(256) { index ->
+            save(
+                label = "rebuild_$index",
+                vectorData = "shared rebuild material unique-token-$index",
+            )
+        }
+        val interactor = fingerprintInteractor()
+        interactor.clear()
+
+        assertTrue(interactor.matchAll("unique-token-173").isEmpty())
+
+        interactor.rebuild()
+
+        val rebuilt = manager.from(VectorIndexEntity::class)
+            .where("vectorData" like "unique-token-173")
+            .list<VectorIndexEntity>()
+        assertEquals(setOf("rebuild_173"), labels(rebuilt))
+    }
+
+    private fun save(
+        label: String,
+        vectorData: String,
+        vectorData2: String? = null,
+        partitionId: Long? = null
+    ): VectorIndexEntity = manager.saveEntity<IManagedEntity>(VectorIndexEntity().apply {
+        this.label = label
+        this.vectorData = vectorData
+        this.vectorData2 = vectorData2
+        this.partitionId = partitionId
+    }) as VectorIndexEntity
+
+    private fun fingerprintInteractor() = manager.context.getIndexInteractor(
+        requireNotNull(
+            manager.context.getBaseDescriptorForEntity(VectorIndexEntity::class.java)
+                ?.indexes
+                ?.get(VectorManagedEntity.REPRESENTATION_FIELD)
+        )
+    )
+
+    private fun labels(results: List<VectorIndexEntity>): Set<String> =
+        results.mapNotNull(VectorIndexEntity::label).toSet()
 }

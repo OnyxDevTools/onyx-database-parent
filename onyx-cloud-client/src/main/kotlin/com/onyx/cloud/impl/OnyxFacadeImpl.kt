@@ -86,6 +86,7 @@ object OnyxFacadeImpl : OnyxFacade {
             apiSecret = resolved.apiSecret,
             fetch = config?.fetch,
             defaultPartition = resolved.partition,
+            entityWireFormat = resolved.entityWireFormat,
             requestLoggingEnabled = resolved.requestLoggingEnabled,
             responseLoggingEnabled = resolved.responseLoggingEnabled,
             ttl = config?.ttl,

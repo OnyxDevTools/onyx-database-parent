@@ -129,6 +129,107 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(
         return values
     }
 
+    /**
+     * Admit bounded prefixes directly from the native posting tree. Active values receive a fair
+     * share before spare capacity is redistributed, and all rounds share one physical visit budget.
+     */
+    override fun visitApproximateCandidates(
+        indexValues: List<Any>,
+        maxCandidates: Int,
+        visitor: (Long) -> Boolean
+    ): Int {
+        require(maxCandidates >= 0) { "maxCandidates must be non-negative" }
+        if (maxCandidates == 0 || indexValues.isEmpty()) return 0
+
+        val distinctValues = distinctNormalizedValues(indexValues)
+
+        val cursors = distinctValues.map(::CandidatePostingCursor)
+        var visits = 0
+        var continueVisiting = true
+        while (continueVisiting && visits < maxCandidates) {
+            val active = cursors.filterNot(CandidatePostingCursor::exhausted)
+            if (active.isEmpty()) break
+            var progressed = false
+            active.forEachIndexed { index, cursor ->
+                if (!continueVisiting || visits >= maxCandidates) return@forEachIndexed
+                val remainingRoutes = active.size - index
+                val remainingVisits = maxCandidates - visits
+                val fairShare = maxOf(
+                    1,
+                    ((remainingVisits.toLong() + remainingRoutes.toLong() - 1L) /
+                        remainingRoutes.toLong()).toInt()
+                )
+                var lastVisitedRecordId: Long? = null
+                val routeVisits = references.visitRecordIdsInRange(
+                    cursor.indexValue,
+                    cursor.lastRecordId,
+                    !cursor.started,
+                    cursor.indexValue,
+                    Long.MAX_VALUE,
+                    true,
+                    fairShare
+                ) { recordId ->
+                    lastVisitedRecordId = recordId
+                    visitor(recordId).also { continueVisiting = it }
+                }
+                if (routeVisits > 0) progressed = true
+                visits += routeVisits
+                lastVisitedRecordId?.let {
+                    cursor.lastRecordId = it
+                    cursor.started = true
+                }
+                if (routeVisits < fairShare || !continueVisiting) cursor.exhausted = true
+            }
+            if (!progressed) break
+        }
+        return visits
+    }
+
+    /** Stream exact posting routes without allocating their record-ID sets. */
+    override fun visitExactPostings(
+        indexValues: List<Any>,
+        visitor: (Long) -> Boolean
+    ): Int {
+        if (indexValues.isEmpty()) return 0
+
+        var visits = 0
+        var continueVisiting = true
+        distinctNormalizedValues(indexValues).forEach { indexValue ->
+            if (!continueVisiting) return@forEach
+            visits += references.visitRecordIdsInRange(
+                indexValue,
+                Long.MIN_VALUE,
+                true,
+                indexValue,
+                Long.MAX_VALUE,
+                true,
+                Int.MAX_VALUE
+            ) { recordId ->
+                visitor(recordId).also { continueVisiting = it }
+            }
+        }
+        return visits
+    }
+
+    private data class CandidatePostingCursor(
+        val indexValue: Any,
+        var lastRecordId: Long = Long.MIN_VALUE,
+        var started: Boolean = false,
+        var exhausted: Boolean = false
+    )
+
+    private fun distinctNormalizedValues(indexValues: List<Any>): List<Any> {
+        val distinctValues = ArrayList<Any>(indexValues.size)
+        val valuesByIndexOrder = java.util.TreeSet<Any>(::compareIndexValues)
+        indexValues.forEach { rawValue ->
+            val normalizedValue = normalize(rawValue)
+            if (valuesByIndexOrder.add(normalizedValue)) {
+                distinctValues += normalizedValue
+            }
+        }
+        return distinctValues
+    }
+
     /** Find references above the supplied indexed value. */
     @Throws(OnyxException::class)
     override fun findAllAbove(indexValue: Any?, includeValue: Boolean): Set<Long> {
@@ -200,23 +301,31 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(
         indexValue.castTo(indexDescriptor.type) ?: indexValue
 
     /** Match the posting tree's value comparison, including compareTo-equivalent object values. */
+    private fun valuesHaveSameIndexOrder(first: Any, second: Any): Boolean =
+        compareIndexValues(first, second) == 0
+
+    /** Mirror the native posting tree's value ordering for route de-duplication. */
     @Suppress("UNCHECKED_CAST")
-    private fun valuesHaveSameIndexOrder(first: Any, second: Any): Boolean = when (indexDescriptor.type) {
+    private fun compareIndexValues(first: Any, second: Any): Int = when (indexDescriptor.type) {
         ClassMetadata.FLOAT_TYPE, ClassMetadata.FLOAT_PRIMITIVE_TYPE ->
-            java.lang.Float.compare(first as Float, second as Float) == 0
+            java.lang.Float.compare(first as Float, second as Float)
         ClassMetadata.DOUBLE_TYPE, ClassMetadata.DOUBLE_PRIMITIVE_TYPE ->
-            java.lang.Double.compare(first as Double, second as Double) == 0
-        Date::class.java -> (first as Date).time == (second as Date).time
+            java.lang.Double.compare(first as Double, second as Double)
+        Date::class.java -> java.lang.Long.compare((first as Date).time, (second as Date).time)
         else -> if (indexDescriptor.type.canBeCastToPrimitive()) {
-            first.long() == second.long()
+            java.lang.Long.compare(first.long(), second.long())
         } else {
             if (first === second || first == second) {
-                true
+                0
             } else {
                 try {
-                    (first as Comparable<Any?>).compareTo(second) == 0
+                    (first as Comparable<Any?>).compareTo(second)
                 } catch (_: Exception) {
-                    first.forceCompare(second, QueryCriteriaOperator.EQUAL)
+                    when {
+                        first.forceCompare(second, QueryCriteriaOperator.EQUAL) -> 0
+                        second.forceCompare(first, QueryCriteriaOperator.GREATER_THAN) -> 1
+                        else -> -1
+                    }
                 }
             }
         }

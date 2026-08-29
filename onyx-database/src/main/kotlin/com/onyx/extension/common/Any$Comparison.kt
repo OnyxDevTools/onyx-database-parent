@@ -4,6 +4,7 @@ import com.onyx.exception.InvalidDataTypeForOperator
 import com.onyx.persistence.query.QueryCriteriaOperator
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.lang.reflect.Array as ReflectArray
 
 /**
  * Compare without throwing exception
@@ -42,6 +43,8 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
     if (second != null && first != null && first::class != second::class
         && operator != QueryCriteriaOperator.IN // Expected as List when IN
         && operator != QueryCriteriaOperator.NOT_IN
+        && operator != QueryCriteriaOperator.BETWEEN // Expected as Pair/List/array
+        && operator != QueryCriteriaOperator.NOT_BETWEEN
     ) {
         when (second) {
             // Handle numeric types
@@ -124,17 +127,21 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
             }
 
             QueryCriteriaOperator.BETWEEN -> {
-                // support range pair on either side of the comparison
-                val range = (first as? Pair<Any?, Any?>) ?: (second as? Pair<Any?, Any?>) ?: return false
-                val value = if (first is Pair<*, *>) second else first
+                // Remote clients commonly transport a range as a two-item list/array,
+                // while the embedded Kotlin DSL uses Pair. Treat them identically.
+                val firstRange = first.asRangeEndpoints()
+                val secondRange = second.asRangeEndpoints()
+                val range = firstRange ?: secondRange ?: return false
+                val value = if (firstRange != null) second else first
                 return range.first.compare(value, QueryCriteriaOperator.GREATER_THAN_EQUAL) &&
                         range.second.compare(value, QueryCriteriaOperator.LESS_THAN_EQUAL)
             }
 
             QueryCriteriaOperator.NOT_BETWEEN -> {
-                // support range pair on either side of the comparison
-                val range = (first as? Pair<Any?, Any?>) ?: (second as? Pair<Any?, Any?>) ?: return false
-                val value = if (first is Pair<*, *>) second else first
+                val firstRange = first.asRangeEndpoints()
+                val secondRange = second.asRangeEndpoints()
+                val range = firstRange ?: secondRange ?: return false
+                val value = if (firstRange != null) second else first
                 return !(range.first.compare(value, QueryCriteriaOperator.GREATER_THAN_EQUAL) &&
                         range.second.compare(value, QueryCriteriaOperator.LESS_THAN_EQUAL))
             }
@@ -151,17 +158,48 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
             QueryCriteriaOperator.MATCHES -> (first.toString()).matches(Regex(second.toString()))
             QueryCriteriaOperator.NOT_MATCHES -> !(first.toString()).matches(Regex(second.toString()))
             QueryCriteriaOperator.IN -> {
-                val list = second as List<Any>
-                return list.find { first.compare(it, QueryCriteriaOperator.EQUAL) } != null
+                val values = second.asComparisonValues()
+                    ?: throw InvalidDataTypeForOperator(InvalidDataTypeForOperator.INVALID_DATA_TYPE_FOR_OPERATOR)
+                return values.any { first.compare(it, QueryCriteriaOperator.EQUAL) }
             }
 
             QueryCriteriaOperator.NOT_IN -> {
-                val list = second as List<Any>
-                return list.find { first.compare(it, QueryCriteriaOperator.EQUAL) } == null
+                val values = second.asComparisonValues()
+                    ?: throw InvalidDataTypeForOperator(InvalidDataTypeForOperator.INVALID_DATA_TYPE_FOR_OPERATOR)
+                return values.none { first.compare(it, QueryCriteriaOperator.EQUAL) }
             }
+
+            QueryCriteriaOperator.CANDIDATES -> throw InvalidDataTypeForOperator(
+                "CANDIDATES is an index-admission operation and cannot be evaluated as an exact predicate"
+            )
+            QueryCriteriaOperator.SEARCH_CANDIDATES -> throw InvalidDataTypeForOperator(
+                "SEARCH_CANDIDATES is an index-admission operation and cannot be evaluated as an exact predicate"
+            )
+            QueryCriteriaOperator.HNSW_CANDIDATES -> throw InvalidDataTypeForOperator(
+                "HNSW_CANDIDATES is an index-admission operation and cannot be evaluated as an exact predicate"
+            )
         }
     } catch (e: Exception) {
         // Comparison operator was not found, we should throw an exception because the data types are not supported
         throw InvalidDataTypeForOperator(InvalidDataTypeForOperator.INVALID_DATA_TYPE_FOR_OPERATOR)
+    }
+}
+
+private fun Any?.asComparisonValues(): List<Any?>? = when {
+    this is Iterable<*> -> toList()
+    this != null && javaClass.isArray -> List(ReflectArray.getLength(this)) { index ->
+        ReflectArray.get(this, index)
+    }
+    else -> null
+}
+
+private fun Any?.asRangeEndpoints(): Pair<Any?, Any?>? = when (this) {
+    is Pair<*, *> -> first to second
+    is List<*> -> takeIf { size == 2 }?.let { it[0] to it[1] }
+    null -> null
+    else -> if (javaClass.isArray && ReflectArray.getLength(this) == 2) {
+        ReflectArray.get(this, 0) to ReflectArray.get(this, 1)
+    } else {
+        null
     }
 }

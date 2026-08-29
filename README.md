@@ -50,6 +50,7 @@ repositories {
 # Table of Contents
 
 1.  [Key Features](#key-features)
+    *   [Vector-managed search architecture](docs/vector-managed-search.md)
 2.  [Core Components](#core-components)
     *   [PersistenceManager](#persistencemanager)
     *   [PersistenceManagerFactory](#persistencemanagerfactory)
@@ -87,6 +88,7 @@ repositories {
     *   [`@Relationship`](#relationship)
     *   [`@Entity`](#entity)
     *   [`@Index`](#index)
+    *   [Vector-managed entities](#vector-managed-entities)
     *   [Lifecycle Annotations](#lifecycle-annotations)
     * 
 ## Key Features
@@ -98,6 +100,7 @@ repositories {
 *   **Powerful Querying:** Retrieve your data efficiently with a fluent and intuitive query language.
 *   **Transactions:** Ensure data consistency with transactional operations.
 *   **Indexing:** Optimize performance with custom indexing.
+*   **Native Hybrid Search:** Encode structured predicates, lexical terms, semantic fingerprints, and optional persistent int8 HNSW vectors on a [`VectorManagedEntity`](docs/vector-managed-search.md) without retaining full-precision embeddings.
 *   **Relationships:** Model complex data structures using relationships between entities.
 *   **Lazy Loading:** Improve performance by loading related data only when needed.
 *   **Caching:** Enhance query speed with built-in caching mechanisms.
@@ -306,6 +309,24 @@ val updatedUsers = manager.from<User>()
     .update("firstName" setTo "Jacob")
     .executeUpdate()
 ```
+
+For a concrete entity store or partition, `executeUpdate` holds the same record-interactor monitor
+across criteria evaluation and writes. A query that includes an identifier plus expected
+owner/generation values can therefore act as a compare-and-set: exactly one concurrent contender
+receives an update count of `1`. Use a concrete partition for partitioned lease records; an
+all-partitions update is a bulk operation, not a cross-partition compare-and-set.
+
+Ordinary embedded saves and deletes use that same concrete-store monitor from the authoritative
+row mutation through indexes, HNSW, relationships, cache updates, and listeners. A conditional
+update therefore cannot observe a newly written row and then be overwritten by a stale trailing
+index update. Batch operations retain this boundary per entity; partition moves are two ordered,
+independently consistent store mutations rather than a cross-partition transaction.
+
+For create-only ownership records, import `com.onyx.persistence.manager.createEntityIfAbsent`.
+It executes existence detection and the complete save/index path under that same concrete-partition
+monitor, returning the saved entity to the winner and `null` when the stable identifier already
+exists. A sequence-generated null or zero identifier is rejected before mutation; assign an
+explicit non-zero key when using create-only semantics with a sequence entity.
 
 #### Executing a Delete Query (Kotlin)
 
@@ -584,6 +605,7 @@ This annotation marks a class as a managed entity, making it eligible for persis
 **Parameters**
 * `fileName: String` (optional, defaults to `"")`: Specifies the name of the file the entity will be stored in.  This is used to control how data is stored on disk
 * `archiveDirectories: Array<String>` (optional, defaults to empty array):  Specifies the directories where archive files for this entity will be stored.  This is useful for managing long term storage.
+* `entropy: Int` (optional, defaults to `128`): Requested vector entropy for a `VectorManagedEntity`. Onyx rounds it up to a whole 64-bit word and bounds it to 64, 128, 192, or 256 bits. The resolved width applies to both structured feature fingerprints and semantic SimHash.
 
 **Example:**
 
@@ -603,11 +625,7 @@ This annotation marks a field as indexed, which can significantly improve the pe
 **Parameters:**
 * `type: IndexType` (optional, defaults to `IndexType.DEFAULT`): Specifies the type of index to create.
   * `IndexType.DEFAULT`: Standard index for exact matching.
-  * `IndexType.VECTOR`: Vector index for text fuzzy searching using cosine similarity.
-  * `IndexType.LUCENE`: Full-text index backed by Apache Lucene for rich text search semantics.
-* `embeddingDimensions: Int` (optional, defaults to `512` for vector indexes): The dimensionality of the embedding vectors for vector indexes. Once defined, this value cannot be changed as it affects the storage format.
-* `minimumScore: Float` (optional, defaults to `0.18f` for vector indexes): Search results with a cosine similarity score below this threshold will be discarded.
-* `hashTableCount: Int` (optional, defaults to `12` for vector indexes): The number of LSH hash tables to use for vector indexes. More tables improve accuracy but increase index size.
+  * `IndexType.VECTOR`: Reserved for the inherited internal index of `VectorManagedEntity`; do not place it on application fields.
 
 **Example (Standard Index):**
 
@@ -622,36 +640,44 @@ class Product : IManagedEntity {
 }
 ```
 
-**Example (Vector Index):**
+### Vector-managed entities
+
+Extend `VectorManagedEntity` to give a record one inherited vector representation and index. Configure its single vector setting directly on `@Entity`:
 
 ```kotlin
-@Entity
-class Document : IManagedEntity {
-    @Index(type = IndexType.VECTOR)
+@Entity(fileName = "option-quotes/", entropy = 128)
+class OptionQuote : VectorManagedEntity() {
+    @Identifier
+    var id: Long = 0
+
     @Attribute
-    var content: String? = null
+    var symbol: String = ""
 
-    // ... other fields
-}
-```
-
-**Example (Custom Vector Index):**
-
-```kotlin
-@Entity
-class Document : IManagedEntity {
-    @Index(
-        type = IndexType.VECTOR,
-        embeddingDimensions = 256,
-        minimumScore = 0.25f,
-        hashTableCount = 8
+    @Attribute
+    @VectorAttribute(
+        mode = VectorAttributeMode.SELECTED,
+        families = [VectorFeatureFamily.CATEGORICAL, VectorFeatureFamily.INTERVAL]
     )
-    @Attribute
-    var content: String? = null
+    var price: Double = 0.0
 
-    // ... other fields
+    @Attribute
+    @VectorAttribute(
+        mode = VectorAttributeMode.SELECTED,
+        families = [VectorFeatureFamily.TEXT_TERM, VectorFeatureFamily.TEXT_NGRAM]
+    )
+    var description: String = ""
 }
 ```
+
+Every persisted identifier, partition, and attribute defaults to low-cost presence/null and categorical equality routes. Use `@VectorAttribute(mode = SELECTED, families = [...])` to opt a field into interval, exact-text, term, prefix, or n-gram routes. `UNIVERSAL` selects every available family for a field, while `IGNORE` excludes it from the representation. Collections and arrays apply the field's selected families to their non-null elements. Relationships are not flattened into the record representation.
+
+Onyx rounds `entropy` up and bounds it to 64, 128, 192, or 256 bits, then uses that width for both structured feature fingerprints and semantic SimHash. Changing the resolved entropy or a field's feature families changes the persisted configuration and rebuilds the internal vector index.
+
+All public scalar operators remain available. An operator routes through the internal index when its field selected the required family; otherwise Onyx safely uses the ordinary table path. `AND`, `OR`, and `NOT` compounds remain available in either source order. Indexed routes produce candidates, and Onyx evaluates the original predicate against stored records before returning them. Regexes without a safely mandatory literal are unroutable. Application fields must not declare `IndexType.VECTOR` themselves.
+
+See [Vector-managed search](docs/vector-managed-search.md) for migration guidance, semantic calibration, query examples, collision behavior, and the downstream reranking contract.
+
+That guide also documents the opt-in `VectorIndexVsFullScanBenchmarkTest`, which compares identical scalar, compound, lexical, and semantic queries against the vector index and a forced full-table scan at configurable record counts and storage engines.
 
 ### Lifecycle Annotations
 

@@ -86,6 +86,15 @@ open class DiskBTreeMap<K, V>(
         super.forEachReference(action)
     }
 
+    override fun visitReferencesWhile(visitor: (Long, V) -> Boolean): Int =
+        mapReadWriteLock.readLock { super.visitReferencesWhile(visitor) }
+
+    override fun forEachMutableReference(
+        action: (Long, MutableMap.MutableEntry<K, V>) -> Unit
+    ) = mapReadWriteLock.writeLock {
+        super.forEachMutableReference(action)
+    }
+
     override fun getRecID(key: K): Long = mapReadWriteLock.readLock {
         findEntryId(key.castTo(keyType) as K)
     }

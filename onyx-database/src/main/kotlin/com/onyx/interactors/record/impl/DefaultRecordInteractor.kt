@@ -9,7 +9,9 @@ import com.onyx.exception.AttributeTypeMismatchException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
 import com.onyx.interactors.record.data.Reference
+import com.onyx.interactors.index.IndexInteractor
 import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.VectorManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.QueryListenerEvent
 import com.onyx.interactors.record.RecordInteractor
@@ -56,11 +58,37 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, conte
             identifierValue,
             entity,
             {
+                val persistedEntity = if (it > 0L) records.getWithRecID(it) else null
                 if (it > 0L) {
                     context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, Reference(partitionId, it), QueryListenerEvent.PRE_UPDATE)
                     entity.onPreUpdate(context, entityDescriptor)
                 } else {
                     entity.onPreInsert(context, entityDescriptor)
+                }
+                if (entity is VectorManagedEntity) {
+                    entity.prepareVectorRepresentation(entityDescriptor)
+                }
+                if (entityDescriptor.hasIndexes) {
+                    val indexWrites: List<Triple<IndexInteractor, Any?, Any?>> =
+                        entityDescriptor.indexes.values.map { index ->
+                            val oldIndexValue: Any? =
+                                persistedEntity?.get<Any?>(context, entityDescriptor, index.name)
+                            val indexValue: Any? = if (
+                                entity is VectorManagedEntity &&
+                                index.name == VectorManagedEntity.REPRESENTATION_FIELD
+                            ) {
+                                entity.preparedVectorIndexValue()
+                            } else {
+                                entity.get(context, entityDescriptor, index.name)
+                            }
+                            Triple(context.getIndexInteractor(index), oldIndexValue, indexValue)
+                        }
+                    indexWrites.forEach { (interactor, oldIndexValue, indexValue) ->
+                        interactor.validateSave(oldIndexValue, indexValue, it)
+                    }
+                    indexWrites.forEach { (interactor, oldIndexValue, indexValue) ->
+                        interactor.prepareSave(oldIndexValue, indexValue, it)
+                    }
                 }
             },
             capturePreviousValue = entityDescriptor.hasIndexes

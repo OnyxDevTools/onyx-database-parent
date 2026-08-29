@@ -60,7 +60,7 @@ abstract class BaseQueryCollector<T>(
         val expanded = ArrayList<String>()
         configuredSelections.forEach { selection ->
             if (selection == Query.WILDCARD_SELECTION) {
-                expanded.addAll(descriptor.attributes.keys)
+                expanded.addAll(descriptor.attributes.values.filterNot { it.isInternal }.map { it.name })
             } else {
                 expanded.add(selection)
             }
@@ -108,7 +108,9 @@ abstract class BaseQueryCollector<T>(
      * @since 2.1.3
      */
     override fun setReferenceSet(value: MutableSet<Reference>) {
-        if(value.size > 1000)
+        val preserveImplicitSearchOrder =
+            query.queryOrders.isNullOrEmpty() && query.fullTextScores?.isNotEmpty() == true
+        if(value.size > 1000 && !preserveImplicitSearchOrder)
             value.parallelForEach { collect(it, it.toManagedEntity(context, descriptor)) }
         else
             value.forEach { collect(it, it.toManagedEntity(context, descriptor)) }

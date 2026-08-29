@@ -5,9 +5,11 @@ import com.onyx.exception.*
 import com.onyx.extension.common.ClassMetadata
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity
+import com.onyx.persistence.VectorManagedEntity
 import com.onyx.persistence.annotations.Entity
 import com.onyx.persistence.annotations.Identifier
 import com.onyx.persistence.annotations.values.IdentifierGenerator
+import com.onyx.persistence.annotations.values.IndexType
 import com.onyx.persistence.annotations.values.RelationshipType
 
 @Throws(OnyxException::class)
@@ -109,10 +111,26 @@ private fun EntityDescriptor.validateRelationships() {
  */
 @Throws(InvalidIndexException::class)
 private fun EntityDescriptor.validateIndexes() =
-    indexes.values.forEach {
-        try {
-            entityClass.getDeclaredField(it.name)
-        } catch (e: NoSuchFieldException) {
+    indexes.values.forEach { index ->
+        @Suppress("DEPRECATION")
+        if (index.indexType == IndexType.RETIRED) {
+            throw InvalidIndexException("The persisted index type for '${index.name}' has been retired")
+        }
+        if (
+            index.indexType == IndexType.VECTOR &&
+            (!VectorManagedEntity::class.java.isAssignableFrom(entityClass) ||
+                index.name != VectorManagedEntity.REPRESENTATION_FIELD)
+        ) {
+            throw InvalidIndexException(
+                "Vector indexes are managed internally; extend VectorManagedEntity instead of annotating '${index.name}'"
+            )
+        }
+        val field = try {
+            index.field
+        } catch (_: UninitializedPropertyAccessException) {
+            throw InvalidIndexException(InvalidIndexException.INDEX_MISSING_FIELD)
+        }
+        if (field.name != index.name || !field.declaringClass.isAssignableFrom(entityClass)) {
             throw InvalidIndexException(InvalidIndexException.INDEX_MISSING_FIELD)
         }
     }

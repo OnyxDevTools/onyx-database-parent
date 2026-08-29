@@ -3,9 +3,10 @@ package com.onyx.interactors.query.impl
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap
 import com.onyx.interactors.record.data.Reference
+import com.onyx.interactors.record.descriptorForReference
+import com.onyx.interactors.record.withRecordMutationLock
 import com.onyx.interactors.scanner.ScannerFactory
 import com.onyx.exception.OnyxException
-import com.onyx.exception.MaxCardinalityExceededException
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
@@ -16,7 +17,6 @@ import com.onyx.interactors.query.QueryCollector
 import com.onyx.interactors.query.QueryCollectorFactory
 import com.onyx.persistence.context.Contexts
 import com.onyx.interactors.query.QueryInteractor
-import com.onyx.interactors.record.FullTextRecordInteractor
 import com.onyx.interactors.scanner.impl.*
 
 /**
@@ -25,7 +25,27 @@ import com.onyx.interactors.scanner.impl.*
  *
  * Controls how to query a partition
  */
-class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private var persistenceManager: PersistenceManager, context: SchemaContext) : QueryInteractor {
+class DefaultQueryInteractor internal constructor(
+    private var descriptor: EntityDescriptor,
+    private var persistenceManager: PersistenceManager,
+    context: SchemaContext,
+    private val scannerSelection: ScannerSelection
+) : QueryInteractor {
+
+    constructor(
+        descriptor: EntityDescriptor,
+        persistenceManager: PersistenceManager,
+        context: SchemaContext
+    ) : this(descriptor, persistenceManager, context, ScannerSelection.AUTOMATIC)
+
+    /**
+     * Selects scanners without bypassing the normal query orchestration and collection pipeline.
+     * [FULL_TABLE] exists for correctness comparisons and diagnostic benchmarks.
+     */
+    internal enum class ScannerSelection {
+        AUTOMATIC,
+        FULL_TABLE
+    }
 
     private val contextId = context.contextId
 
@@ -39,98 +59,37 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
      */
     override fun <T> getReferencesForQuery(query: Query):QueryCollector<T> {
         query.fullTextScores = null
+        query.vectorSearchMatches = null
         if (query.isTerminated) {
             val collector = QueryCollectorFactory.create<T>(Contexts.get(contextId)!!, descriptor, query)
             collector.finalizeResults()
             return collector
         }
 
-        val context = Contexts.get(contextId)!!
-        if ( context.getRecordInteractor(descriptor) is FullTextRecordInteractor && query.getAllCriteria().firstOrNull { it.attribute == Query.FULL_TEXT_ATTRIBUTE } != null) {
-            val luceneQuery = buildLuceneCriteriaQuery(query.criteria!!, descriptor)
-            if (luceneQuery != null) {
-                val references = executeLuceneCriteriaQuery(query, luceneQuery, context)
-                val collector = QueryCollectorFactory.create<T>(context, descriptor, query)
-                collector.setReferenceSet(references)
-                collector.finalizeResults()
-                query.resultsCount = collector.getNumberOfResults()
-                return collector
-            }
+        val requestedCriteria = query.criteria!!
+        val vectorGroupNegation = requestedCriteria.hasGroupNegation() &&
+            ScannerFactory.isVectorManagedCriteriaTree(descriptor, requestedCriteria)
+        val executionCriteria = if (vectorGroupNegation) {
+            requestedCriteria.withoutGroupNegations()
+        } else {
+            requestedCriteria
         }
-
-        val pair = getReferencesForCriteria<T>(query, query.criteria!!, null, query.criteria!!.isNot)
+        val pair = getReferencesForCriteria<T>(
+            query,
+            executionCriteria,
+            null,
+            forceFullScan = requestedCriteria.isNot && !vectorGroupNegation
+        )
+        val references = pair.first.orderedBySearchScore(query)
         var collector = pair.second
         if(collector == null) {
             collector = QueryCollectorFactory.create(Contexts.get(contextId)!!, descriptor, query)
-            collector.setReferenceSet(pair.first)
+            collector.setReferenceSet(references)
         }
         collector.finalizeResults()
         query.resultsCount = collector.getNumberOfResults()
 
         return collector
-    }
-
-    private fun executeLuceneCriteriaQuery(
-        query: Query,
-        criteriaQuery: LuceneCriteriaQuery,
-        context: SchemaContext
-    ): MutableSet<Reference> {
-        val maxCardinality = context.maxCardinality
-        val limit = if (query.maxResults > 0) query.maxResults else maxCardinality - 1
-        val matchingReferences = HashSet<Reference>()
-        val scores = HashMap<Reference, Float>()
-        val minScore = criteriaQuery.minScore
-
-        fun collectResults(partitionId: Long, interactor: FullTextRecordInteractor) {
-            val results = interactor.searchAll(criteriaQuery.queryText, limit)
-            results.forEach { (recordId, score) ->
-                if (minScore != null && score < minScore) return@forEach
-                if (matchingReferences.size > maxCardinality) {
-                    throw MaxCardinalityExceededException(context.maxCardinality)
-                }
-                val reference = Reference(partitionId, recordId)
-                matchingReferences.add(reference)
-                val previousScore = scores[reference]
-                if (previousScore == null || score > previousScore) {
-                    scores[reference] = score
-                }
-            }
-        }
-
-        if (query.partition == QueryPartitionMode.ALL) {
-            val partitions = context.getAllPartitions(query.entityType!!)
-            partitions.forEach { entry ->
-                val partitionDescriptor = context.getDescriptorForEntity(query.entityType, entry.value)
-                val interactor = context.getRecordInteractor(partitionDescriptor) as? FullTextRecordInteractor
-                if (interactor != null) {
-                    collectResults(entry.index, interactor)
-                }
-            }
-            query.fullTextScores = scores
-            return matchingReferences
-        }
-
-        val partitionDescriptor = if (descriptor.hasPartition) {
-            context.getDescriptorForEntity(query.entityType!!, query.partition)
-        } else {
-            descriptor
-        }
-        val partitionId = if (partitionDescriptor.hasPartition) {
-            context.getPartitionWithValue(query.entityType!!, query.partition)?.index ?: 0L
-        } else {
-            0L
-        }
-        if (partitionDescriptor.hasPartition && partitionId == 0L) {
-            return mutableSetOf()
-        }
-
-        val interactor = context.getRecordInteractor(partitionDescriptor) as? FullTextRecordInteractor
-        if (interactor != null) {
-            collectResults(partitionId, interactor)
-        }
-
-        query.fullTextScores = scores
-        return matchingReferences
     }
 
     /**
@@ -145,13 +104,23 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
         val context = Contexts.get(contextId)!!
         var deleteCount = 0
 
-        records.forEach {
-            val entity:IManagedEntity? = it.toManagedEntity(context, query.entityType!!, descriptor)
-            entity?.deleteAllIndexes(context, it.reference)
-            entity?.deleteRelationships(context)
-            entity?.recordInteractor(context)?.delete(entity)
-            if(entity != null)
+        records.forEach { reference ->
+            val sourceDescriptor = context.descriptorForReference(
+                reference,
+                query.entityType!!,
+                descriptor,
+            )
+            val deleted = context.withRecordMutationLock(sourceDescriptor) {
+                val entity = reference.toManagedEntity(context, query.entityType!!, descriptor)
+                    ?: return@withRecordMutationLock false
+                entity.deleteAllIndexes(context, reference.reference, sourceDescriptor)
+                entity.deleteRelationships(context, descriptor = sourceDescriptor)
+                entity.recordInteractor(context, sourceDescriptor).delete(entity)
+                true
+            }
+            if (deleted) {
                 deleteCount++
+            }
         }
 
         return deleteCount
@@ -170,30 +139,119 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
         val context = Contexts.get(contextId)!!
         var updateCount = 0
 
-        records.forEach { it ->
-            val entity: IManagedEntity? = it.toManagedEntity(context, query.entityType!!, descriptor)
-            val updatedPartitionValue = query.updates.firstOrNull { entity != null && it.fieldName == descriptor.partition?.name && !entity.get<Any?>(context, descriptor, it.fieldName!!).compare(it.value) } != null
-
-            if (updatedPartitionValue) {
-                entity?.deleteAllIndexes(context, it.reference)
-                entity?.deleteRelationships(context)
-                entity?.recordInteractor(context)?.delete(entity)
+        records.forEach { reference ->
+            val sourceDescriptor = context.descriptorForReference(
+                reference,
+                query.entityType!!,
+                descriptor,
+            )
+            val partitionUpdate = query.updates.firstOrNull {
+                it.fieldName == sourceDescriptor.partition?.name
             }
 
-            query.updates.forEach { entity?.set(context = context, descriptor = descriptor, name = it.fieldName!!, value = it.value) }
+            if (partitionUpdate == null) {
+                context.withRecordMutationLock(sourceDescriptor) {
+                    val entity = reference.toManagedEntity(context, query.entityType!!, descriptor)
+                        ?: return@withRecordMutationLock
+                    query.updates.forEach {
+                        entity.set(
+                            context = context,
+                            descriptor = sourceDescriptor,
+                            name = it.fieldName!!,
+                            value = it.value,
+                        )
+                    }
+                    val putResult = entity.save(context, sourceDescriptor)
+                    entity.saveIndexes(
+                        context,
+                        if (putResult.isInsert) 0L else reference.reference,
+                        putResult.recordId,
+                        sourceDescriptor,
+                        previousEntity = putResult.previousValue as? IManagedEntity,
+                    )
+                    context.queryCacheInteractor.updateCachedQueryResultsForEntity(
+                        entity,
+                        sourceDescriptor,
+                        entity.reference(putResult.recordId, context, sourceDescriptor),
+                        QueryListenerEvent.UPDATE,
+                    )
+                    updateCount++
+                }
+                return@forEach
+            }
 
-            val putResult = entity?.save(context)
-            val previousIndexReference = if (updatedPartitionValue || putResult?.isInsert != false) 0L else it.reference
-            if (entity != null && putResult != null) {
+            // A partition move is two independently consistent store mutations, not a cross-store
+            // CAS. Remove the source row+indexes together, release its monitor before relationship
+            // traversal, then add the target row+indexes under the target monitor.
+            var movingEntity: IManagedEntity? = null
+            var moved = false
+            var completedInSource = false
+            context.withRecordMutationLock(sourceDescriptor) {
+                val entity = reference.toManagedEntity(context, query.entityType!!, descriptor)
+                    ?: return@withRecordMutationLock
+                movingEntity = entity
+                moved = !entity.get<Any?>(
+                    context,
+                    sourceDescriptor,
+                    partitionUpdate.fieldName!!,
+                ).compare(partitionUpdate.value)
+                if (moved) {
+                    entity.deleteAllIndexes(context, reference.reference, sourceDescriptor)
+                    entity.deleteRelationships(context, descriptor = sourceDescriptor)
+                    entity.recordInteractor(context, sourceDescriptor).delete(entity)
+                } else {
+                    query.updates.forEach {
+                        entity.set(
+                            context = context,
+                            descriptor = sourceDescriptor,
+                            name = it.fieldName!!,
+                            value = it.value,
+                        )
+                    }
+                    val putResult = entity.save(context, sourceDescriptor)
+                    entity.saveIndexes(
+                        context,
+                        if (putResult.isInsert) 0L else reference.reference,
+                        putResult.recordId,
+                        sourceDescriptor,
+                        previousEntity = putResult.previousValue as? IManagedEntity,
+                    )
+                    context.queryCacheInteractor.updateCachedQueryResultsForEntity(
+                        entity,
+                        sourceDescriptor,
+                        entity.reference(putResult.recordId, context, sourceDescriptor),
+                        QueryListenerEvent.UPDATE,
+                    )
+                    updateCount++
+                    completedInSource = true
+                }
+            }
+            if (completedInSource) return@forEach
+            val entity = movingEntity ?: return@forEach
+            query.updates.forEach {
+                entity.set(
+                    context = context,
+                    descriptor = sourceDescriptor,
+                    name = it.fieldName!!,
+                    value = it.value,
+                )
+            }
+            val targetDescriptor = context.getDescriptorForEntity(entity)
+            context.withRecordMutationLock(targetDescriptor) {
+                val putResult = entity.save(context, targetDescriptor)
                 entity.saveIndexes(
                     context,
-                    previousIndexReference,
+                    if (moved || putResult.isInsert) 0L else reference.reference,
                     putResult.recordId,
-                    previousEntity = putResult.previousValue as? IManagedEntity
+                    targetDescriptor,
+                    previousEntity = putResult.previousValue as? IManagedEntity,
                 )
-
-                // Update Cached queries
-                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, descriptor, entity.reference(putResult.recordId, context, descriptor), QueryListenerEvent.UPDATE)
+                context.queryCacheInteractor.updateCachedQueryResultsForEntity(
+                    entity,
+                    targetDescriptor,
+                    entity.reference(putResult.recordId, context, targetDescriptor),
+                    QueryListenerEvent.UPDATE,
+                )
                 updateCount++
             }
         }
@@ -262,13 +320,14 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
             return Pair(HashSet(), null)
         }
 
-        val scanner = if (forceFullScan) {
+        val scanner = if (forceFullScan || scannerSelection == ScannerSelection.FULL_TABLE) {
             ScannerFactory.getFullTableScanner(context, criteria, query.entityType!!, query, persistenceManager)
         } else {
             ScannerFactory.getScannerForQueryCriteria(context, criteria, query.entityType!!, query, persistenceManager)
         }
 
         if(collect &&
+                !query.usesImplicitSearchScoreOrder() &&
                 (scanner is FullTableScanner || (
                     criteria == query.getAllCriteria().last()
                     && !criteria.isNot
@@ -306,19 +365,35 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
         // If there are existing references, use those to narrow it down.  Otherwise
         // start from a clean slate
 
-        val criteriaResults: MutableSet<Reference> = if (existingReferences == null) {
+        val prefilteredConjunct = if (existingReferences == null) {
+            (scanner as? VectorIndexScanner)?.selectiveConjunctForDomain()
+        } else {
+            null
+        }
+        val prefilteredReferences = prefilteredConjunct?.let {
+            getReferencesForCriteria<T>(
+                query,
+                it,
+                existingReferences = null,
+                forceFullScan = false,
+                collect = false
+            ).first
+        }
+
+        val criteriaResults: MutableSet<Reference> = if (existingReferences == null && prefilteredReferences == null) {
             scanner.scan()
         } else {
             if (criteria.isOr || criteria.isNot) {
                 scanner.scan()
             } else {
-                scanner.scan(existingReferences)
+                scanner.scan(prefilteredReferences ?: requireNotNull(existingReferences))
             }
         }
 
         if(scanner !is FullTableScanner) {
             // Go through and ensure all the sub criteria is met
             criteria.subCriteria.forEachIndexed { index, subCriteriaObject ->
+                if (subCriteriaObject === prefilteredConjunct) return@forEachIndexed
                 if(index == 0 && subCriteriaIsRange)
                     return@forEachIndexed
                 val subCriteriaResults = getReferencesForCriteria<T>(query, subCriteriaObject, criteriaResults,
@@ -347,6 +422,51 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
             criteria.isOr ->  totalResults += criteriaResults
             criteria.isAnd -> totalResults -= totalResults.filter { !criteriaResults.contains(it) }
         }
+    }
+
+    /** Search relevance is the implicit order unless the caller supplied an explicit order. */
+    private fun MutableSet<Reference>.orderedBySearchScore(query: Query): MutableSet<Reference> {
+        if (!query.queryOrders.isNullOrEmpty()) return this
+        val scores = query.fullTextScores?.takeIf(Map<Reference, Float>::isNotEmpty) ?: return this
+        return sortedWith(
+            compareByDescending<Reference> { scores[it] ?: Float.NEGATIVE_INFINITY }
+                .thenBy(Reference::partition)
+                .thenBy(Reference::reference)
+        )
+            .toCollection(LinkedHashSet())
+    }
+
+    private fun Query.usesImplicitSearchScoreOrder(): Boolean =
+        queryOrders.isNullOrEmpty() && getAllCriteria().any {
+            it.operator in setOf(
+                QueryCriteriaOperator.MATCHES,
+                QueryCriteriaOperator.LIKE,
+                QueryCriteriaOperator.SEARCH_CANDIDATES,
+                QueryCriteriaOperator.HNSW_CANDIDATES
+            ) &&
+                it.attribute == Query.FULL_TEXT_ATTRIBUTE
+        }
+
+    /** Pushes group negation to vector-backed leaves using De Morgan's laws. */
+    private fun QueryCriteria.hasGroupNegation(): Boolean =
+        isNot || subCriteria.any { !it.flip && it.hasGroupNegation() }
+
+    private fun QueryCriteria.withoutGroupNegations(parentNegated: Boolean = false): QueryCriteria {
+        val negateNode = parentNegated.xor(isNot)
+        val normalized = QueryCriteria(
+            requireNotNull(attribute),
+            if (negateNode) requireNotNull(operator).inverse else requireNotNull(operator),
+            value
+        ).also { it.level = level }
+
+        subCriteria.filterNot(QueryCriteria::flip).forEach { child ->
+            val normalizedChild = child.withoutGroupNegations(negateNode)
+            normalizedChild.isAnd = if (negateNode) child.isOr else child.isAnd
+            normalizedChild.isOr = if (negateNode) child.isAnd else child.isOr
+            normalizedChild.parentCriteria = normalized
+            normalized.subCriteria += normalizedChild
+        }
+        return normalized
     }
 
 }

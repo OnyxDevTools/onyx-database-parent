@@ -6,13 +6,14 @@ import com.onyx.exception.OnyxException
 import com.onyx.extension.common.ReflectionCache.hasMember
 import com.onyx.extension.common.hasKey
 import com.onyx.interactors.scanner.impl.*
+import com.onyx.persistence.VectorManagedEntity
 import com.onyx.persistence.annotations.values.IndexType
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
-import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.QueryPartitionMode
+import com.onyx.vector.FingerprintQueryPlanner
 
 /**
  * Created by timothy.osborn on 1/6/15.
@@ -69,13 +70,28 @@ object ScannerFactory {
         }
 
         val attributeToScan = criteria.attribute
+
+        if (criteria.operator == com.onyx.persistence.query.QueryCriteriaOperator.CANDIDATES) {
+            return ApproximateIndexCandidateScanner(
+                criteria,
+                classToScan,
+                descriptor,
+                query,
+                context,
+                persistenceManager
+            )
+        }
+
         val segments = attributeToScan!!.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
 
         if (attributeToScan == Query.FULL_TEXT_ATTRIBUTE) {
+            if (isVectorManagedCriteria(descriptor, criteria)) {
+                return vectorScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
+            }
             return if (descriptor.hasPartition) {
-                PartitionLuceneRecordScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
+                PartitionFullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
             } else {
-                LuceneRecordScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
+                FullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
             }
         }
 
@@ -100,6 +116,10 @@ object ScannerFactory {
             }
         }
 
+        if (isVectorManagedCriteria(descriptor, criteria)) {
+            return vectorScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
+        }
+
         // Indexes must be either an equal or in so that it can make exact matches
         val indexDescriptor = descriptor.indexes[attributeToScan]
         if (indexDescriptor != null && criteria.operator!!.isIndexed) {
@@ -110,21 +130,6 @@ object ScannerFactory {
             }
         }
         
-        // Vector index with operators that can use vector similarity search
-        val vectorOperators = setOf(
-            QueryCriteriaOperator.LIKE,
-            QueryCriteriaOperator.MATCHES,
-        )
-        
-        if (indexDescriptor != null && indexDescriptor.indexType in setOf(IndexType.VECTOR, IndexType.LUCENE) &&
-            criteria.operator in vectorOperators) {
-            return if (descriptor.hasPartition) {
-                PartitionVectorIndexScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
-            } else {
-                VectorIndexScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
-            }
-        }
-
         val attributeDescriptor = descriptor.attributes[attributeToScan]
         if (attributeDescriptor != null) {
             return if (descriptor.hasPartition) {
@@ -155,5 +160,35 @@ object ScannerFactory {
         }
 
         throw AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE + " " + attributeToScan)
+    }
+
+    internal fun isVectorManagedCriteria(
+        descriptor: EntityDescriptor,
+        criteria: QueryCriteria
+    ): Boolean {
+        if (!VectorManagedEntity::class.java.isAssignableFrom(descriptor.entityClass)) return false
+        val representationIndex = descriptor.indexes[VectorManagedEntity.REPRESENTATION_FIELD]
+            ?: return false
+        if (representationIndex.indexType != IndexType.VECTOR) return false
+        return FingerprintQueryPlanner(descriptor).canRouteLeaf(criteria)
+    }
+
+    internal fun isVectorManagedCriteriaTree(
+        descriptor: EntityDescriptor,
+        criteria: QueryCriteria
+    ): Boolean = (criteria.flip || isVectorManagedCriteria(descriptor, criteria)) &&
+        criteria.subCriteria.all { child -> isVectorManagedCriteriaTree(descriptor, child) }
+
+    private fun vectorScanner(
+        criteria: QueryCriteria,
+        classToScan: Class<*>,
+        descriptor: EntityDescriptor,
+        query: Query,
+        context: SchemaContext,
+        persistenceManager: PersistenceManager
+    ): TableScanner = if (descriptor.hasPartition) {
+        PartitionVectorIndexScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
+    } else {
+        VectorIndexScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
     }
 }

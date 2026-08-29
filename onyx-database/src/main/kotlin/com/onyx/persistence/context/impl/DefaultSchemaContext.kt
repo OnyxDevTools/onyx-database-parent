@@ -24,7 +24,7 @@ import com.onyx.interactors.encryption.EncryptionInteractor
 import com.onyx.interactors.encryption.data.Base64
 import com.onyx.interactors.index.IndexInteractor
 import com.onyx.interactors.index.impl.DefaultIndexInteractor
-import com.onyx.interactors.index.impl.VectorIndexInteractor
+import com.onyx.interactors.index.impl.FingerprintIndexInteractor
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.interactors.record.impl.DefaultRecordInteractor
 import com.onyx.interactors.record.impl.SequenceRecordInteractor
@@ -40,7 +40,6 @@ import com.onyx.interactors.transaction.impl.MemoryMappedTransactionStore
 import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity
-import com.onyx.persistence.annotations.EntityType
 import com.onyx.persistence.annotations.values.IdentifierGenerator
 import com.onyx.persistence.annotations.values.IndexType
 import com.onyx.persistence.annotations.values.RelationshipType
@@ -700,30 +699,14 @@ open class DefaultSchemaContext : SchemaContext {
     override fun getIndexInteractor(indexDescriptor: IndexDescriptor): IndexInteractor =
         indexInteractors.getOrPut(indexDescriptor) {
             return@getOrPut when (indexDescriptor.indexType) {
-                IndexType.VECTOR -> createVectorInteractor(indexDescriptor)
-                IndexType.LUCENE -> createLuceneInteractor(indexDescriptor)
+                IndexType.VECTOR -> FingerprintIndexInteractor(
+                    indexDescriptor.entityDescriptor,
+                    indexDescriptor,
+                    this
+                )
                 else -> DefaultIndexInteractor(indexDescriptor.entityDescriptor, indexDescriptor, this)
             }
         }
-
-    private fun createLuceneInteractor(indexDescriptor: IndexDescriptor): IndexInteractor {
-        val className = "com.onyx.lucene.interactors.index.impl.LuceneIndexInteractor"
-        return try {
-            val clazz = Class.forName(className)
-            val constructor = clazz.getConstructor(EntityDescriptor::class.java, IndexDescriptor::class.java, SchemaContext::class.java)
-            constructor.newInstance(indexDescriptor.entityDescriptor, indexDescriptor, this) as IndexInteractor
-        } catch (classNotFound: ClassNotFoundException) {
-            throw IllegalStateException(
-                "Lucene index support is not available. Add the onyx-lucene-index module to the classpath to enable IndexType.LUCENE.",
-                classNotFound
-            )
-        }
-    }
-
-    private fun createVectorInteractor(indexDescriptor: IndexDescriptor): IndexInteractor {
-        return VectorIndexInteractor(indexDescriptor.entityDescriptor, indexDescriptor, this)
-    }
-
 
     // endregion
 
@@ -741,34 +724,12 @@ open class DefaultSchemaContext : SchemaContext {
      */
     override fun getRecordInteractor(descriptor: EntityDescriptor): RecordInteractor =
         recordInteractors.getOrPut(descriptor) {
-            return@getOrPut when (descriptor.entityType) {
-                EntityType.SEARCHABLE ->
-                    when (descriptor.identifier!!.generator) {
-                        IdentifierGenerator.UUID -> createRecordInteractor(UUID_DOCUMENT_RECORD_INTERACTOR, descriptor)
-                        IdentifierGenerator.SEQUENCE -> createRecordInteractor(SEQUENCE_DOCUMENT_RECORD_INTERACTOR, descriptor)
-                        IdentifierGenerator.NONE -> createRecordInteractor(DEFAULT_DOCUMENT_RECORD_INTERACTOR, descriptor)
-                    }
-                EntityType.DEFAULT ->
-                    when (descriptor.identifier!!.generator) {
-                        IdentifierGenerator.SEQUENCE -> SequenceRecordInteractor(descriptor, this)
-                        IdentifierGenerator.UUID -> UUIDRecordInteractor(descriptor, this)
-                        else -> DefaultRecordInteractor(descriptor, this)
-                    }
+            return@getOrPut when (descriptor.identifier!!.generator) {
+                IdentifierGenerator.SEQUENCE -> SequenceRecordInteractor(descriptor, this)
+                IdentifierGenerator.UUID -> UUIDRecordInteractor(descriptor, this)
+                else -> DefaultRecordInteractor(descriptor, this)
             }
         }
-
-    private fun createRecordInteractor(className: String, descriptor: EntityDescriptor): RecordInteractor {
-        return try {
-            val clazz = Class.forName(className)
-            val constructor = clazz.getConstructor(EntityDescriptor::class.java, SchemaContext::class.java)
-            constructor.newInstance(descriptor, this) as RecordInteractor
-        } catch (classNotFound: ClassNotFoundException) {
-            throw IllegalStateException(
-                "Lucene document support is not available. Add the onyx-lucene-index module to the classpath to enable EntityType.DOCUMENT.",
-                classNotFound
-            )
-        }
-    }
 
     // endregion
 
@@ -998,16 +959,9 @@ open class DefaultSchemaContext : SchemaContext {
             // Get the partition-specific descriptor
             val partitionDescriptor = getDescriptorForEntity(descriptor.entityClass, partition.value)
 
-            // A searchable entity's record index is shared across partition
-            // deletion operations. Clearing the partition above removes its
-            // documents; closing/deleting the writer here would make subsequent
-            // partition deletes reuse a closed IndexWriter.
-            val retainSearchResources = partitionDescriptor.entityType == EntityType.SEARCHABLE
-            if (!retainSearchResources) {
-                getRecordInteractor(partitionDescriptor).deleteResources()
-                partitionDescriptor.indexes.values.forEach { indexDescriptor ->
-                    getIndexInteractor(indexDescriptor).deleteResources()
-                }
+            getRecordInteractor(partitionDescriptor).deleteResources()
+            partitionDescriptor.indexes.values.forEach { indexDescriptor ->
+                getIndexInteractor(indexDescriptor).deleteResources()
             }
 
             // Delete the data file for this partition
@@ -1017,13 +971,10 @@ open class DefaultSchemaContext : SchemaContext {
             serializedPersistenceManager.deleteEntity(partition)
 
             // Remove interactors from cache for this partition descriptor
-            if (!retainSearchResources) {
-                recordInteractors.remove(partitionDescriptor)
-            }
+            recordInteractors.remove(partitionDescriptor)
             synchronized(indexInteractors) {
                 indexInteractors.entries.removeIf {
-                    it.key.entityDescriptor == partitionDescriptor &&
-                        (!retainSearchResources || it.key.indexType == IndexType.DEFAULT)
+                    it.key.entityDescriptor == partitionDescriptor
                 }
             }
             relationshipInteractors.removeEntries { it.key.entityDescriptor == partitionDescriptor }
@@ -1112,10 +1063,4 @@ open class DefaultSchemaContext : SchemaContext {
     }
 
     // endregion
-
-    companion object {
-        private const val DEFAULT_DOCUMENT_RECORD_INTERACTOR = "com.onyx.lucene.interactors.record.impl.LuceneRecordInteractor"
-        private const val SEQUENCE_DOCUMENT_RECORD_INTERACTOR = "com.onyx.lucene.interactors.record.impl.LuceneSequenceRecordInteractor"
-        private const val UUID_DOCUMENT_RECORD_INTERACTOR = "com.onyx.lucene.interactors.record.impl.LuceneUUIDRecordInteractor"
-    }
 }

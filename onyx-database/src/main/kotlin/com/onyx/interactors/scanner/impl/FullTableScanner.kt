@@ -7,7 +7,9 @@ import com.onyx.extension.*
 import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.TableScanner
 import com.onyx.persistence.context.Contexts
+import com.onyx.persistence.context.QueryExecutionEvent
 import com.onyx.persistence.context.SchemaContext
+import com.onyx.persistence.context.reportQueryExecution
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
@@ -28,11 +30,12 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
      */
     @Throws(OnyxException::class)
     override fun scan(): MutableSet<Reference> {
+        context.reportQueryExecution(QueryExecutionEvent.FULL_TABLE_SCAN)
         val matching = HashSet<Reference>()
         val context = Contexts.get(contextId)!!
         val maxCardinality = context.maxCardinality
 
-        records.forEachReference { recordId, value ->
+        records.visitReferencesWhile { recordId, value ->
             val reference = Reference(partitionId, recordId)
             if(query.meetsCriteria(value, reference, context, descriptor)) {
                 collector?.collect(reference, value)
@@ -41,6 +44,7 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
                 if(collector == null)
                     matching.add(reference)
             }
+            shouldContinueBoundedMutationScan()
         }
 
         return matching
@@ -56,13 +60,23 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
      */
     @Throws(OnyxException::class)
     override fun scan(existingValues: Set<Reference>): MutableSet<Reference> {
+        context.reportQueryExecution(QueryExecutionEvent.FULL_TABLE_SCAN)
         val context = Contexts.get(contextId)!!
-        return existingValues.filterTo(HashSet()) {
-            val entity = it.toManagedEntity(context, descriptor)
-            val meetsCriteria = query.meetsCriteria(entity, it, context, descriptor)
+        val matching = HashSet<Reference>()
+        val iterator = existingValues.iterator()
+        while (iterator.hasNext() && shouldContinueBoundedMutationScan()) {
+            val reference = iterator.next()
+            val entity = reference.toManagedEntity(context, descriptor)
+            val meetsCriteria = query.meetsCriteria(entity, reference, context, descriptor)
             if(meetsCriteria)
-                collector?.collect(it, entity)
-            (collector == null) && meetsCriteria
+                collector?.collect(reference, entity)
+            if (collector == null && meetsCriteria) matching += reference
         }
+        return matching
     }
+
+    /** Guarded update/delete scans can stop as soon as their bounded collector is full. */
+    protected fun shouldContinueBoundedMutationScan(): Boolean =
+        !query.isUpdateOrDelete || query.maxResults <= 0 ||
+            (collector?.references?.size ?: 0) < query.maxResults
 }

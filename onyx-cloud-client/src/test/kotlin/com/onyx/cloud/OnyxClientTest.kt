@@ -22,7 +22,7 @@ class OnyxClientTest {
 
     @Test
     fun encodeStringsProperly() {
-        assertEquals("hello+world%21", client.encode("hello world!"))
+        assertEquals("hello%20world%21", client.encode("hello world!"))
     }
 
     @Test
@@ -197,4 +197,3 @@ class OnyxClientTest {
         override val body: Any? = bodyText
     }
 }
-

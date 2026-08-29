@@ -11,7 +11,6 @@ dependencies {
     implementation(project(":onyx-database"))
     implementation(project(":onyx-remote-database"))
     implementation(project(":onyx-remote-driver"))
-    implementation(project(":onyx-lucene-index"))
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:${Config.KOTLIN_VERSION}")
     testImplementation(kotlin("test"))
 }

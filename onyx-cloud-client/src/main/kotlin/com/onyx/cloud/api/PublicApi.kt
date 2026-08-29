@@ -48,7 +48,13 @@ enum class QueryCriteriaOperator {
     STARTS_WITH,
     NOT_STARTS_WITH,
     IS_NULL,
-    NOT_NULL
+    NOT_NULL,
+    /** Explicitly approximate, bounded admission from an ordinary secondary index. */
+    CANDIDATES,
+    /** Explicitly approximate, bounded lexical search admission. */
+    SEARCH_CANDIDATES,
+    /** Explicitly approximate, bounded native-HNSW nearest-neighbor admission. */
+    HNSW_CANDIDATES
 }
 
 /**
@@ -62,12 +68,306 @@ const val FULL_TEXT_ATTRIBUTE = "__full_text__"
 const val FULL_TEXT_ALL_TABLE = "ALL"
 
 /**
- * Defines a Lucene full-text query with an optional minimum match score.
+ * Defines a fingerprint-backed full-text query with an optional minimum match score.
  */
 data class FullTextQuery(
     val queryText: String,
     val minScore: Float? = null
 )
+
+/**
+ * Lossless JSON representation of one semantic routing signature.
+ *
+ * All 64-bit values use strings so JavaScript and generic JSON decoders cannot round them.
+ * [fingerprint] and [bands] use unsigned hexadecimal words (`0x` plus 16 digits), while
+ * [calibrationId] is normally a signed decimal string. The current database index contract uses
+ * exactly four equal-width bands, ordered from the least-significant fingerprint bits upward: a
+ * 64-bit fingerprint therefore maps to four 16-bit bands.
+ */
+data class SemanticVectorSignature @JvmOverloads constructor(
+    val calibrationId: String,
+    val bucketId: Int,
+    val cells: List<Int>,
+    val cellCounts: List<Int>,
+    val fingerprint: List<String>,
+    val bands: List<String>,
+    val boundaryConfidence: Float = 0f
+) {
+    init {
+        require(parseSemanticWireLong(calibrationId, "calibrationId") != 0L) {
+            "calibrationId must be non-zero"
+        }
+        require(bucketId >= 0) { "bucketId must be non-negative" }
+        require(cells.isNotEmpty()) { "At least one product cell is required" }
+        require(cellCounts.size == cells.size) {
+            "cellCounts must contain one cardinality per product cell"
+        }
+        var packedBucket = 0L
+        var bucketSpace = 1L
+        cells.indices.forEach { axis ->
+            val count = cellCounts[axis]
+            require(count >= 2) { "Each component must contain at least 2 cells" }
+            require(cells[axis] in 0 until count) {
+                "Product cell ${cells[axis]} is outside axis $axis bounds 0..${count - 1}"
+            }
+            bucketSpace *= count.toLong()
+            require(bucketSpace <= Int.MAX_VALUE.toLong()) {
+                "Product-cell space exceeds the supported Int bucket domain"
+            }
+            packedBucket = packedBucket * count.toLong() + cells[axis].toLong()
+        }
+        require(bucketId == packedBucket.toInt()) {
+            "bucketId does not match the mixed-radix product cells"
+        }
+
+        val words = fingerprint.mapIndexed { index, word ->
+            parseSemanticWireLong(word, "fingerprint[$index]")
+        }.toLongArray()
+        require(words.size in 1..4) { "Fingerprint size must be between 64 and 256 bits" }
+        require(bands.size == SEMANTIC_BAND_COUNT) {
+            "Semantic fingerprints currently require exactly four equal-width bands"
+        }
+        val parsedBands = bands.mapIndexed { index, band ->
+            parseSemanticWireLong(band, "bands[$index]")
+        }.toLongArray()
+        require(parsedBands.contentEquals(splitSemanticFingerprintIntoFourBands(words))) {
+            "Bands do not represent four equal portions of the fingerprint"
+        }
+        require(boundaryConfidence.isFinite() && boundaryConfidence in 0f..1f) {
+            "boundaryConfidence must be finite and between zero and one"
+        }
+    }
+
+    /** Convenience constructor that computes the four wire bands from raw JVM fingerprint words. */
+    @JvmOverloads
+    constructor(
+        calibrationId: Long,
+        bucketId: Int,
+        cells: IntArray,
+        cellCounts: IntArray,
+        fingerprint: LongArray,
+        boundaryConfidence: Float = 0f
+    ) : this(
+        calibrationId = calibrationId.toString(),
+        bucketId = bucketId,
+        cells = cells.toList(),
+        cellCounts = cellCounts.toList(),
+        fingerprint = fingerprint.map(::semanticWireWord),
+        bands = splitSemanticFingerprintIntoFourBands(fingerprint).map(::semanticWireWord),
+        boundaryConfidence = boundaryConfidence
+    )
+}
+
+/**
+ * Public Cloud query DTO for lexical, semantic, or hybrid search. Lexical-only search is exact
+ * unless submitted through the dedicated `SEARCH_CANDIDATES` operator.
+ */
+data class VectorSearchQuery @JvmOverloads constructor(
+    val text: String?,
+    val semantic: SemanticVectorSignature? = null,
+    val minScore: Float? = null,
+    val nearbyBucketRadius: Int = 1,
+    val maxCandidates: Int = 1_000,
+    val requireAllTerms: Boolean = true
+) {
+    init {
+        require(text == null || text.isNotBlank()) { "text must be non-blank when supplied" }
+        require(text != null || semantic != null) {
+            "VectorSearchQuery must contain text and/or a semantic signature"
+        }
+        require(minScore == null || minScore.isFinite()) { "minScore must be finite" }
+        require(nearbyBucketRadius >= 0) { "nearbyBucketRadius must be non-negative" }
+        require(maxCandidates in 1..MAX_VECTOR_SEARCH_CANDIDATES) {
+            "maxCandidates must be between 1 and $MAX_VECTOR_SEARCH_CANDIDATES"
+        }
+    }
+
+    /** Convenience constructor for semantic-only bounded search. */
+    @JvmOverloads
+    constructor(
+        semantic: SemanticVectorSignature,
+        minScore: Float? = null,
+        nearbyBucketRadius: Int = 1,
+        maxCandidates: Int = 1_000,
+        requireAllTerms: Boolean = true
+    ) : this(
+        text = null,
+        semantic = semantic,
+        minScore = minScore,
+        nearbyBucketRadius = nearbyBucketRadius,
+        maxCandidates = maxCandidates,
+        requireAllTerms = requireAllTerms
+    )
+}
+
+/**
+ * Lossless Cloud wire request for bounded native-HNSW candidate admission.
+ *
+ * [calibrationId] is decimal text because arbitrary signed 64-bit identifiers cannot be encoded
+ * exactly by every JSON implementation. [efSearch] is a physical distance-evaluation budget,
+ * while [maxCandidates] caps the admitted result set. Callers should exactly rerank these
+ * approximate candidates when full-precision embeddings are available.
+ */
+data class HnswSearchQuery @JvmOverloads constructor(
+    val calibrationId: String,
+    val vector: List<Float>,
+    val maxCandidates: Int = DEFAULT_HNSW_CANDIDATES,
+    val efSearch: Int = maxOf(DEFAULT_HNSW_EF_SEARCH, maxCandidates),
+    val minScore: Float? = null,
+    val formatVersion: Int = HNSW_QUERY_FORMAT_VERSION,
+) {
+    init {
+        require(formatVersion == HNSW_QUERY_FORMAT_VERSION) {
+            "Unsupported HNSW query formatVersion $formatVersion; expected $HNSW_QUERY_FORMAT_VERSION"
+        }
+        require(parseHnswCalibrationId(calibrationId) != 0L) {
+            "HNSW calibrationId must be non-zero"
+        }
+        require(vector.size in 1..MAX_HNSW_VECTOR_DIMENSION) {
+            "HNSW vector dimensions must be between 1 and $MAX_HNSW_VECTOR_DIMENSION"
+        }
+        var squaredMagnitude = 0.0
+        vector.forEach { value ->
+            require(value.isFinite()) { "HNSW vector values must be finite" }
+            squaredMagnitude += value.toDouble() * value.toDouble()
+        }
+        require(squaredMagnitude.isFinite() && squaredMagnitude > 0.0) {
+            "HNSW vector must have a non-zero finite norm"
+        }
+        require(maxCandidates in 1..MAX_HNSW_CANDIDATES) {
+            "HNSW maxCandidates must be between 1 and $MAX_HNSW_CANDIDATES"
+        }
+        require(efSearch in maxCandidates..MAX_HNSW_EF_SEARCH) {
+            "HNSW efSearch must be between maxCandidates and $MAX_HNSW_EF_SEARCH"
+        }
+        require(minScore == null || minScore.isFinite() && minScore in -1f..1f) {
+            "HNSW minScore must be finite and between -1 and 1"
+        }
+    }
+
+    /** JVM-friendly constructor that retains the calibration identifier losslessly on the wire. */
+    @JvmOverloads
+    constructor(
+        calibrationId: Long,
+        vector: FloatArray,
+        maxCandidates: Int = DEFAULT_HNSW_CANDIDATES,
+        efSearch: Int = maxOf(DEFAULT_HNSW_EF_SEARCH, maxCandidates),
+        minScore: Float? = null,
+    ) : this(
+        calibrationId = calibrationId.toString(),
+        vector = vector.toList(),
+        maxCandidates = maxCandidates,
+        efSearch = efSearch,
+        minScore = minScore,
+        formatVersion = HNSW_QUERY_FORMAT_VERSION,
+    )
+}
+
+const val HNSW_QUERY_FORMAT_VERSION: Int = 1
+const val DEFAULT_HNSW_CANDIDATES: Int = 1_000
+const val DEFAULT_HNSW_EF_SEARCH: Int = 1_000
+const val MAX_HNSW_CANDIDATES: Int = 5_000
+const val MAX_HNSW_EF_SEARCH: Int = 20_000
+const val MAX_HNSW_VECTOR_DIMENSION: Int = 16_384
+
+private fun parseHnswCalibrationId(value: String): Long {
+    val text = value.trim()
+    require(text.isNotEmpty()) { "HNSW calibrationId must not be blank" }
+    return try {
+        BigInteger(text).longValueExact()
+    } catch (_: NumberFormatException) {
+        throw IllegalArgumentException("HNSW calibrationId must be a signed decimal 64-bit value")
+    } catch (_: ArithmeticException) {
+        throw IllegalArgumentException("HNSW calibrationId exceeds the signed 64-bit range")
+    }
+}
+
+/**
+ * Explicitly approximate admission from one ordinary secondary index.
+ *
+ * One [values] item is bounded `EQUAL`; multiple items are bounded `IN`. Fair request-order rounds
+ * share [maxCandidates] physical posting visits. `totalResults` reports only rows
+ * admitted by this sample (before an ordinary response `limit`), never the exhaustive index count.
+ * Use ordinary `EQUAL`/`IN` whenever an exact result set or total is required.
+ */
+data class ApproximateIndexCandidateQuery @JvmOverloads constructor(
+    val values: List<Any?>,
+    val maxCandidates: Int = DEFAULT_APPROXIMATE_INDEX_CANDIDATES
+) {
+    init {
+        require(maxCandidates in 1..MAX_APPROXIMATE_INDEX_CANDIDATES) {
+            "maxCandidates must be between 1 and $MAX_APPROXIMATE_INDEX_CANDIDATES"
+        }
+        require(values.isNotEmpty()) { "Approximate index candidates require at least one route value" }
+        require(values.size <= MAX_APPROXIMATE_INDEX_ROUTE_VALUES) {
+            "Approximate index candidate routes cannot exceed $MAX_APPROXIMATE_INDEX_ROUTE_VALUES values"
+        }
+        require(values.none { it == null }) { "Approximate index candidate route values cannot be null" }
+    }
+
+    constructor(
+        value: Any,
+        maxCandidates: Int = DEFAULT_APPROXIMATE_INDEX_CANDIDATES
+    ) : this(listOf(value), maxCandidates)
+}
+
+const val DEFAULT_APPROXIMATE_INDEX_CANDIDATES: Int = 1_000
+const val MAX_APPROXIMATE_INDEX_CANDIDATES: Int = 5_000
+const val MAX_APPROXIMATE_INDEX_ROUTE_VALUES: Int = 5_000
+
+private fun semanticWireWord(value: Long): String =
+    "0x" + java.lang.Long.toUnsignedString(value, 16).padStart(16, '0')
+
+private fun parseSemanticWireLong(value: String, field: String): Long {
+    val text = value.trim()
+    require(text.isNotEmpty()) { "$field must not be blank" }
+    val unsignedHex = when {
+        text.startsWith("0x", ignoreCase = true) -> text.substring(2)
+        text.any { it in 'a'..'f' || it in 'A'..'F' } -> text
+        else -> null
+    }
+    return if (unsignedHex != null) {
+        require(unsignedHex.isNotEmpty() && unsignedHex.all(::isSemanticHexDigit)) {
+            "$field must be a signed decimal or unsigned hexadecimal 64-bit value"
+        }
+        val parsed = BigInteger(unsignedHex, 16)
+        require(parsed.bitLength() <= Long.SIZE_BITS) { "$field exceeds 64 bits" }
+        parsed.toLong()
+    } else {
+        try {
+            BigInteger(text).longValueExact()
+        } catch (_: NumberFormatException) {
+            throw IllegalArgumentException("$field must be a signed decimal or unsigned hexadecimal 64-bit value")
+        } catch (_: ArithmeticException) {
+            throw IllegalArgumentException("$field exceeds the signed 64-bit range")
+        }
+    }
+}
+
+private fun isSemanticHexDigit(value: Char): Boolean =
+    value in '0'..'9' || value in 'a'..'f' || value in 'A'..'F'
+
+private fun splitSemanticFingerprintIntoFourBands(fingerprint: LongArray): LongArray {
+    require(fingerprint.size in 1..4) { "Fingerprint size must be between 64 and 256 bits" }
+    val bitCount = fingerprint.size * Long.SIZE_BITS
+    val bandBits = bitCount / SEMANTIC_BAND_COUNT
+    return LongArray(SEMANTIC_BAND_COUNT) { bandIndex ->
+        var band = 0L
+        val firstBit = bandIndex * bandBits
+        for (bandBit in 0 until bandBits) {
+            val sourceBit = firstBit + bandBit
+            val isSet = (fingerprint[sourceBit / Long.SIZE_BITS] ushr
+                (sourceBit % Long.SIZE_BITS)) and 1L
+            if (isSet != 0L) band = band or (1L shl bandBit)
+        }
+        band
+    }
+}
+
+private const val SEMANTIC_BAND_COUNT = 4
+
+/** Public hard ceiling for semantic/hybrid candidate admission and scoring work. */
+const val MAX_VECTOR_SEARCH_CANDIDATES: Int = 5_000
 
 /**
  * Specifies the logical operator used to join multiple conditions in a query.
@@ -422,6 +722,109 @@ interface IQueryBuilder {
      */
     fun search(queryText: String, minScore: Float? = null): IQueryBuilder
 
+    /** Adds a bounded semantic or hybrid search clause. */
+    fun search(searchQuery: VectorSearchQuery): IQueryBuilder = and(
+        ConditionBuilderImpl(
+            QueryCriteria(FULL_TEXT_ATTRIBUTE, QueryCriteriaOperator.MATCHES, searchQuery)
+        )
+    )
+
+    /**
+     * Seeds a physically bounded lexical candidate search. It must be the sole criterion. For a
+     * partitioned table, call [inPartition] with one concrete partition.
+     */
+    fun approximateSearch(searchQuery: VectorSearchQuery): IQueryBuilder {
+        require(!searchQuery.text.isNullOrBlank() && searchQuery.semantic == null) {
+            "SEARCH_CANDIDATES supports text-only VectorSearchQuery values"
+        }
+        return and(
+            ConditionBuilderImpl(
+                QueryCriteria(
+                    FULL_TEXT_ATTRIBUTE,
+                    QueryCriteriaOperator.SEARCH_CANDIDATES,
+                    searchQuery
+                )
+            )
+        )
+    }
+
+    /** Convenience overload for bounded lexical candidate admission. */
+    fun approximateSearch(
+        queryText: String,
+        minScore: Float? = null,
+        maxCandidates: Int = 1_000,
+        requireAllTerms: Boolean = true
+    ): IQueryBuilder = approximateSearch(
+        VectorSearchQuery(
+            text = queryText,
+            minScore = minScore,
+            maxCandidates = maxCandidates,
+            requireAllTerms = requireAllTerms
+        )
+    )
+
+    /**
+     * Seeds a physically bounded native-HNSW candidate request. It must be the sole criterion.
+     * For a partitioned table, call [inPartition] with one concrete partition.
+     */
+    fun hnswCandidates(searchQuery: HnswSearchQuery): IQueryBuilder = and(
+        ConditionBuilderImpl(
+            QueryCriteria(
+                FULL_TEXT_ATTRIBUTE,
+                QueryCriteriaOperator.HNSW_CANDIDATES,
+                searchQuery
+            )
+        )
+    )
+
+    /**
+     * Seeds the query with one explicitly approximate bounded secondary-index route. It must be
+     * the sole criterion. For partitioned tables call [inPartition] with one concrete partition.
+     */
+    fun approximateCandidates(
+        attribute: String,
+        candidateQuery: ApproximateIndexCandidateQuery
+    ): IQueryBuilder = and(
+        ConditionBuilderImpl(
+            QueryCriteria(attribute, QueryCriteriaOperator.CANDIDATES, candidateQuery)
+        )
+    )
+
+    /** Bounded `EQUAL`-style candidate admission. */
+    fun approximateCandidates(
+        attribute: String,
+        value: Any,
+        maxCandidates: Int = DEFAULT_APPROXIMATE_INDEX_CANDIDATES
+    ): IQueryBuilder = approximateCandidates(
+        attribute,
+        ApproximateIndexCandidateQuery(value, maxCandidates)
+    )
+
+    /** Bounded `IN`-style admission with one shared physical visit budget. */
+    fun approximateCandidates(
+        attribute: String,
+        values: Collection<Any>,
+        maxCandidates: Int = DEFAULT_APPROXIMATE_INDEX_CANDIDATES
+    ): IQueryBuilder = approximateCandidates(
+        attribute,
+        ApproximateIndexCandidateQuery(values.toList(), maxCandidates)
+    )
+
+    /** Convenience overload for a semantic-only bounded search. */
+    fun search(
+        signature: SemanticVectorSignature,
+        minScore: Float? = null,
+        nearbyBucketRadius: Int = 1,
+        maxCandidates: Int = 1_000
+    ): IQueryBuilder = search(
+        VectorSearchQuery(
+            semantic = signature,
+            minScore = minScore,
+            nearbyBucketRadius = nearbyBucketRadius,
+            maxCandidates = maxCandidates
+        )
+    )
+
     /**
      * Adds an additional filter condition, joined with the existing one by `AND`.
      * @param builder An [IConditionBuilder] that defines the additional filter logic.
@@ -718,6 +1121,17 @@ inline fun <reified T> ICascadeBuilder.delete(primaryKey: Any) =
     this.delete(T::class.simpleName!!, primaryKey.toString())
 
 /**
+ * Wire representation used by core entity CRUD, query, and live-query routes.
+ *
+ * [JSON] remains the default for backwards compatibility. [MESSAGE_PACK] opts into the recursive,
+ * schema-free entity binary protocol while document, schema, secret, and AI routes remain JSON.
+ */
+enum class EntityWireFormat {
+    JSON,
+    MESSAGE_PACK,
+}
+
+/**
  * Configuration options for initializing the Onyx database client.
  *
  * @property baseUrl The base URL of the Onyx API endpoint.
@@ -733,6 +1147,7 @@ inline fun <reified T> ICascadeBuilder.delete(primaryKey: Any) =
  * @property connectTimeoutMs Optional override for the socket connect timeout in milliseconds.
  * @property aiBaseUrl The base URL for AI/Chat API (defaults to https://ai.onyx.dev).
  * @property defaultModel The default AI model to use for chat completions (defaults to "onyx").
+ * @property entityWireFormat Entity-route wire representation. JSON is the backwards-compatible default.
  */
 data class OnyxConfig(
     val baseUrl: String? = null,
@@ -747,7 +1162,8 @@ data class OnyxConfig(
     val requestTimeoutMs: Int? = null,
     val connectTimeoutMs: Int? = null,
     val aiBaseUrl: String? = null,
-    val defaultModel: String? = null
+    val defaultModel: String? = null,
+    val entityWireFormat: EntityWireFormat = EntityWireFormat.JSON,
 )
 
 /**
@@ -759,6 +1175,8 @@ interface FetchResponse {
     val statusText: String
     fun header(name: String): String?
     fun text(): String
+    /** Raw response bytes. Override when using [EntityWireFormat.MESSAGE_PACK]. */
+    fun bytes(): ByteArray = text().toByteArray(Charsets.UTF_8)
     val body: Any?
 }
 
@@ -768,8 +1186,14 @@ interface FetchResponse {
 data class FetchInit(
     val method: String? = null,
     val headers: Map<String, String>? = null,
-    val body: String? = null
-)
+    val body: String? = null,
+    /** Raw request body used for binary entity calls; JSON calls continue to use [body]. */
+    val bodyBytes: ByteArray? = null,
+) {
+    /** Retains the original JVM constructor for existing custom-fetch adapters. */
+    constructor(method: String?, headers: Map<String, String>?, body: String?) :
+        this(method, headers, body, null)
+}
 
 /**
  * A typealias for the fetch function signature required by the SDK. This allows clients
@@ -1243,6 +1667,82 @@ fun percentile(attribute: String, p: Number): String = "percentile($attribute,$p
 fun search(queryText: String, minScore: Float? = null): IConditionBuilder =
     ConditionBuilderImpl(QueryCriteria(FULL_TEXT_ATTRIBUTE, QueryCriteriaOperator.MATCHES, FullTextQuery(queryText, minScore)))
 
+/** Creates a semantic or hybrid search criterion for composition with ordinary filters. */
+fun search(searchQuery: VectorSearchQuery): IConditionBuilder =
+    ConditionBuilderImpl(QueryCriteria(FULL_TEXT_ATTRIBUTE, QueryCriteriaOperator.MATCHES, searchQuery))
+
+/** Creates the sole root condition for physically bounded lexical search admission. */
+fun approximateSearch(searchQuery: VectorSearchQuery): IConditionBuilder {
+    require(!searchQuery.text.isNullOrBlank() && searchQuery.semantic == null) {
+        "SEARCH_CANDIDATES supports text-only VectorSearchQuery values"
+    }
+    return ConditionBuilderImpl(
+        QueryCriteria(
+            FULL_TEXT_ATTRIBUTE,
+            QueryCriteriaOperator.SEARCH_CANDIDATES,
+            searchQuery
+        )
+    )
+}
+
+/** Convenience condition for physically bounded lexical search admission. */
+fun approximateSearch(
+    queryText: String,
+    minScore: Float? = null,
+    maxCandidates: Int = 1_000,
+    requireAllTerms: Boolean = true
+): IConditionBuilder = approximateSearch(
+    VectorSearchQuery(
+        text = queryText,
+        minScore = minScore,
+        maxCandidates = maxCandidates,
+        requireAllTerms = requireAllTerms
+    )
+)
+
+/** Creates the sole root condition for approximate bounded secondary-index admission. */
+fun approximateCandidates(
+    attribute: String,
+    candidateQuery: ApproximateIndexCandidateQuery
+): IConditionBuilder = ConditionBuilderImpl(
+    QueryCriteria(attribute, QueryCriteriaOperator.CANDIDATES, candidateQuery)
+)
+
+/** Creates a bounded `EQUAL`-style candidate condition. */
+fun approximateCandidates(
+    attribute: String,
+    value: Any,
+    maxCandidates: Int = DEFAULT_APPROXIMATE_INDEX_CANDIDATES
+): IConditionBuilder = approximateCandidates(
+    attribute,
+    ApproximateIndexCandidateQuery(value, maxCandidates)
+)
+
+/** Creates a bounded `IN`-style candidate condition with one shared visit budget. */
+fun approximateCandidates(
+    attribute: String,
+    values: Collection<Any>,
+    maxCandidates: Int = DEFAULT_APPROXIMATE_INDEX_CANDIDATES
+): IConditionBuilder = approximateCandidates(
+    attribute,
+    ApproximateIndexCandidateQuery(values.toList(), maxCandidates)
+)
+
+/** Convenience condition for a semantic-only bounded search. */
+fun search(
+    signature: SemanticVectorSignature,
+    minScore: Float? = null,
+    nearbyBucketRadius: Int = 1,
+    maxCandidates: Int = 1_000
+): IConditionBuilder = search(
+    VectorSearchQuery(
+        semantic = signature,
+        minScore = minScore,
+        nearbyBucketRadius = nearbyBucketRadius,
+        maxCandidates = maxCandidates
+    )
+)
+
 /**
  * Adds a full-text search criteria to an existing condition builder using a logical `AND`.
  *
@@ -1252,6 +1752,25 @@ fun search(queryText: String, minScore: Float? = null): IConditionBuilder =
  */
 fun IConditionBuilder.search(queryText: String, minScore: Float? = null): IConditionBuilder =
     and(QueryCriteria(FULL_TEXT_ATTRIBUTE, QueryCriteriaOperator.MATCHES, FullTextQuery(queryText, minScore)))
+
+/** Adds a semantic or hybrid search criterion using logical `AND`. */
+fun IConditionBuilder.search(searchQuery: VectorSearchQuery): IConditionBuilder =
+    and(QueryCriteria(FULL_TEXT_ATTRIBUTE, QueryCriteriaOperator.MATCHES, searchQuery))
+
+/** Adds a semantic-only bounded search criterion using logical `AND`. */
+fun IConditionBuilder.search(
+    signature: SemanticVectorSignature,
+    minScore: Float? = null,
+    nearbyBucketRadius: Int = 1,
+    maxCandidates: Int = 1_000
+): IConditionBuilder = search(
+    VectorSearchQuery(
+        semantic = signature,
+        minScore = minScore,
+        nearbyBucketRadius = nearbyBucketRadius,
+        maxCandidates = maxCandidates
+    )
+)
 
 /**
  * Result returned from a full-text search across one or more tables.

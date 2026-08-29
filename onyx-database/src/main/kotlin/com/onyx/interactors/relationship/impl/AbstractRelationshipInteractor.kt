@@ -5,6 +5,7 @@ import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
 import com.onyx.interactors.record.data.Reference
+import com.onyx.interactors.record.withRecordMutationLock
 import com.onyx.interactors.relationship.RelationshipInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
@@ -52,9 +53,13 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
                 val entityToDelete = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
                 deleteInverseRelationshipReference(entity, entityRelationshipReference, it)
                 if (relationshipDescriptor.shouldDeleteEntity && !transaction.contains(entityToDelete!!, context)) {
-                    entityToDelete.deleteAllIndexes(context, entityToDelete.referenceId(context))
-                    entityToDelete.recordInteractor(context).delete(entityToDelete)
-                    entityToDelete.deleteRelationships(context, transaction)
+                    val childDescriptor = entityToDelete.descriptor(context)
+                    context.withRecordMutationLock(childDescriptor) {
+                        val referenceId = entityToDelete.referenceId(context, childDescriptor)
+                        entityToDelete.deleteAllIndexes(context, referenceId, childDescriptor)
+                        entityToDelete.deleteRelationships(context, transaction)
+                        entityToDelete.recordInteractor(context, childDescriptor).delete(entityToDelete)
+                    }
                 }
             }
         }

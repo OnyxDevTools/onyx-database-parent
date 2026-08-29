@@ -8,6 +8,7 @@ import com.onyx.cloud.api.save
 import com.onyx.cloud.exceptions.NotFoundException
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.SocketPolicy
 import java.util.concurrent.TimeUnit
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -191,10 +192,7 @@ class OnyxClientErrorHandlingIntegrationTest {
     fun closeCancelsActiveStreamsAndPreventsNewSubscriptions() {
         server.enqueue(
             MockResponse()
-                .setResponseCode(200)
-                .setHeader("Content-Type", "application/x-ndjson")
-                .setBodyDelay(1, TimeUnit.MINUTES)
-                .setBody("""{"action":"QUERY_RESPONSE","entity":{"id":"1","username":"ada"}}""" + "\n")
+                .setSocketPolicy(SocketPolicy.NO_RESPONSE)
         )
 
         val onyxClient = client as OnyxClient
@@ -228,4 +226,3 @@ class OnyxClientErrorHandlingIntegrationTest {
         }
     }
 }
-

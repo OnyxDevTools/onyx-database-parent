@@ -35,6 +35,27 @@ interface IndexPostingMap {
         action: (Long) -> Unit
     )
 
+    /**
+     * Visit at most [maxVisits] record IDs in tuple order, stopping as soon as [visitor] returns
+     * `false`. The return value is the number of IDs passed to [visitor].
+     *
+     * Native posting maps override this method so reaching either bound also stops B+ tree page
+     * traversal. Custom maps must provide an equivalent physical stop; the default deliberately
+     * fails instead of disguising exhaustive traversal as bounded work.
+     */
+    fun visitRecordIdsInRange(
+        fromValue: Any?,
+        fromRecordId: Long,
+        includeFrom: Boolean,
+        toValue: Any?,
+        toRecordId: Long,
+        includeTo: Boolean,
+        maxVisits: Int,
+        visitor: (Long) -> Boolean
+    ): Int = throw UnsupportedOperationException(
+        "${this::class.java.name} does not support physically bounded posting traversal"
+    )
+
     /** Visit each distinct indexed value once, in index order. */
     fun forEachDistinctValue(action: (Any) -> Unit)
 
