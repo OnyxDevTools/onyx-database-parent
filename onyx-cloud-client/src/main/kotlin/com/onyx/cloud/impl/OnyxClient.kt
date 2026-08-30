@@ -1266,13 +1266,11 @@ class QueryBuilder(
      */
     override fun where(condition: IConditionBuilder): IQueryBuilder {
         val replacement = condition.toCondition()
+        replacement?.requireCandidateSoleRoot()
         val replacementHasSearchContract = replacement.containsReadOnlySearch()
         if (replacementHasSearchContract) replacement.validateSearchContract()
         this.conditions = replacement
         this.hasSearchContract = replacementHasSearchContract
-        val replacement = condition.toCondition()
-        replacement?.requireCandidateSoleRoot()
-        this.conditions = replacement
         return this
     }
 
@@ -1382,10 +1380,9 @@ class QueryBuilder(
     private fun addCondition(builderToAdd: IConditionBuilder, logicalOperator: LogicalOperator) {
         val conditionToAdd = builderToAdd.toCondition() ?: return
         val currentCondition = this.conditions
+        requireCandidateCompositionIsValid(currentCondition, conditionToAdd)
         val combinedHasSearchContract = hasSearchContract || conditionToAdd.containsReadOnlySearch()
         val combined = when {
-        requireCandidateCompositionIsValid(currentCondition, conditionToAdd)
-        this.conditions = when {
             currentCondition == null -> conditionToAdd
             currentCondition is QueryCondition.CompoundCondition && currentCondition.operator == logicalOperator ->
                 currentCondition.copy(conditions = currentCondition.conditions + conditionToAdd)
