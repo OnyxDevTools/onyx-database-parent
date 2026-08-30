@@ -12,6 +12,7 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.*
 import com.onyx.persistence.query.QueryListener
 import com.onyx.persistence.stream.QueryStream
+import com.onyx.vector.SearchEmbeddingProvider
 
 /**
  * Persistence manager supplies a public API for performing database persistence and querying operations.
@@ -40,6 +41,20 @@ import com.onyx.persistence.stream.QueryStream
  *
  */
 interface PersistenceManager {
+
+    /**
+     * Optional model integration for ergonomic semantic and hybrid search.
+     *
+     * Embedded managers use it both when searchable entities are saved and when natural-language
+     * queries execute. Remote clients configure the provider on the server-side manager.
+     */
+    var searchEmbeddingProvider: SearchEmbeddingProvider?
+        get() = null
+        set(value) {
+            require(value == null) {
+                "Search embedding providers must be configured on the database server"
+            }
+        }
 
     /**
      * The context of the database contains descriptor information regarding the entities and instruction on how to structure the record data.  This is usually done within the PersistenceManagerFactory.

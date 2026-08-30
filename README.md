@@ -606,6 +606,7 @@ This annotation marks a class as a managed entity, making it eligible for persis
 * `fileName: String` (optional, defaults to `"")`: Specifies the name of the file the entity will be stored in.  This is used to control how data is stored on disk
 * `archiveDirectories: Array<String>` (optional, defaults to empty array):  Specifies the directories where archive files for this entity will be stored.  This is useful for managing long term storage.
 * `entropy: Int` (optional, defaults to `128`): Requested vector entropy for a `VectorManagedEntity`. Onyx rounds it up to a whole 64-bit word and bounds it to 64, 128, 192, or 256 bits. The resolved width applies to both structured feature fingerprints and semantic SimHash.
+* `searchSupport: SearchSupport` (optional, defaults to `SearchSupport.BOTH`): Declares whether a `VectorManagedEntity` accepts bounded lexical requests, semantic requests, or both plus hybrid requests.
 
 **Example:**
 
@@ -642,10 +643,15 @@ class Product : IManagedEntity {
 
 ### Vector-managed entities
 
-Extend `VectorManagedEntity` to give a record one inherited vector representation and index. Configure its single vector setting directly on `@Entity`:
+Extend `VectorManagedEntity` to give a record one inherited vector representation and index.
+Configure its entropy and high-level search support directly on `@Entity`:
 
 ```kotlin
-@Entity(fileName = "option-quotes/", entropy = 128)
+@Entity(
+    fileName = "option-quotes/",
+    entropy = 128,
+    searchSupport = SearchSupport.BOTH,
+)
 class OptionQuote : VectorManagedEntity() {
     @Identifier
     var id: Long = 0
@@ -674,6 +680,43 @@ Every persisted identifier, partition, and attribute defaults to low-cost presen
 Onyx rounds `entropy` up and bounds it to 64, 128, 192, or 256 bits, then uses that width for both structured feature fingerprints and semantic SimHash. Changing the resolved entropy or a field's feature families changes the persisted configuration and rebuilds the internal vector index.
 
 All public scalar operators remain available. An operator routes through the internal index when its field selected the required family; otherwise Onyx safely uses the ordinary table path. `AND`, `OR`, and `NOT` compounds remain available in either source order. Indexed routes produce candidates, and Onyx evaluates the original predicate against stored records before returning them. Regexes without a safely mandatory literal are unroutable. Application fields must not declare `IndexType.VECTOR` themselves.
+
+For bounded natural-language retrieval, declare the modes an entity supports and use the options
+overload to choose lexical, semantic, or hybrid execution. `SearchSupport.BOTH` is the default, so
+existing `@Entity` declarations can omit `searchSupport`:
+
+```kotlin
+@Entity(
+    fileName = "option-quotes/",
+    searchSupport = SearchSupport.BOTH,
+)
+class OptionQuote : VectorManagedEntity() {
+    // ...
+}
+
+val results = manager.from<OptionQuote>()
+    .search(
+        "how do i calculate cost per horse",
+        SearchOptions(mode = SearchMode.LEXICAL, match = SearchMatch.ANY),
+    )
+    .list<OptionQuote>()
+```
+
+`LEXICAL` entities accept lexical requests, `SEMANTIC` entities accept semantic requests, and
+`BOTH` entities accept lexical, semantic, and hybrid requests. A typed request outside the entity's
+declared support fails before search work begins. Hybrid is one `SEARCH` operation: Onyx obtains one
+query embedding, runs the lexical and semantic channels under one candidate budget, and merges them
+once.
+
+Semantic-capable entities use a server-configured `SearchEmbeddingProvider`. Onyx embeds selected
+search text automatically on save and embeds query text in the same model space; lexical-only
+entities do not pay that embedding or HNSW cost. Existing rows must be explicitly re-saved to
+backfill embeddings. Explicit application-supplied HNSW vectors win over automatic embedding for
+the current save. Direct searches of partitioned entities span every concrete partition by
+default, sharing one deterministic candidate budget and merging relevance globally; use
+`.inPartition(...)` to constrain that budget to one partition. The legacy one-argument
+`.search(text)` overload remains unchanged. High-level all-table search includes only eligible,
+unpartitioned vector-managed types for the requested mode.
 
 See [Vector-managed search](docs/vector-managed-search.md) for migration guidance, semantic calibration, query examples, collision behavior, and the downstream reranking contract.
 

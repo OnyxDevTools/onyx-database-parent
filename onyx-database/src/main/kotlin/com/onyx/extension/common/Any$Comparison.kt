@@ -169,6 +169,10 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
                 return values.none { first.compare(it, QueryCriteriaOperator.EQUAL) }
             }
 
+            QueryCriteriaOperator.SEARCH -> throw InvalidDataTypeForOperator(
+                "SEARCH is an index-admission operation and cannot be evaluated as an exact predicate"
+            )
+
             QueryCriteriaOperator.CANDIDATES -> throw InvalidDataTypeForOperator(
                 "CANDIDATES is an index-admission operation and cannot be evaluated as an exact predicate"
             )

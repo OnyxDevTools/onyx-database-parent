@@ -17,6 +17,7 @@ import com.onyx.persistence.collections.LazyQueryCollection
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
+import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.interactors.relationship.data.RelationshipTransaction
 import com.onyx.interactors.relationship.data.RelationshipReference
 import com.onyx.persistence.query.QueryListenerEvent
@@ -24,6 +25,7 @@ import com.onyx.persistence.query.QueryPartitionMode
 import com.onyx.persistence.stream.QueryMapStream
 import com.onyx.persistence.stream.QueryStream
 import java.util.*
+import com.onyx.vector.SearchEmbeddingProvider
 
 /**
  * Persistence manager supplies a public API for performing database persistence and querying operations.  This specifically is used for an embedded database.
@@ -45,6 +47,12 @@ import java.util.*
  *
  */
 open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
+
+    override var searchEmbeddingProvider: SearchEmbeddingProvider? = null
+
+    init {
+        context.systemPersistenceManager = this
+    }
 
     override var context: SchemaContext = context
         set(value) {
@@ -701,6 +709,17 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                     )
                 )
                     return@forEachIndexed
+            }
+        } else if (query.criteria?.let { query.getAllCriteria().any { criterion ->
+                criterion.operator == QueryCriteriaOperator.SEARCH
+            } } == true
+        ) {
+            // SEARCH is a candidate-admission operation.  The ordinary bulk-stream path
+            // evaluates records directly and therefore cannot populate its admitted-reference
+            // set or preserve relevance ordering.  Reuse the lazy query pipeline for SEARCH
+            // while retaining the stream callback's early-termination contract.
+            for (entity in executeLazyQuery<IManagedEntity>(query)) {
+                if (!streamer.accept(entity as T, this)) break
             }
         } else {
             val descriptors =

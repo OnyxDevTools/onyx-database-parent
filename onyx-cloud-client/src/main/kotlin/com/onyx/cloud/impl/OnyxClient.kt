@@ -27,6 +27,8 @@ import com.onyx.cloud.api.OnyxDocument
 import com.onyx.cloud.api.QueryCriteria
 import com.onyx.cloud.api.QueryCriteriaOperator
 import com.onyx.cloud.api.SaveOptions
+import com.onyx.cloud.api.SearchOptions
+import com.onyx.cloud.api.SearchQuery
 import com.onyx.cloud.api.Sort
 import com.onyx.cloud.api.VectorSearchQuery
 import com.onyx.cloud.exceptions.NotFoundException
@@ -603,8 +605,16 @@ class OnyxClient(
         return QueryBuilder(
             client = this,
             type = FullTextSearchResult::class,
-            table = FULL_TEXT_ALL_TABLE
-        ).search(queryText, minScore)
+            table = FULL_TEXT_ALL_TABLE,
+        ).withoutDefaultPartition().search(queryText, minScore)
+    }
+
+    override fun search(queryText: String, options: SearchOptions): IQueryBuilder {
+        return QueryBuilder(
+            client = this,
+            type = FullTextSearchResult::class,
+            table = FULL_TEXT_ALL_TABLE,
+        ).withoutDefaultPartition().search(queryText, options)
     }
 
     /**
@@ -1219,6 +1229,7 @@ class QueryBuilder(
 
     private var fields: List<String>? = null
     private var conditions: QueryCondition? = null
+    private var hasSearchContract: Boolean = false
     private var sort: List<Sort>? = null
     private var limitValue: Int? = null
     private var distinctValue: Boolean = false
@@ -1254,7 +1265,11 @@ class QueryBuilder(
      * Replaces existing conditions with [condition].
      */
     override fun where(condition: IConditionBuilder): IQueryBuilder {
-        this.conditions = condition.toCondition()
+        val replacement = condition.toCondition()
+        val replacementHasSearchContract = replacement.containsReadOnlySearch()
+        if (replacementHasSearchContract) replacement.validateSearchContract()
+        this.conditions = replacement
+        this.hasSearchContract = replacementHasSearchContract
         return this
     }
 
@@ -1268,11 +1283,20 @@ class QueryBuilder(
             FullTextQuery(queryText, minScore)
         )
         val condition = ConditionBuilderImpl(searchCriteria)
-        if (conditions == null) {
-            conditions = condition.toCondition()
-        } else {
-            addCondition(condition, LogicalOperator.AND)
-        }
+        addCondition(condition, LogicalOperator.AND)
+        return this
+    }
+
+    /** Adds the high-level natural-language search contract to the query. */
+    override fun search(queryText: String, options: SearchOptions): IQueryBuilder {
+        val condition = ConditionBuilderImpl(
+            QueryCriteria(
+                FULL_TEXT_ATTRIBUTE,
+                QueryCriteriaOperator.SEARCH,
+                SearchQuery(queryText, options),
+            )
+        )
+        addCondition(condition, LogicalOperator.AND)
         return this
     }
 
@@ -1284,11 +1308,7 @@ class QueryBuilder(
             searchQuery
         )
         val condition = ConditionBuilderImpl(searchCriteria)
-        if (conditions == null) {
-            conditions = condition.toCondition()
-        } else {
-            addCondition(condition, LogicalOperator.AND)
-        }
+        addCondition(condition, LogicalOperator.AND)
         return this
     }
 
@@ -1305,6 +1325,7 @@ class QueryBuilder(
                 searchQuery
             )
         ).toCondition()
+        hasSearchContract = true
         return this
     }
 
@@ -1318,6 +1339,7 @@ class QueryBuilder(
                 searchQuery
             )
         ).toCondition()
+        hasSearchContract = true
         return this
     }
 
@@ -1334,6 +1356,7 @@ class QueryBuilder(
                 candidateQuery
             )
         ).toCondition()
+        hasSearchContract = true
         return this
     }
 
@@ -1356,7 +1379,8 @@ class QueryBuilder(
     private fun addCondition(builderToAdd: IConditionBuilder, logicalOperator: LogicalOperator) {
         val conditionToAdd = builderToAdd.toCondition() ?: return
         val currentCondition = this.conditions
-        this.conditions = when {
+        val combinedHasSearchContract = hasSearchContract || conditionToAdd.containsReadOnlySearch()
+        val combined = when {
             currentCondition == null -> conditionToAdd
             currentCondition is QueryCondition.CompoundCondition && currentCondition.operator == logicalOperator ->
                 currentCondition.copy(conditions = currentCondition.conditions + conditionToAdd)
@@ -1365,6 +1389,9 @@ class QueryBuilder(
                 conditions = listOfNotNull(currentCondition, conditionToAdd)
             )
         }
+        if (combinedHasSearchContract) combined.validateSearchContract()
+        this.conditions = combined
+        this.hasSearchContract = combinedHasSearchContract
     }
 
     private fun serializableConditions(): QueryCondition? =
@@ -1436,6 +1463,12 @@ class QueryBuilder(
      */
     override fun inPartition(partition: String): QueryBuilder {
         partitionValue = partition
+        return this
+    }
+
+    /** Clears a configured default partition for database-wide operations such as `ALL` search. */
+    internal fun withoutDefaultPartition(): QueryBuilder {
+        partitionValue = null
         return this
     }
 
@@ -1569,6 +1602,10 @@ class QueryBuilder(
         check(mode == Mode.SELECT || mode == Mode.DELETE) {
             "delete() can only be called after setting conditions (where/and/or/partition), not in update mode."
         }
+        val readOnlyOperator = conditions.firstReadOnlySearchOperator()
+        check(readOnlyOperator == null) {
+            "$readOnlyOperator is a read-only operation"
+        }
         val targetTable = table
             ?: throw IllegalStateException("Table name must be specified using from() before calling delete().")
         mode = Mode.DELETE
@@ -1585,6 +1622,10 @@ class QueryBuilder(
     override fun update(): Int {
         check(mode == Mode.UPDATE) { "Must call setUpdates(...) before calling update()." }
         check(updates != null) { "No updates specified. Call setUpdates(...) first." }
+        val readOnlyOperator = conditions.firstReadOnlySearchOperator()
+        check(readOnlyOperator == null) {
+            "$readOnlyOperator is a read-only operation"
+        }
         val targetTable = table
             ?: throw IllegalStateException("Table name must be specified using from() before calling update().")
         val queryPayload = buildUpdateQueryPayload()
@@ -1642,6 +1683,10 @@ class QueryBuilder(
         keepAlive: Boolean,
     ): IStreamSubscription {
         check(mode == Mode.SELECT) { "Streaming is only applicable in select mode." }
+        val readOnlyOperator = conditions.firstReadOnlySearchOperator()
+        check(readOnlyOperator == null) {
+            "$readOnlyOperator does not support live streams"
+        }
         val targetTable = table
             ?: throw IllegalStateException("Table name must be specified using from() before calling stream().")
         val queryPayload = buildSelectQueryPayload()
@@ -1702,6 +1747,54 @@ sealed class QueryCondition {
         val conditions: List<QueryCondition>,
         val conditionType: String = "CompoundCondition"
     ) : QueryCondition()
+}
+
+private val SOLE_ROOT_CANDIDATE_OPERATORS = setOf(
+    QueryCriteriaOperator.CANDIDATES,
+    QueryCriteriaOperator.SEARCH_CANDIDATES,
+    QueryCriteriaOperator.HNSW_CANDIDATES,
+)
+
+private val READ_ONLY_SEARCH_OPERATORS = SOLE_ROOT_CANDIDATE_OPERATORS + QueryCriteriaOperator.SEARCH
+
+private fun QueryCondition?.allCriteria(): List<QueryCriteria> = when (this) {
+    null -> emptyList()
+    is QueryCondition.SingleCondition -> listOf(criteria)
+    is QueryCondition.CompoundCondition -> conditions.flatMap { it.allCriteria() }
+}
+
+/** Enforces the structural search rules before an invalid query can reach the server. */
+private fun QueryCondition?.validateSearchContract() {
+    val criteria = allCriteria()
+    val candidate = criteria.firstOrNull { it.operator in SOLE_ROOT_CANDIDATE_OPERATORS }
+    require(
+        candidate == null ||
+            this is QueryCondition.SingleCondition && this.criteria.operator == candidate.operator
+    ) {
+        "${candidate?.operator} must be the sole root criterion"
+    }
+
+    val searches = criteria.filter { it.operator == QueryCriteriaOperator.SEARCH }
+    require(searches.all { it.field == FULL_TEXT_ATTRIBUTE }) {
+        "SEARCH requires the $FULL_TEXT_ATTRIBUTE field"
+    }
+    require(searches.size <= 1) { "A query may contain only one SEARCH criterion" }
+    if (searches.isNotEmpty()) {
+        require(criteria.none {
+            it.operator != QueryCriteriaOperator.SEARCH && it.field == FULL_TEXT_ATTRIBUTE
+        }) {
+            "SEARCH cannot be combined with another full-text search criterion"
+        }
+    }
+}
+
+private fun QueryCondition?.firstReadOnlySearchOperator(): QueryCriteriaOperator? =
+    allCriteria().firstOrNull { it.operator in READ_ONLY_SEARCH_OPERATORS }?.operator
+
+private fun QueryCondition?.containsReadOnlySearch(): Boolean = when (this) {
+    null -> false
+    is QueryCondition.SingleCondition -> criteria.operator in READ_ONLY_SEARCH_OPERATORS
+    is QueryCondition.CompoundCondition -> conditions.any { it.containsReadOnlySearch() }
 }
 
 // =====================================================================

@@ -1,5 +1,9 @@
 package com.onyx.cloud.extensions
 
+import com.onyx.cloud.api.SearchMatch
+import com.onyx.cloud.api.SearchMode
+import com.onyx.cloud.api.SearchOptions
+import com.onyx.cloud.api.SearchQuery
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.Date
@@ -12,6 +16,19 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class EntityMessagePackTest {
+    @Test
+    fun serializedNameIsHonoredForSearchEnums() {
+        val query = SearchQuery(
+            "expense for each animal",
+            SearchOptions(mode = SearchMode.HYBRID, match = SearchMatch.ANY),
+        )
+
+        val decoded = assertIs<Map<*, *>>(EntityMessagePack.decode(EntityMessagePack.encode(query)))
+
+        assertEquals("hybrid", decoded["mode"])
+        assertEquals("any", decoded["match"])
+    }
+
     @Test
     fun canonicalGoldenFixtureMatchesEverySdk() {
         val fixture = canonicalFixture()

@@ -272,13 +272,14 @@ class VectorIndexScannerOperatorIntegrationTest(
         )
 
         // These are bounded admission plans, not exact scalar predicates. CANDIDATES is handled
-        // by ApproximateIndexCandidateScanner; SEARCH_CANDIDATES and HNSW_CANDIDATES target the
-        // whole-record text pseudo-field. Their dedicated suites assert budgets/rejection rules;
-        // adding them to the scalar matrix would test invalid queries.
+        // by ApproximateIndexCandidateScanner; SEARCH, SEARCH_CANDIDATES, and HNSW_CANDIDATES
+        // target the whole-record text pseudo-field. Their dedicated suites assert budgets and
+        // rejection rules; adding them to the scalar matrix would test invalid queries.
         private val ADMISSION_ONLY_OPERATORS = setOf(
             QueryCriteriaOperator.CANDIDATES,
             QueryCriteriaOperator.SEARCH_CANDIDATES,
             QueryCriteriaOperator.HNSW_CANDIDATES,
+            QueryCriteriaOperator.SEARCH,
         )
 
         @JvmStatic

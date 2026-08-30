@@ -15,6 +15,8 @@ import com.onyx.persistence.VectorManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.QueryListenerEvent
 import com.onyx.interactors.record.RecordInteractor
+import com.onyx.vector.VectorEntityEncoder
+import com.onyx.vector.VectorManagedConfiguration
 import java.lang.ref.WeakReference
 import java.lang.reflect.Field
 
@@ -65,6 +67,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, conte
                 } else {
                     entity.onPreInsert(context, entityDescriptor)
                 }
+                prepareAutomaticSearchEmbedding(entity)
                 if (entity is VectorManagedEntity) {
                     entity.prepareVectorRepresentation(entityDescriptor)
                 }
@@ -94,12 +97,43 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, conte
             capturePreviousValue = entityDescriptor.hasIndexes
         )
 
+        if (entity is VectorManagedEntity) {
+            entity.clearExplicitHnswOverride()
+        }
+
         if(result.isInsert)
             entity.onPostInsert(context, entityDescriptor)
         else
             entity.onPostUpdate(context, entityDescriptor)
 
         return result
+    }
+
+    /**
+     * Runs after pre-insert/pre-update callbacks so every record write path indexes the final text.
+     * Relationship cascades and query updates write through this interactor as well.
+     */
+    private fun prepareAutomaticSearchEmbedding(entity: IManagedEntity) {
+        val searchable = entity as? VectorManagedEntity ?: return
+        if (searchable.hasExplicitHnswOverride()) return
+        val provider = context.systemPersistenceManager?.searchEmbeddingProvider ?: return
+        val configuration = VectorManagedConfiguration.forClass(
+            entityDescriptor.entityClass,
+        )
+        if (!configuration.searchSupport.supportsSemantic) return
+        if (
+            !provider.supports(entityDescriptor.entityClass) ||
+            !VectorEntityEncoder.hasSearchableTextFields(entityDescriptor)
+        ) {
+            return
+        }
+        val text = VectorEntityEncoder.searchableText(searchable, entityDescriptor)
+        if (text.isBlank()) {
+            searchable.clearAutomaticHnswVector()
+            return
+        }
+        val embedding = provider.embed(text, entityDescriptor.entityClass)
+        searchable.automaticHnswVector(embedding.vector, embedding.calibrationId)
     }
 
     /**

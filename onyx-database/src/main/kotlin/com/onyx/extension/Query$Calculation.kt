@@ -52,7 +52,8 @@ fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, con
             }
         }
         else if (it.attribute == Query.FULL_TEXT_ATTRIBUTE) {
-            val evaluatedScore = if (entity is VectorManagedEntity) {
+            val isHighLevelAdmission = it.operator == QueryCriteriaOperator.SEARCH
+            val evaluatedScore = if (entity is VectorManagedEntity && !isHighLevelAdmission) {
                 evaluatedVectorSearch = true
                 resolveVectorSearchQuery(it.value)?.let { searchQuery ->
                     VectorSearchEvaluator.evaluate(entity, descriptor, searchQuery)
@@ -63,7 +64,9 @@ fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, con
             if (evaluatedScore != null) {
                 evaluatedVectorSearchScore = maxOf(evaluatedVectorSearchScore ?: evaluatedScore, evaluatedScore)
             }
-            val matches = if (entity is VectorManagedEntity) {
+            val matches = if (isHighLevelAdmission) {
+                vectorSearchMatches?.get(it)?.contains(entityReference) == true
+            } else if (entity is VectorManagedEntity) {
                 evaluatedScore != null
             } else {
                 vectorSearchMatches?.get(it)?.contains(entityReference)

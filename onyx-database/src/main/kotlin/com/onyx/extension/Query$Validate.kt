@@ -11,7 +11,11 @@ import com.onyx.persistence.query.QueryPartitionMode
 import com.onyx.persistence.query.resolveApproximateIndexCandidateQuery
 import com.onyx.persistence.query.resolveVectorSearchQuery
 import com.onyx.persistence.query.resolveHnswSearchQuery
+import com.onyx.persistence.query.resolveSearchQuery
+import com.onyx.persistence.query.SearchMode
+import com.onyx.persistence.query.supports
 import com.onyx.persistence.VectorManagedEntity
+import com.onyx.vector.VectorManagedConfiguration
 
 /**
  * Validates a query to ensure it is valid before executing it
@@ -30,6 +34,68 @@ fun Query.validate(context: SchemaContext, descriptor: EntityDescriptor = contex
     definePartition(context)
 
     val allCriteria = this.getAllCriteria()
+    val searches = allCriteria.filter {
+        it.operator == QueryCriteriaOperator.SEARCH
+    }
+    if (searches.isNotEmpty()) {
+        require(searches.size == 1) {
+            "A query may contain only one SEARCH criterion"
+        }
+        val search = searches.single()
+        require(!isUpdateOrDelete) {
+            "SEARCH is a read-only operation"
+        }
+        require(!cache && changeListener == null) {
+            "SEARCH does not support query caching or live listeners"
+        }
+        require(!search.isNot && !search.flip) {
+            "SEARCH criteria cannot be negated"
+        }
+        require(generateSequence(search.parentCriteria) { it.parentCriteria }.none { it.isNot }) {
+            "SEARCH cannot be nested inside a negated criteria group"
+        }
+        require(search.attribute == Query.FULL_TEXT_ATTRIBUTE) {
+            "SEARCH requires the ${Query.FULL_TEXT_ATTRIBUTE} field"
+        }
+        require(allCriteria.none {
+            it !== search && it.attribute == Query.FULL_TEXT_ATTRIBUTE
+        }) {
+            "SEARCH cannot be combined with another full-text search criterion"
+        }
+        require(VectorManagedEntity::class.java.isAssignableFrom(requireNotNull(entityType))) {
+            "SEARCH requires a VectorManagedEntity"
+        }
+        val searchQuery = resolveSearchQuery(search.value)
+        VectorManagedConfiguration.forClass(requireNotNull(entityType))
+            .requireSearchMode(searchQuery.mode)
+        // Unlike the low-level candidate operators below, high-level SEARCH owns one global
+        // candidate budget and can therefore distribute it across every concrete partition.
+        // An explicit partition still limits the query to that one store.
+    }
+
+    if (VectorManagedEntity::class.java.isAssignableFrom(requireNotNull(entityType))) {
+        val configuration = VectorManagedConfiguration.forClass(requireNotNull(entityType))
+        allCriteria.asSequence()
+            .filter { it.attribute == Query.FULL_TEXT_ATTRIBUTE }
+            .filter {
+                it.operator in setOf(
+                    QueryCriteriaOperator.MATCHES,
+                    QueryCriteriaOperator.NOT_MATCHES,
+                    QueryCriteriaOperator.LIKE,
+                    QueryCriteriaOperator.NOT_LIKE,
+                )
+            }
+            .mapNotNull { resolveVectorSearchQuery(it.value) }
+            .forEach { vectorSearch ->
+                if (!vectorSearch.text.isNullOrBlank()) {
+                    configuration.requireSearchMode(SearchMode.LEXICAL)
+                }
+                if (vectorSearch.semantic != null) {
+                    configuration.requireSearchMode(SearchMode.SEMANTIC)
+                }
+            }
+    }
+
     val approximateCandidates = allCriteria.filter {
         it.operator == QueryCriteriaOperator.CANDIDATES
     }
@@ -84,6 +150,8 @@ fun Query.validate(context: SchemaContext, descriptor: EntityDescriptor = contex
         require(!searchQuery.text.isNullOrBlank() && searchQuery.semantic == null) {
             "SEARCH_CANDIDATES supports text-only VectorSearchQuery values"
         }
+        VectorManagedConfiguration.forClass(requireNotNull(entityType))
+            .requireSearchMode(SearchMode.LEXICAL)
         if (descriptor.hasPartition) {
             require(partition != QueryPartitionMode.ALL && partition.toString().isNotBlank()) {
                 "SEARCH_CANDIDATES requires one concrete partition for partitioned entities"
@@ -115,6 +183,8 @@ fun Query.validate(context: SchemaContext, descriptor: EntityDescriptor = contex
             "HNSW_CANDIDATES requires a VectorManagedEntity"
         }
         resolveHnswSearchQuery(hnswSearches.single().value)
+        VectorManagedConfiguration.forClass(requireNotNull(entityType))
+            .requireSearchMode(SearchMode.SEMANTIC)
         if (descriptor.hasPartition) {
             require(partition != QueryPartitionMode.ALL && partition.toString().isNotBlank()) {
                 "HNSW_CANDIDATES requires one concrete partition for partitioned entities"
@@ -159,6 +229,13 @@ fun Query.validate(context: SchemaContext, descriptor: EntityDescriptor = contex
     }
 
     return true
+}
+
+private fun VectorManagedConfiguration.requireSearchMode(mode: SearchMode) {
+    require(searchSupport.supports(mode)) {
+        "${mode.name} search is not supported by this entity; " +
+            "@Entity declares searchSupport=${searchSupport.name}"
+    }
 }
 
 /**

@@ -16,7 +16,8 @@ and persistent graph.
 ## Define an entity
 
 Extend `VectorManagedEntity` and use the normal persistence annotations. `entropy` selects the
-fingerprint width; `@VectorAttribute` opts individual fields into additional feature families.
+fingerprint width, `searchSupport` declares the high-level capabilities, and `@VectorAttribute`
+opts individual fields into additional feature families.
 
 ```kotlin
 import com.onyx.persistence.VectorManagedEntity
@@ -24,13 +25,18 @@ import com.onyx.persistence.annotations.Attribute
 import com.onyx.persistence.annotations.Entity
 import com.onyx.persistence.annotations.Identifier
 import com.onyx.persistence.annotations.Partition
+import com.onyx.persistence.annotations.SearchSupport
 import com.onyx.persistence.annotations.VectorAttribute
 import com.onyx.persistence.annotations.VectorAttributeMode
 import com.onyx.persistence.annotations.VectorFeatureFamily
 import com.onyx.persistence.annotations.values.IdentifierGenerator
 import java.util.Date
 
-@Entity(fileName = "option-quotes/", entropy = 128)
+@Entity(
+    fileName = "option-quotes/",
+    entropy = 128,
+    searchSupport = SearchSupport.BOTH,
+)
 class OptionQuote : VectorManagedEntity() {
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
     @VectorAttribute(mode = VectorAttributeMode.IGNORE)
@@ -115,13 +121,14 @@ each field:
 | `CATEGORICAL` | Stable full-value `EQUAL`, `IN`, and their negative forms |
 | `INTERVAL` | Ordered comparisons, `BETWEEN`, and numeric equality when categorical routes are omitted |
 | `TEXT_EXACT` | Java-compatible case-folded complete values for exact regex and tokenless/ignore-case textual predicates |
-| `TEXT_TERM` | Per-field terms and whole-record `.search(...)` terms |
+| `TEXT_TERM` | Searchable text input; emits per-field and whole-record terms when lexical support is enabled |
 | `TEXT_PREFIX` | Length-preserving case-folded `STARTS_WITH` routes |
 | `TEXT_NGRAM` | Length-preserving case-folded `CONTAINS` and safely extractable regular-expression literals |
 
 Collections and arrays apply the field's selected families to every non-null element. Maps apply
 them to every non-null key and value. `SELECTED` with an empty family list is useful when only
-`IS_NULL`/`NOT_NULL` routing is wanted.
+`IS_NULL`/`NOT_NULL` routing is wanted. On a `SEMANTIC` entity, `TEXT_TERM` still selects the text
+sent to the embedding provider but does not build lexical term routes.
 
 Interval encoding remains type-aware: integers use exact signed coordinates; finite floating-point
 values use ordered IEEE-754 coordinates; dates use epoch milliseconds; and strings use a
@@ -191,8 +198,8 @@ Negative predicates use the indexed record domain and subtract verified positive
 
 ## Lexical search
 
-`.search(...)` uses normalized whole-record terms emitted only by fields selecting `TEXT_TERM`, and
-composes with the same structured criteria:
+The legacy `.search(text)` overload uses normalized whole-record terms emitted only by fields
+selecting `TEXT_TERM`, and composes with the same structured criteria:
 
 ```kotlin
 val results = manager.from<OptionQuote>()
@@ -243,9 +250,112 @@ Schema-free Cloud/Python callers can opt in with the same typed `MATCHES` value:
 `VectorSearchQuery` values; semantic and hybrid searches continue to use `MATCHES`. A partitioned
 entity requires one concrete partition.
 
+## High-level lexical, semantic, and hybrid search
+
+The entity schema declares which high-level search modes are valid. `SearchSupport.BOTH` is the
+default, so it may be omitted; specify `LEXICAL` or `SEMANTIC` when a type should support only one
+channel:
+
+```kotlin
+@Entity(
+    fileName = "option-quotes/",
+    entropy = 128,
+    searchSupport = SearchSupport.BOTH,
+)
+class OptionQuote : VectorManagedEntity() {
+    // ...
+}
+```
+
+| Entity declaration | Accepted typed requests |
+|---|---|
+| `SearchSupport.LEXICAL` | `SearchMode.LEXICAL` |
+| `SearchSupport.SEMANTIC` | `SearchMode.SEMANTIC` |
+| `SearchSupport.BOTH` | `SearchMode.LEXICAL`, `SearchMode.SEMANTIC`, or `SearchMode.HYBRID` |
+
+The options overload is the application-facing natural-language API. It uses a dedicated `SEARCH`
+operator, so an older server fails closed instead of silently ignoring the requested mode. A server
+also rejects a typed request that the target entity did not declare before invoking an embedding
+provider or scanning an index:
+
+```kotlin
+val lexical = manager.from<OptionQuote>()
+    .search(
+        "how do i calculate cost per horse",
+        SearchOptions(
+            mode = SearchMode.LEXICAL,
+            match = SearchMatch.ANY,
+            minScore = 0.4f,
+            maxCandidates = 500,
+        ),
+    )
+    .list<OptionQuote>()
+
+val semantic = manager.from<OptionQuote>()
+    .search(question, SearchOptions(mode = SearchMode.SEMANTIC))
+    .list<OptionQuote>()
+
+val both = manager.from<OptionQuote>()
+    .search(question, SearchOptions(mode = SearchMode.HYBRID))
+    .list<OptionQuote>()
+```
+
+`SearchOptions()` defaults to `HYBRID`, `ANY`, no minimum score, and 1,000 candidates. Because
+`SearchSupport.BOTH` is also the entity default, the defaults form one hybrid operation. Onyx sends
+one `SEARCH` criterion, obtains one query embedding, executes both channels under one bounded
+candidate pool, and merges their scores once; it does not issue separate lexical and semantic
+queries. Scores are normalized to `0..1`; they are ranking signals, not probabilities or
+cross-model guarantees. Hybrid search requires at least two candidates so both channels receive
+work. The final hybrid score is the stronger lexical or semantic channel score.
+
+Semantic and hybrid modes require an application-supplied embedding integration on the database
+server. Onyx deliberately does not choose a model:
+
+```kotlin
+manager.searchEmbeddingProvider = SearchEmbeddingProvider { text, entityType ->
+    require(entityType == OptionQuote::class.java)
+    SearchEmbedding(
+        calibrationId = embeddingSpaceId,
+        vector = embeddingModel.embed(text),
+    )
+}
+```
+
+For `SEMANTIC` and `BOTH` entity types, every save deterministically joins the selected searchable
+fields, embeds that text once after generated identifiers and pre-save callbacks run, quantizes it,
+and updates the native HNSW graph atomically with the row. Query text goes through the same provider.
+One hybrid request on a `BOTH` entity also embeds the query once and reuses that embedding across
+the semantic channel and every concrete partition. `LEXICAL` entities do not invoke the provider or
+maintain an automatic HNSW vector. Use the lower-level `hnswCandidates(...)` API when the application
+owns vectors independently of this high-level contract. Vector entities with no selected searchable
+text fields are never modified by automatic embedding. An explicit `hnswVector(...)`,
+`semanticVector(...)`, or `clearHnswVector()` call takes precedence over the provider for that one
+save. The override marker is then consumed, so a later save without another explicit vector refreshes
+the provider-managed embedding normally.
+
+Provider calls run inside the record mutation lock to keep callback-mutated text, the row, and its
+index synchronized; keep the provider bounded and reliable. Rows written before a provider was
+configured are not automatically backfilled, and an index rebuild cannot invent their embeddings.
+Explicitly stream those authoritative rows through the application and save them again before
+depending on semantic retrieval.
+
+`SEARCH` admits one global bounded candidate pool and then composes ordinary `AND`/`OR` filters
+against it, independent of fluent call order. It is read-only and cannot be negated, cached, used
+with live listeners, or combined with another full-text criterion. A direct query of a partitioned
+entity searches every current concrete partition when `.inPartition(...)` is omitted. The one
+`maxCandidates` budget is divided deterministically by partition index, candidates are merged and
+ranked globally, and the final pool is capped once. Lexical and semantic modes require at least one
+candidate per partition; hybrid requires at least two so both channels run in every partition. If
+the budget cannot cover all partitions, the query fails with the required minimum instead of
+silently skipping partitions. Use `.inPartition(...)` to spend the full budget in one partition.
+Cross-table high-level search intentionally covers only eligible unpartitioned tables for the
+requested mode; a direct typed search fails when its mode is unsupported.
+
 ## Semantic routing
 
-Semantic search starts with dense embeddings supplied by the application. Onyx does not create embeddings. Fit one deterministic `VectorCalibration` from representative embeddings and persist that shared calibration separately:
+The lower-level semantic-routing API accepts dense embeddings supplied directly by the
+application. Fit one deterministic `VectorCalibration` from representative embeddings and persist
+that shared calibration separately:
 
 ```kotlin
 import com.onyx.vector.VectorCalibration
@@ -390,15 +500,18 @@ The internal field is excluded from wildcard selections and entity maps. Applica
 
 ## Configuration and rebuild behavior
 
-Onyx derives a stable configuration signature from the resolved entropy and the names, types, and
-canonically ordered feature families of included attributes. Schema startup compares that signature
-with the stored internal-index metadata.
+Onyx derives a stable configuration signature from the resolved entropy, declared search support,
+and the names, types, and canonically ordered feature families of included attributes. Schema
+startup compares that signature with the stored internal-index metadata. The default `BOTH` value
+preserves the pre-existing configuration identity.
 
 Plan these changes as index migrations:
 
 * changing entropy to a different resolved width rebuilds the index;
 * adding, removing, renaming, or changing the type of a persisted attribute rebuilds the index;
 * changing a field mode or selected family rebuilds the index;
+* changing `searchSupport` rebuilds the index so disabled lexical routes or semantic vectors are
+  removed rather than remaining queryable;
 * a representation from a different configuration is rejected rather than mixed into the index;
 * a newly fitted calibration has a different calibration ID, so document and query signatures or HNSW vectors must use the same frozen vector-space ID.
 
@@ -485,10 +598,14 @@ These are warm-cache, steady-state measurements: fixture insertion and untimed p
 ## Migration checklist
 
 1. Make the entity extend `VectorManagedEntity`.
-2. Put the desired entropy on its existing `@Entity` annotation, or use the default of 128.
+2. Put the desired entropy and `searchSupport` on its existing `@Entity` annotation, or use the
+   defaults of 128 and `SearchSupport.BOTH`.
 3. Remove application-declared vector index fields.
 4. Add `@VectorAttribute` only where a field needs interval or lexical routes; use `UNIVERSAL` only when every family is intentionally required.
 5. Keep identifiers, partitions, attributes, relationships, and existing query syntax unchanged.
 6. Reopen the schema and allow the internal vector index to rebuild.
-7. If semantic retrieval is used, encode document and query signatures with the same calibration and resolved entity entropy.
-8. Verify structured result correctness separately from semantic recall and downstream reranking quality.
+7. When enabling `SEMANTIC` or `BOTH`, configure the provider and explicitly re-save existing rows;
+   an index rebuild cannot derive their embeddings.
+8. If lower-level semantic routing is used, encode document and query signatures with the same
+   calibration and resolved entity entropy.
+9. Verify structured result correctness separately from semantic recall and downstream reranking quality.

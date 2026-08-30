@@ -13,7 +13,7 @@ Kotlin/JVM client SDK for **Onyx Cloud Database** — a typed, builder-pattern A
 - Schema API for managing database schemas
 - Secrets API for secure credential storage
 - Document storage for binary assets
-- Vector-managed whole-record lexical search with structured filters
+- Vector-managed whole-record lexical, semantic, and hybrid search with structured filters
 
 - **Website:** https://onyx.dev/
 - **Cloud Console:** https://cloud.onyx.dev
@@ -52,7 +52,7 @@ Kotlin/JVM client SDK for **Onyx Cloud Database** — a typed, builder-pattern A
 
 ```kotlin
 dependencies {
-    implementation("dev.onyx:onyx-cloud-client:3.8.6")
+    implementation("dev.onyx:onyx-cloud-client:4.2.0")
 }
 ```
 
@@ -60,7 +60,7 @@ dependencies {
 
 ```groovy
 dependencies {
-    implementation 'dev.onyx:onyx-cloud-client:3.8.6'
+    implementation 'dev.onyx:onyx-cloud-client:4.2.0'
 }
 ```
 
@@ -70,7 +70,7 @@ dependencies {
 <dependency>
     <groupId>dev.onyx</groupId>
     <artifactId>onyx-cloud-client</artifactId>
-    <version>3.8.6</version>
+    <version>4.2.0</version>
 </dependency>
 ```
 
@@ -573,9 +573,14 @@ db.cascade("orders", "profile").delete<User>("user_123")
 
 ## Vector-managed record search
 
-Use `.search(...)` for normalized lexical queries across the persisted fields of a vector-managed server entity. The wire syntax is unchanged: search can be combined with ordinary equality, range, partition, and compound criteria.
+The legacy `.search(text, minScore)` overload performs normalized lexical queries across the
+persisted fields of a vector-managed server entity. Its wire syntax is unchanged, and it composes
+with ordinary equality, range, partition, and compound criteria.
 
-On the server, the model extends `VectorManagedEntity` and uses its existing `@Entity(entropy = N)` annotation. Every persisted identifier, partition, and attribute is encoded automatically by type. Entropy is the only vector setting: the requested positive bit count is rounded and bounded to 64, 128, 192, or 256 bits, then shared by structured features and semantic SimHash.
+On the server, the model extends `VectorManagedEntity` and declares entropy plus high-level search
+support on `@Entity`. The requested positive entropy is rounded and bounded to 64, 128, 192, or 256
+bits, then shared by structured features and semantic SimHash. `searchSupport` defaults to
+`SearchSupport.BOTH`.
 
 The server stores sparse term and structured-feature fingerprints rather than a dense embedding for each record. One inherited internal vector index routes all public scalar operators across numeric, date, character, Boolean, string, and enum fields; the normal query evaluator then verifies compound predicates before returning records. It never substitutes a full-table scan for an unroutable vector predicate. Application fields do not declare their own vector indexes.
 
@@ -586,6 +591,58 @@ val results = db.from<Article>()
     .search("storm warning", minScore = 0.5f)
     .list<Article>()
 ```
+
+The legacy overload above remains exhaustive lexical search. For the bounded natural-language API,
+the server entity declares its capabilities with `@Entity(searchSupport = ...)`:
+
+```kotlin
+@Entity(searchSupport = SearchSupport.BOTH) // BOTH is the default
+class Article : VectorManagedEntity() {
+    // ...
+}
+```
+
+The cloud client then uses `SearchOptions` to make a typed request:
+
+```kotlin
+val lexical = db.from<Article>()
+    .search(
+        "how do i calculate cost per horse",
+        SearchOptions(mode = SearchMode.LEXICAL, match = SearchMatch.ANY, minScore = 0.4f),
+    )
+    .list<Article>()
+
+val semantic = db.from<Article>()
+    .search(question, SearchOptions(mode = SearchMode.SEMANTIC))
+    .list<Article>()
+
+val both = db.from<Article>()
+    .search(question, SearchOptions(mode = SearchMode.HYBRID))
+    .list<Article>()
+```
+
+`SearchSupport.LEXICAL` accepts lexical requests, `SearchSupport.SEMANTIC` accepts semantic
+requests, and `SearchSupport.BOTH` accepts lexical, semantic, and hybrid requests. The server rejects
+a typed request outside the entity's declaration before doing provider or index work.
+
+`SearchOptions()` defaults to hybrid/any/no minimum/1,000 candidates, matching the entity's default
+`BOTH` support. High-level scores are in `0..1`, and hybrid requires at least two candidates. A
+hybrid request is one `SEARCH` operation with one query embedding and one merged candidate pool, not
+separate lexical and semantic requests. Semantic-capable entities require the database server to
+configure a `SearchEmbeddingProvider`; the client never sends or selects a model. The provider
+automatically embeds selected searchable fields once per save and query text once per semantic or
+hybrid search. `LEXICAL` entities do not pay the embedding or automatic HNSW cost. Existing rows
+must be explicitly re-saved to backfill embeddings.
+
+High-level `SEARCH` is read-only, uses one bounded candidate pool before ordinary filters, and does
+not support negation, live listeners, caching, or another full-text criterion. A direct query of a
+partitioned table searches all of its current partitions by default. The server divides the single
+`maxCandidates` budget deterministically, merges scores globally, and fails with an actionable
+minimum when the budget cannot give every partition one lexical/semantic candidate or two hybrid
+candidates. Use `.inPartition(...)` to constrain the search and spend the full budget there.
+Cross-table high-level search covers only eligible unpartitioned tables for the requested mode.
+Database-wide `.search(...)` therefore does not inherit a configured default partition;
+table-scoped `.from(...)` queries still do.
 
 ### Cross-table search
 
@@ -607,7 +664,9 @@ val filteredSearch = db.from<User>()
     .list<User>()
 ```
 
-`minScore` filters the server's candidate score; it is not a probability. The cloud client's `.search(...)` shorthand sends lexical text. Applications that also need semantic PCA/SimHash candidates use the embedded/server `VectorSearchQuery` integration and may rerank returned content with their embedding model.
+Legacy `minScore` filters the server's candidate score; it is not a probability. Applications that
+need the lower-level PCA/SimHash or caller-supplied HNSW contracts can still use
+`VectorSearchQuery` or `HnswSearchQuery` and rerank returned content with their embedding model.
 
 ### Native HNSW candidates
 

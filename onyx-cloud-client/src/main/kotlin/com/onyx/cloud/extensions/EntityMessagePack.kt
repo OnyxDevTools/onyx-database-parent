@@ -44,6 +44,19 @@ internal object EntityMessagePack {
     const val MAX_NODES: Int = 2_000_000
 
     private val fieldsByClass = ConcurrentHashMap<Class<*>, List<Field>>()
+    private val enumWireNamesByClass = object : ClassValue<Map<String, String>>() {
+        override fun computeValue(type: Class<*>): Map<String, String> =
+            type.enumConstants
+                ?.filterIsInstance<Enum<*>>()
+                ?.associate { constant ->
+                    val wireName = type.getField(constant.name)
+                        .getAnnotation(SerializedName::class.java)
+                        ?.value
+                        ?: constant.name
+                    constant.name to wireName
+                }
+                .orEmpty()
+    }
 
     fun encode(value: Any?): ByteArray {
         val packer = MessagePack.newDefaultBufferPacker()
@@ -124,7 +137,7 @@ internal object EntityMessagePack {
             }
             is CharSequence -> packString(packer, value.toString())
             is Char -> packString(packer, value.toString())
-            is Enum<*> -> packString(packer, value.name)
+            is Enum<*> -> packString(packer, enumWireName(value))
             is Date -> packString(packer, value.toInstant().toString())
             is Instant -> packString(packer, value.toString())
             is TemporalAccessor -> packString(packer, value.toString())
@@ -166,6 +179,10 @@ internal object EntityMessagePack {
             }
         }
     }
+
+    /** Keeps binary enum values identical to Gson's JSON representation. */
+    private fun enumWireName(value: Enum<*>): String =
+        enumWireNamesByClass.get(value.declaringJavaClass)[value.name] ?: value.name
 
     private fun packJsonElement(
         packer: org.msgpack.core.MessagePacker,

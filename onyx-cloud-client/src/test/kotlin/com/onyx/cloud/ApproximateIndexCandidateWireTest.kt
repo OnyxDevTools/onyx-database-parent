@@ -3,10 +3,14 @@ package com.onyx.cloud
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.onyx.cloud.api.ApproximateIndexCandidateQuery
+import com.onyx.cloud.api.FULL_TEXT_ATTRIBUTE
 import com.onyx.cloud.api.MAX_APPROXIMATE_INDEX_CANDIDATES
 import com.onyx.cloud.api.MAX_APPROXIMATE_INDEX_ROUTE_VALUES
+import com.onyx.cloud.api.QueryCriteria
 import com.onyx.cloud.api.QueryCriteriaOperator
+import com.onyx.cloud.api.eq
 import com.onyx.cloud.extensions.gson
+import com.onyx.cloud.impl.ConditionBuilderImpl
 import com.onyx.cloud.impl.OnyxClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -106,11 +110,93 @@ class ApproximateIndexCandidateWireTest {
         assertTrue(error.message.orEmpty().contains("sole root"))
     }
 
+    @Test
+    fun everyCandidateOperatorRemainsTheSoleRootRegardlessOfCompositionOrder() {
+        candidateOperators.forEach { operator ->
+            val appendAnd = client.from<CandidateWireEntity>().where(candidateCondition(operator))
+            val appendAndError = assertFailsWith<IllegalArgumentException> {
+                appendAnd.and("status" eq "active")
+            }
+            assertTrue(appendAndError.message.orEmpty().contains(operator.name))
+
+            val appendOr = client.from<CandidateWireEntity>().where(candidateCondition(operator))
+            val appendOrError = assertFailsWith<IllegalArgumentException> {
+                appendOr.or("status" eq "active")
+            }
+            assertTrue(appendOrError.message.orEmpty().contains(operator.name))
+
+            val candidateAfterExact = assertFailsWith<IllegalArgumentException> {
+                client.from<CandidateWireEntity>()
+                    .where("status" eq "active")
+                    .and(candidateCondition(operator))
+            }
+            assertTrue(candidateAfterExact.message.orEmpty().contains(operator.name))
+
+            val nestedCandidate = ("status" eq "active").and(candidateCondition(operator))
+            val nestedError = assertFailsWith<IllegalArgumentException> {
+                client.from<CandidateWireEntity>().where(nestedCandidate)
+            }
+            assertTrue(nestedError.message.orEmpty().contains(operator.name))
+        }
+
+        assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun everyCandidateOperatorRejectsMutationsAndLiveStreamsBeforeTransport() {
+        candidateOperators.forEach { operator ->
+            val deleteError = assertFailsWith<IllegalStateException> {
+                client.from<CandidateWireEntity>()
+                    .where(candidateCondition(operator))
+                    .delete()
+            }
+            assertTrue(deleteError.message.orEmpty().contains(operator.name))
+
+            val updateError = assertFailsWith<IllegalStateException> {
+                client.from<CandidateWireEntity>()
+                    .where(candidateCondition(operator))
+                    .setUpdates("status" to "archived")
+                    .update()
+            }
+            assertTrue(updateError.message.orEmpty().contains(operator.name))
+
+            val streamError = assertFailsWith<IllegalStateException> {
+                client.from<CandidateWireEntity>()
+                    .where(candidateCondition(operator))
+                    .stream<CandidateWireEntity>(includeQueryResults = false, keepAlive = false)
+            }
+            assertTrue(streamError.message.orEmpty().contains(operator.name))
+        }
+
+        assertEquals(0, server.requestCount)
+    }
+
+    private fun candidateCondition(operator: QueryCriteriaOperator): ConditionBuilderImpl =
+        ConditionBuilderImpl(
+            QueryCriteria(
+                field = if (operator == QueryCriteriaOperator.CANDIDATES) {
+                    "bucketId"
+                } else {
+                    FULL_TEXT_ATTRIBUTE
+                },
+                operator = operator,
+                value = emptyMap<String, Any?>(),
+            ),
+        )
+
     private fun emptyQueryPage(): MockResponse = MockResponse()
         .setResponseCode(200)
         .setBody("""{"records":[],"totalResults":0}""")
 
     private fun JsonObject.objectAt(name: String): JsonObject = get(name).asJsonObject
+
+    private companion object {
+        private val candidateOperators = listOf(
+            QueryCriteriaOperator.CANDIDATES,
+            QueryCriteriaOperator.SEARCH_CANDIDATES,
+            QueryCriteriaOperator.HNSW_CANDIDATES,
+        )
+    }
 }
 
 private data class CandidateWireEntity(val id: String = "")

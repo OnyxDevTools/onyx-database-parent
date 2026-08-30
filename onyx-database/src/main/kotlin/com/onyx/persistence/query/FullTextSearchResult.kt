@@ -5,8 +5,9 @@ import com.onyx.persistence.IManagedEntity
 /**
  * Result returned from a full-text search across one or more tables.
  */
-data class FullTextSearchResult(
+data class FullTextSearchResult @JvmOverloads constructor(
     val id: Any?,
     val entityType: Class<*>,
-    val entity: IManagedEntity
+    val entity: IManagedEntity,
+    val score: Float? = null,
 )

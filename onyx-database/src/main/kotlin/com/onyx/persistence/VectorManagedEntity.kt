@@ -27,6 +27,13 @@ abstract class VectorManagedEntity : ManagedEntity() {
     @Transient
     private var preparedVectorRepresentation: PreparedVectorRepresentation? = null
 
+    /**
+     * Tracks an application-supplied HNSW override for the next write only. Persisted vectors are
+     * not overrides: loading and updating an entity must still refresh its automatic embedding.
+     */
+    @Transient
+    private var explicitHnswOverridePending: Boolean = false
+
     /** Returns a defensive, decoded view of the persisted routing representation. */
     fun vectorRepresentation(): VectorRepresentation? =
         VectorRepresentationCodec.decodeOrNull(__vectorRepresentation)
@@ -43,6 +50,7 @@ abstract class VectorManagedEntity : ManagedEntity() {
     /** Encodes LSH metadata and an int8 HNSW vector, then discards the full-precision input. */
     fun semanticVector(embedding: FloatArray, calibration: VectorCalibration) {
         val configuration = VectorManagedConfiguration.forClass(javaClass)
+        requireSemanticSearchSupport(configuration)
         semanticSignature(calibration.encode(embedding, configuration.entropy))
         hnswVector(embedding, calibration.calibrationId)
     }
@@ -55,11 +63,22 @@ abstract class VectorManagedEntity : ManagedEntity() {
      * carrying different identifiers.
      */
     fun hnswVector(embedding: FloatArray, calibrationId: Long) {
+        installHnswVector(embedding, calibrationId)
+        explicitHnswOverridePending = true
+    }
+
+    /** Installs a provider-generated vector without marking it as an application override. */
+    internal fun automaticHnswVector(embedding: FloatArray, calibrationId: Long) {
+        installHnswVector(embedding, calibrationId)
+    }
+
+    private fun installHnswVector(embedding: FloatArray, calibrationId: Long) {
         require(calibrationId != VectorRepresentation.NO_CALIBRATION) {
             "HNSW calibrationId must be non-zero"
         }
         preparedVectorRepresentation = null
         val configuration = VectorManagedConfiguration.forClass(javaClass)
+        requireSemanticSearchSupport(configuration)
         val quantized = com.onyx.vector.QuantizedCosineVector.fromDense(embedding).toByteArray()
         val existing = VectorRepresentationCodec.decodeOrNull(__vectorRepresentation)
             ?.takeIf {
@@ -78,10 +97,42 @@ abstract class VectorManagedEntity : ManagedEntity() {
         )
     }
 
+    /** Removes a previously installed HNSW vector while retaining lexical and LSH metadata. */
+    fun clearHnswVector() {
+        removeHnswVector()
+        explicitHnswOverridePending = true
+    }
+
+    /** Removes a provider-managed vector without marking an application override. */
+    internal fun clearAutomaticHnswVector() {
+        removeHnswVector()
+    }
+
+    private fun removeHnswVector() {
+        preparedVectorRepresentation = null
+        val existing = VectorRepresentationCodec.decodeOrNull(__vectorRepresentation) ?: return
+        if (!existing.hasHnswVector) return
+        __vectorRepresentation = VectorRepresentationCodec.encode(
+            existing.copy(
+                hnswCalibrationId = VectorRepresentation.NO_CALIBRATION,
+                hnswVector = byteArrayOf(),
+            )
+        )
+    }
+
+    /** True when application code supplied or cleared the HNSW vector for the pending write. */
+    internal fun hasExplicitHnswOverride(): Boolean = explicitHnswOverridePending
+
+    /** Clears the per-write override only after persistence commits successfully. */
+    internal fun clearExplicitHnswOverride() {
+        explicitHnswOverridePending = false
+    }
+
     /** Installs already encoded semantic routing data, for example from an external embedder. */
     fun semanticSignature(signature: SemanticVectorSignature) {
         preparedVectorRepresentation = null
         val configuration = VectorManagedConfiguration.forClass(javaClass)
+        requireSemanticSearchSupport(configuration)
         require(signature.bitCount == configuration.entropy.bitCount) {
             "Semantic signature has ${signature.bitCount} bits; expected ${configuration.entropy.bitCount}"
         }
@@ -139,6 +190,13 @@ abstract class VectorManagedEntity : ManagedEntity() {
     /** Peeks at prepared write state without consuming it during pre-record index validation. */
     internal fun preparedVectorIndexValue(): Any =
         preparedVectorRepresentation ?: __vectorRepresentation
+
+    private fun requireSemanticSearchSupport(configuration: VectorManagedConfiguration) {
+        require(configuration.searchSupport.supportsSemantic) {
+            "${javaClass.name} declares searchSupport=${configuration.searchSupport.name} and " +
+                "does not support semantic vectors"
+        }
+    }
 
     companion object {
         const val REPRESENTATION_FIELD: String = "__vectorRepresentation"

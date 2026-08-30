@@ -5,6 +5,7 @@ import com.onyx.persistence.annotations.Attribute
 import com.onyx.persistence.annotations.Entity
 import com.onyx.persistence.annotations.Identifier
 import com.onyx.persistence.annotations.Partition
+import com.onyx.persistence.annotations.SearchSupport
 import com.onyx.persistence.annotations.VectorAttribute
 import com.onyx.persistence.annotations.VectorAttributeMode
 import com.onyx.persistence.annotations.VectorFeatureFamily
@@ -14,11 +15,16 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
 /** Frozen entity-level settings shared by record and query encoders. */
-data class VectorManagedConfiguration(
+data class VectorManagedConfiguration @JvmOverloads constructor(
     val entropy: VectorEntropy,
     val attributes: List<VectorAttributeDefinition>,
     val configurationId: Long,
-    val signature: String
+    val signature: String,
+    val searchSupport: SearchSupport = SearchSupport.BOTH,
+    internal val searchableTextAttributes: List<String> = attributes.asSequence()
+        .filter { it.supports(VectorFeatureFamily.TEXT_TERM) }
+        .map(VectorAttributeDefinition::name)
+        .toList(),
 ) {
     internal val randomSeed: Long
         get() = RANDOM_SEED
@@ -56,8 +62,9 @@ data class VectorManagedConfiguration(
                 "${entityClass.name} is not annotated with ${Entity::class.java.name}"
             }
             val entropy = VectorEntropy(entity.entropy)
+            val searchSupport = entity.searchSupport
 
-            val definitions = hierarchyFields(entityClass)
+            val declaredDefinitions = hierarchyFields(entityClass)
                 .filter { field ->
                     field.name != VectorManagedEntity.REPRESENTATION_FIELD &&
                         (field.isAnnotationPresent(Attribute::class.java) ||
@@ -70,6 +77,20 @@ data class VectorManagedConfiguration(
                     VectorAttributeDefinition(field.name, field.type.name, families)
                 }
                 .sortedBy { it.name }
+            val searchableTextAttributes = declaredDefinitions.asSequence()
+                .filter { it.supports(VectorFeatureFamily.TEXT_TERM) }
+                .map(VectorAttributeDefinition::name)
+                .toList()
+            val definitions = if (searchSupport.supportsLexical) {
+                declaredDefinitions
+            } else {
+                // TEXT_TERM doubles as the declaration of embedding-input fields. Semantic-only
+                // entities retain that declaration without emitting lexical routes or allowing
+                // the fingerprint planner to route lexical predicates through an empty index.
+                declaredDefinitions.map { definition ->
+                    definition.copy(families = definition.families - VectorFeatureFamily.TEXT_TERM)
+                }
+            }
 
             val signature = buildString {
                 append("vector-managed-v").append(ENCODING_VERSION)
@@ -78,6 +99,16 @@ data class VectorManagedConfiguration(
                 append('|').append(TEXT_NGRAM_SIZE)
                 append('|').append(MAX_TEXT_PREFIX_LENGTH)
                 append('|').append(COMPARISON_ROUTING_VERSION)
+                // Preserve the existing BOTH configuration ID. Explicit narrower capabilities
+                // get distinct IDs so schema startup rebuilds and removes the disabled routes.
+                if (searchSupport != SearchSupport.BOTH) {
+                    append("|searchSupport:").append(searchSupport.name)
+                }
+                if (!searchSupport.supportsLexical) {
+                    // Effective semantic-only families omit TEXT_TERM, so retain its source-field
+                    // declaration in the signature to make input changes trigger migration.
+                    append("|searchText:").append(searchableTextAttributes.joinToString(","))
+                }
                 definitions.forEach { append('|').append(it.signature) }
             }
             val digest = MessageDigest.getInstance("SHA-256")
@@ -88,7 +119,9 @@ data class VectorManagedConfiguration(
                 entropy,
                 definitions,
                 configurationId,
-                signature
+                signature,
+                searchSupport,
+                searchableTextAttributes,
             )
         }
 

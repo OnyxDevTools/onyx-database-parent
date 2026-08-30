@@ -1,14 +1,18 @@
 package com.onyx.persistence.query
 
 import com.onyx.entity.SystemEntity
+import com.onyx.exception.SearchEmbeddingUnavailableException
 import com.onyx.extension.common.async
 import com.onyx.extension.common.get
 import com.onyx.extension.identifier
+import com.onyx.extension.reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.VectorManagedEntity
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.stream.QueryMapStream
 import com.onyx.vector.SemanticVectorSignature
+import com.onyx.vector.VectorEntityEncoder
+import com.onyx.vector.VectorManagedConfiguration
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.reflect.KClass
@@ -287,6 +291,15 @@ class QueryBuilder(
     fun search(searchQuery: VectorSearchQuery): QueryBuilder = appendSearchCriteria(searchQuery)
 
     /**
+     * Apply the high-level bounded search API. Semantic and hybrid modes use the manager's
+     * configured [com.onyx.vector.SearchEmbeddingProvider] and native HNSW index.
+     */
+    fun search(queryText: String, options: SearchOptions): QueryBuilder = appendSearchCriteria(
+        SearchQuery(queryText, options),
+        QueryCriteriaOperator.SEARCH,
+    )
+
+    /**
      * Admit a physically bounded lexical candidate sample. This must be the sole root criterion.
      */
     fun approximateSearch(searchQuery: VectorSearchQuery): QueryBuilder {
@@ -384,10 +397,13 @@ class QueryBuilder(
         )
     )
 
-    private fun appendSearchCriteria(value: Any): QueryBuilder {
+    private fun appendSearchCriteria(
+        value: Any,
+        operator: QueryCriteriaOperator = QueryCriteriaOperator.MATCHES,
+    ): QueryBuilder {
         val criteria = QueryCriteria(
             Query.FULL_TEXT_ATTRIBUTE,
-            QueryCriteriaOperator.MATCHES,
+            operator,
             value
         )
         if (query.criteria == null) {
@@ -501,7 +517,10 @@ fun PersistenceManager.searchAllTables(
             .getOrNull()
             ?: return@forEach
 
-        if (!VectorManagedEntity::class.java.isAssignableFrom(descriptor.entityClass)) {
+        if (
+            !VectorManagedEntity::class.java.isAssignableFrom(descriptor.entityClass) ||
+            !VectorManagedConfiguration.forClass(descriptor.entityClass).searchSupport.supportsLexical
+        ) {
             return@forEach
         }
 
@@ -522,11 +541,102 @@ fun PersistenceManager.searchAllTables(
     return results
 }
 
+/** Execute a high-level lexical, semantic, or hybrid search across searchable tables. */
+fun PersistenceManager.searchAllTables(
+    queryText: String,
+    options: SearchOptions,
+    limit: Int = 100,
+): List<FullTextSearchResult> {
+    // Validate independently of schema discovery so malformed input cannot appear successful
+    // merely because this database has no eligible tables.
+    SearchQuery(queryText, options)
+    val semanticProvider = if (options.mode.usesSemantic) {
+        searchEmbeddingProvider ?: throw SearchEmbeddingUnavailableException(
+            "${options.mode.name.lowercase()} search requires a SearchEmbeddingProvider " +
+                "configured on the database server",
+        )
+    } else {
+        null
+    }
+    val context = this.context
+    val systemEntities = context.serializedPersistenceManager
+        .from(SystemEntity::class)
+        .where(("isLatestVersion" eq true) and ("name" notStartsWith "com.onyx.entity.System"))
+        .list<SystemEntity>()
+    val results = ArrayList<FullTextSearchResult>()
+    val maxResults = if (limit > 0) limit else Int.MAX_VALUE
+
+    val searchableTables = systemEntities.mapNotNull { systemEntity ->
+        val entityClass = runCatching { systemEntity.type(context.contextId) }
+            .getOrNull()
+            ?.takeIf { IManagedEntity::class.java.isAssignableFrom(it) }
+            ?: return@mapNotNull null
+        val descriptor = runCatching { context.getDescriptorForEntity(entityClass, "") }
+            .getOrNull()
+            ?: return@mapNotNull null
+        val searchSupport = if (VectorManagedEntity::class.java.isAssignableFrom(descriptor.entityClass)) {
+            VectorManagedConfiguration.forClass(descriptor.entityClass).searchSupport
+        } else {
+            null
+        }
+        if (
+            !VectorManagedEntity::class.java.isAssignableFrom(descriptor.entityClass) ||
+            !VectorEntityEncoder.hasSearchableTextFields(descriptor) ||
+            searchSupport?.supports(options.mode) != true ||
+            descriptor.hasPartition ||
+            semanticProvider?.let { !it.supports(entityClass) } == true
+        ) {
+            // Cross-table search deliberately covers only unpartitioned tables with searchable
+            // text. A direct search can span one partitioned table under its own global budget,
+            // or callers can use inPartition(...) to constrain it. A type-selective provider
+            // makes unsupported semantic tables ineligible without weakening direct-table
+            // fail-closed validation.
+            return@mapNotNull null
+        }
+        entityClass to descriptor
+    }.sortedBy { (entityClass, _) -> entityClass.name }
+
+    val minimumTableBudget = if (options.mode == SearchMode.HYBRID) 2 else 1
+    val requiredCandidates = searchableTables.size.toLong() * minimumTableBudget
+    require(requiredCandidates <= options.maxCandidates) {
+        "Search maxCandidates=${options.maxCandidates} cannot cover all ${searchableTables.size} " +
+            "eligible tables; use at least $requiredCandidates or search one table directly"
+    }
+    var remainingCandidates = options.maxCandidates
+    searchableTables.forEachIndexed { index, (entityClass, descriptor) ->
+        if (remainingCandidates <= 0) return@forEachIndexed
+        val remainingTables = searchableTables.size - index
+        val tableCandidates = maxOf(minimumTableBudget, remainingCandidates / remainingTables)
+        remainingCandidates -= tableCandidates
+        val tableOptions = options.copy(maxCandidates = tableCandidates)
+        val queryBuilder = this.from(entityClass.kotlin).search(queryText, tableOptions)
+        if (limit > 0) queryBuilder.limit(minOf(limit, tableCandidates))
+        queryBuilder.list<IManagedEntity>().forEach { entity ->
+            results += FullTextSearchResult(
+                id = entity.identifier(context),
+                entityType = entityClass,
+                entity = entity,
+                score = queryBuilder.query.fullTextScores?.get(entity.reference(context, descriptor)),
+            )
+        }
+    }
+    return results.sortedWith(
+        compareByDescending<FullTextSearchResult> { it.score ?: Float.NEGATIVE_INFINITY }
+            .thenBy { it.entityType.name }
+            .thenBy { it.id.toString() },
+    ).take(maxResults)
+}
+
 /**
  * Build a full-text search across all vector-managed tables.
  */
 fun PersistenceManager.search(queryText: String, minScore: Float? = null): FullTextSearchBuilder {
     return FullTextSearchBuilder(this, queryText, minScore)
+}
+
+/** Build a high-level lexical, semantic, or hybrid search across searchable tables. */
+fun PersistenceManager.search(queryText: String, options: SearchOptions): FullTextSearchBuilder {
+    return FullTextSearchBuilder(this, queryText, options)
 }
 
 // endregion
@@ -564,6 +674,13 @@ fun search(searchQuery: VectorSearchQuery): QueryCriteria = QueryCriteria(
     Query.FULL_TEXT_ATTRIBUTE,
     QueryCriteriaOperator.MATCHES,
     searchQuery
+)
+
+/** Creates a composable high-level lexical, semantic, or hybrid search criterion. */
+fun search(queryText: String, options: SearchOptions): QueryCriteria = QueryCriteria(
+    Query.FULL_TEXT_ATTRIBUTE,
+    QueryCriteriaOperator.SEARCH,
+    SearchQuery(queryText, options),
 )
 
 /** Creates the sole root criterion for physically bounded lexical search admission. */

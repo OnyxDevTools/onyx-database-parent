@@ -8,6 +8,7 @@ import com.onyx.cloud.impl.OnyxClient
 import com.onyx.cloud.impl.OnyxFacadeImpl
 import com.onyx.cloud.impl.QueryBuilder
 import com.onyx.cloud.impl.QueryCondition
+import com.google.gson.annotations.SerializedName
 import java.math.BigInteger
 import java.util.Date
 import kotlin.reflect.KClass
@@ -39,6 +40,7 @@ enum class QueryCriteriaOperator {
     MATCHES,
     NOT_MATCHES,
     BETWEEN,
+    NOT_BETWEEN,
     LIKE,
     NOT_LIKE,
     CONTAINS,
@@ -54,7 +56,9 @@ enum class QueryCriteriaOperator {
     /** Explicitly approximate, bounded lexical search admission. */
     SEARCH_CANDIDATES,
     /** Explicitly approximate, bounded native-HNSW nearest-neighbor admission. */
-    HNSW_CANDIDATES
+    HNSW_CANDIDATES,
+    /** High-level bounded lexical, semantic-HNSW, or hybrid search. */
+    SEARCH
 }
 
 /**
@@ -74,6 +78,80 @@ data class FullTextQuery(
     val queryText: String,
     val minScore: Float? = null
 )
+
+/** Search strategy used by the ergonomic natural-language API. */
+enum class SearchMode {
+    @SerializedName("lexical")
+    LEXICAL,
+
+    @SerializedName("semantic")
+    SEMANTIC,
+
+    @SerializedName("hybrid")
+    HYBRID
+}
+
+/** Lexical term admission policy. */
+enum class SearchMatch {
+    @SerializedName("all")
+    ALL,
+
+    @SerializedName("any")
+    ANY
+}
+
+/** Options for bounded lexical, semantic-HNSW, or hybrid natural-language search. */
+data class SearchOptions @JvmOverloads constructor(
+    val mode: SearchMode = SearchMode.HYBRID,
+    val match: SearchMatch = SearchMatch.ANY,
+    val minScore: Float? = null,
+    val maxCandidates: Int = DEFAULT_SEARCH_CANDIDATES,
+) {
+    init {
+        require(minScore == null || minScore.isFinite() && minScore in 0f..1f) {
+            "minScore must be finite and between 0 and 1"
+        }
+        require(maxCandidates in 1..MAX_SEARCH_CANDIDATES) {
+            "maxCandidates must be between 1 and $MAX_SEARCH_CANDIDATES"
+        }
+        require(mode != SearchMode.HYBRID || maxCandidates >= 2) {
+            "Hybrid search requires maxCandidates to be at least 2"
+        }
+    }
+}
+
+/** Canonical fail-closed value sent with the dedicated `SEARCH` operator. */
+data class SearchQuery(
+    val text: String,
+    val mode: SearchMode,
+    val match: SearchMatch,
+    val minScore: Float?,
+    val maxCandidates: Int,
+) {
+    init {
+        require(text.isNotBlank()) { "Search text must not be blank" }
+        require(minScore == null || minScore.isFinite() && minScore in 0f..1f) {
+            "minScore must be finite and between 0 and 1"
+        }
+        require(maxCandidates in 1..MAX_SEARCH_CANDIDATES) {
+            "maxCandidates must be between 1 and $MAX_SEARCH_CANDIDATES"
+        }
+        require(mode != SearchMode.HYBRID || maxCandidates >= 2) {
+            "Hybrid search requires maxCandidates to be at least 2"
+        }
+    }
+
+    constructor(text: String, options: SearchOptions) : this(
+        text = text,
+        mode = options.mode,
+        match = options.match,
+        minScore = options.minScore,
+        maxCandidates = options.maxCandidates,
+    )
+}
+
+const val DEFAULT_SEARCH_CANDIDATES: Int = 1_000
+const val MAX_SEARCH_CANDIDATES: Int = 5_000
 
 /**
  * Lossless JSON representation of one semantic routing signature.
@@ -722,6 +800,17 @@ interface IQueryBuilder {
      */
     fun search(queryText: String, minScore: Float? = null): IQueryBuilder
 
+    /** Adds a high-level lexical, semantic-HNSW, or hybrid search clause. */
+    fun search(queryText: String, options: SearchOptions): IQueryBuilder = and(
+        ConditionBuilderImpl(
+            QueryCriteria(
+                FULL_TEXT_ATTRIBUTE,
+                QueryCriteriaOperator.SEARCH,
+                SearchQuery(queryText, options),
+            )
+        )
+    )
+
     /** Adds a bounded semantic or hybrid search clause. */
     fun search(searchQuery: VectorSearchQuery): IQueryBuilder = and(
         ConditionBuilderImpl(
@@ -1237,6 +1326,10 @@ interface IOnyxDatabase<Schema : Any> {
      */
     fun search(queryText: String, minScore: Float? = null): IQueryBuilder
 
+    /** Starts a high-level lexical, semantic-HNSW, or hybrid search across searchable tables. */
+    fun search(queryText: String, options: SearchOptions): IQueryBuilder =
+        select().search(queryText, options)
+
     /**
      * Starts a cascading operation to save or delete entities across specified relationships.
      *
@@ -1671,6 +1764,16 @@ fun search(queryText: String, minScore: Float? = null): IConditionBuilder =
 fun search(searchQuery: VectorSearchQuery): IConditionBuilder =
     ConditionBuilderImpl(QueryCriteria(FULL_TEXT_ATTRIBUTE, QueryCriteriaOperator.MATCHES, searchQuery))
 
+/** Creates a composable high-level lexical, semantic-HNSW, or hybrid search criterion. */
+fun search(queryText: String, options: SearchOptions): IConditionBuilder =
+    ConditionBuilderImpl(
+        QueryCriteria(
+            FULL_TEXT_ATTRIBUTE,
+            QueryCriteriaOperator.SEARCH,
+            SearchQuery(queryText, options),
+        )
+    )
+
 /** Creates the sole root condition for physically bounded lexical search admission. */
 fun approximateSearch(searchQuery: VectorSearchQuery): IConditionBuilder {
     require(!searchQuery.text.isNullOrBlank() && searchQuery.semantic == null) {
@@ -1757,6 +1860,16 @@ fun IConditionBuilder.search(queryText: String, minScore: Float? = null): ICondi
 fun IConditionBuilder.search(searchQuery: VectorSearchQuery): IConditionBuilder =
     and(QueryCriteria(FULL_TEXT_ATTRIBUTE, QueryCriteriaOperator.MATCHES, searchQuery))
 
+/** Adds a high-level lexical, semantic-HNSW, or hybrid search criterion using logical `AND`. */
+fun IConditionBuilder.search(queryText: String, options: SearchOptions): IConditionBuilder =
+    and(
+        QueryCriteria(
+            FULL_TEXT_ATTRIBUTE,
+            QueryCriteriaOperator.SEARCH,
+            SearchQuery(queryText, options),
+        )
+    )
+
 /** Adds a semantic-only bounded search criterion using logical `AND`. */
 fun IConditionBuilder.search(
     signature: SemanticVectorSignature,
@@ -1778,9 +1891,11 @@ fun IConditionBuilder.search(
  * @property id The unique identifier of the entity.
  * @property entityType The class of the entity type.
  * @property entity The actual entity object.
+ * @property score Normalized relevance score for high-level search results, when available.
  */
-data class FullTextSearchResult(
+data class FullTextSearchResult @JvmOverloads constructor(
     val id: Any?,
     val entityType: String,
-    val entity: Map<String, Any?>
+    val entity: Map<String, Any?>,
+    val score: Float? = null,
 )

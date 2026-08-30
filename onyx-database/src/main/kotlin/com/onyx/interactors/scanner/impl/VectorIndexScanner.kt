@@ -3,6 +3,7 @@ package com.onyx.interactors.scanner.impl
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.MaxCardinalityExceededException
 import com.onyx.exception.OnyxException
+import com.onyx.exception.SearchEmbeddingUnavailableException
 import com.onyx.extension.meetsCriteria
 import com.onyx.extension.toManagedEntity
 import com.onyx.interactors.index.impl.FingerprintIndexInteractor
@@ -21,9 +22,17 @@ import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.BoundedLexicalSearchQuery
 import com.onyx.persistence.query.resolveVectorSearchQuery
 import com.onyx.persistence.query.resolveHnswSearchQuery
+import com.onyx.persistence.query.DEFAULT_HNSW_EF_SEARCH
+import com.onyx.persistence.query.HnswSearchQuery
+import com.onyx.persistence.query.SearchMatch
+import com.onyx.persistence.query.SearchMode
+import com.onyx.persistence.query.SearchQuery
+import com.onyx.persistence.query.VectorSearchQuery
+import com.onyx.persistence.query.resolveSearchQuery
 import com.onyx.vector.FingerprintQueryPlan
 import com.onyx.vector.FingerprintQueryExecutor
 import com.onyx.vector.FingerprintQueryPlanner
+import com.onyx.vector.SearchEmbedding
 
 /**
  * Scanner for the managed vector fingerprint index.
@@ -140,6 +149,33 @@ open class VectorIndexScanner @Throws(OnyxException::class) constructor(
             ?.filter { it.partition == targetPartitionId }
             ?.mapTo(LinkedHashSet(), Reference::reference)
 
+        if (leafCriteria.operator == QueryCriteriaOperator.SEARCH) {
+            val cachedAdmission = query.vectorSearchMatches?.get(criteria)
+            if (cachedAdmission != null) {
+                return cachedAdmission.asSequence()
+                    .filter { reference ->
+                        reference.partition == targetPartitionId &&
+                            (restrictedIds == null || reference.reference in restrictedIds)
+                    }
+                    .toCollection(LinkedHashSet())
+            }
+            val scores = executeSearch(
+                resolveSearchQuery(leafCriteria.value),
+                targetDescriptor,
+                interactor,
+                restrictedIds,
+            )
+            val referenceScores = LinkedHashMap<Reference, Float>(scores.size)
+            val matches = LinkedHashSet<Reference>(scores.size)
+            scores.forEach { (recordId, score) ->
+                val reference = Reference(targetPartitionId, recordId)
+                matches += reference
+                referenceScores[reference] = score
+            }
+            mergeScores(referenceScores)
+            return matches
+        }
+
         if (leafCriteria.operator == QueryCriteriaOperator.HNSW_CANDIDATES) {
             val hnswQuery = resolveHnswSearchQuery(leafCriteria.value)
             val scores = interactor.findHnswCandidates(hnswQuery, restrictedIds)
@@ -254,7 +290,95 @@ open class VectorIndexScanner @Throws(OnyxException::class) constructor(
         return matching
     }
 
-    private fun mergeScores(matches: Map<Reference, Float>) {
+    protected fun executeSearch(
+        search: SearchQuery,
+        targetDescriptor: EntityDescriptor,
+        interactor: FingerprintIndexInteractor,
+        restrictedIds: Set<Long>?,
+        preparedSemanticEmbedding: SearchEmbedding? = null,
+    ): LinkedHashMap<Long, Float> {
+        val lexicalBudget = when (search.mode) {
+            SearchMode.LEXICAL -> search.maxCandidates
+            SearchMode.SEMANTIC -> 0
+            SearchMode.HYBRID -> search.maxCandidates / 2
+        }
+        val semanticBudget = when (search.mode) {
+            SearchMode.LEXICAL -> 0
+            SearchMode.SEMANTIC -> search.maxCandidates
+            SearchMode.HYBRID -> search.maxCandidates - lexicalBudget
+        }
+
+        val lexicalScores = if (lexicalBudget == 0) {
+            emptyMap()
+        } else {
+            val lexicalQuery = VectorSearchQuery(
+                text = search.text,
+                maxCandidates = lexicalBudget,
+                requireAllTerms = search.match == SearchMatch.ALL,
+            )
+            interactor.matchAll(
+                BoundedLexicalSearchQuery(lexicalQuery),
+                limit = lexicalBudget,
+                maxCandidates = lexicalBudget,
+            ).mapNotNull { (recordId, score) ->
+                val numericScore = (score as? Number)?.toFloat() ?: return@mapNotNull null
+                recordId to numericScore.coerceIn(0f, 1f)
+            }.toMap(LinkedHashMap())
+        }
+
+        val semanticScores = if (semanticBudget == 0) {
+            emptyMap()
+        } else {
+            val embedding = preparedSemanticEmbedding ?: run {
+                val provider = persistenceManager.searchEmbeddingProvider
+                    ?: throw SearchEmbeddingUnavailableException(
+                        "${search.mode.name.lowercase()} search requires a SearchEmbeddingProvider " +
+                            "configured on the database server"
+                    )
+                if (!provider.supports(targetDescriptor.entityClass)) {
+                    throw SearchEmbeddingUnavailableException(
+                        "SearchEmbeddingProvider does not support ${targetDescriptor.entityClass.name}",
+                    )
+                }
+                provider.embed(search.text, targetDescriptor.entityClass)
+            }
+            interactor.findHnswCandidates(
+                HnswSearchQuery(
+                    calibrationId = embedding.calibrationId,
+                    vector = embedding.vector,
+                    maxCandidates = semanticBudget,
+                    efSearch = maxOf(DEFAULT_HNSW_EF_SEARCH, semanticBudget),
+                ),
+                restrictedIds,
+            ).mapValuesTo(LinkedHashMap()) { (_, score) ->
+                ((score.coerceIn(-1f, 1f) + 1f) / 2f)
+            }
+        }
+
+        val candidateIds = LinkedHashSet<Long>(lexicalScores.size + semanticScores.size).apply {
+            addAll(lexicalScores.keys)
+            addAll(semanticScores.keys)
+        }
+        return candidateIds.asSequence()
+            .filter { restrictedIds == null || it in restrictedIds }
+            .map { recordId ->
+                val score = when (search.mode) {
+                    SearchMode.LEXICAL -> lexicalScores.getValue(recordId)
+                    SearchMode.SEMANTIC -> semanticScores.getValue(recordId)
+                    SearchMode.HYBRID -> maxOf(
+                        lexicalScores[recordId] ?: Float.NEGATIVE_INFINITY,
+                        semanticScores[recordId] ?: Float.NEGATIVE_INFINITY,
+                    )
+                }
+                recordId to score
+            }
+            .filter { (_, score) -> search.minScore == null || score >= search.minScore }
+            .sortedWith(compareByDescending<Pair<Long, Float>> { it.second }.thenBy { it.first })
+            .take(search.maxCandidates)
+            .toMap(LinkedHashMap())
+    }
+
+    protected fun mergeScores(matches: Map<Reference, Float>) {
         if (matches.isEmpty()) return
         synchronized(query) {
             val scores = query.fullTextScores?.toMutableMap() ?: hashMapOf()

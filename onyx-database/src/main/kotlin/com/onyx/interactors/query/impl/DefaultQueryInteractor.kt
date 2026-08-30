@@ -18,6 +18,7 @@ import com.onyx.interactors.query.QueryCollectorFactory
 import com.onyx.persistence.context.Contexts
 import com.onyx.interactors.query.QueryInteractor
 import com.onyx.interactors.scanner.impl.*
+import java.util.IdentityHashMap
 
 /**
  * Created by timothy.osborn on 3/5/15.
@@ -67,12 +68,31 @@ class DefaultQueryInteractor internal constructor(
         }
 
         val requestedCriteria = query.criteria!!
+        val requestedSearch = query.getAllCriteria().singleOrNull {
+            it.operator == QueryCriteriaOperator.SEARCH
+        }
         val vectorGroupNegation = requestedCriteria.hasGroupNegation() &&
             ScannerFactory.isVectorManagedCriteriaTree(descriptor, requestedCriteria)
         val executionCriteria = if (vectorGroupNegation) {
             requestedCriteria.withoutGroupNegations()
         } else {
             requestedCriteria
+        }
+        requestedSearch?.let { searchCriteria ->
+            val searchScanner = ScannerFactory.getScannerForQueryCriteria(
+                Contexts.get(contextId)!!,
+                searchCriteria,
+                query.entityType!!,
+                query,
+                persistenceManager,
+            )
+            val admitted = searchScanner.scan()
+            query.vectorSearchMatches = IdentityHashMap<QueryCriteria, Set<Reference>>().apply {
+                put(searchCriteria, admitted)
+                // De Morgan normalization creates a new criteria tree. Cache the same one-shot
+                // admission under its SEARCH node so execution cannot embed and scan it again.
+                executionCriteria.findSearchCriteria()?.let { put(it, admitted) }
+            }
         }
         val pair = getReferencesForCriteria<T>(
             query,
@@ -441,6 +461,7 @@ class DefaultQueryInteractor internal constructor(
             it.operator in setOf(
                 QueryCriteriaOperator.MATCHES,
                 QueryCriteriaOperator.LIKE,
+                QueryCriteriaOperator.SEARCH,
                 QueryCriteriaOperator.SEARCH_CANDIDATES,
                 QueryCriteriaOperator.HNSW_CANDIDATES
             ) &&
@@ -450,6 +471,12 @@ class DefaultQueryInteractor internal constructor(
     /** Pushes group negation to vector-backed leaves using De Morgan's laws. */
     private fun QueryCriteria.hasGroupNegation(): Boolean =
         isNot || subCriteria.any { !it.flip && it.hasGroupNegation() }
+
+    private fun QueryCriteria.findSearchCriteria(): QueryCriteria? {
+        if (operator == QueryCriteriaOperator.SEARCH) return this
+        subCriteria.forEach { child -> child.findSearchCriteria()?.let { return it } }
+        return null
+    }
 
     private fun QueryCriteria.withoutGroupNegations(parentNegated: Boolean = false): QueryCriteria {
         val negateNode = parentNegated.xor(isNot)

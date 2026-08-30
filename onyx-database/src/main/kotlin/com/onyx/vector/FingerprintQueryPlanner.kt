@@ -10,6 +10,7 @@ import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.resolveVectorSearchQuery
 import com.onyx.persistence.query.resolveHnswSearchQuery
+import com.onyx.persistence.query.resolveSearchQuery
 import java.lang.reflect.Array as ReflectArray
 import java.math.BigInteger
 import java.util.Date
@@ -105,6 +106,12 @@ class FingerprintQueryPlanner(
     private fun compileLeafValue(criteria: QueryCriteria): FingerprintQueryPlan {
         val operator = criteria.operator ?: return FingerprintQueryPlan.Universe
         if (criteria.attribute == Query.FULL_TEXT_ATTRIBUTE) {
+            if (operator == QueryCriteriaOperator.SEARCH) {
+                if (runCatching { resolveSearchQuery(criteria.value) }.isFailure) {
+                    return FingerprintQueryPlan.Universe
+                }
+                return FingerprintQueryPlan.Search(operator, criteria.value)
+            }
             if (operator == QueryCriteriaOperator.HNSW_CANDIDATES) {
                 if (runCatching { resolveHnswSearchQuery(criteria.value) }.isFailure) {
                     return FingerprintQueryPlan.Universe
@@ -164,6 +171,7 @@ class FingerprintQueryPlanner(
             QueryCriteriaOperator.NOT_BETWEEN ->
                 complement(range(definition, attributeType, QueryCriteriaOperator.BETWEEN, criteria.value))
             QueryCriteriaOperator.NOT_IN -> complement(inValues(definition, attributeType, criteria.value))
+            QueryCriteriaOperator.SEARCH,
             QueryCriteriaOperator.CANDIDATES,
             QueryCriteriaOperator.SEARCH_CANDIDATES,
             QueryCriteriaOperator.HNSW_CANDIDATES -> FingerprintQueryPlan.Universe

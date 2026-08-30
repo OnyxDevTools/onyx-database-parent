@@ -48,8 +48,12 @@ object VectorEntityEncoder {
         val compatibleSemantic = existing?.takeIf {
             // Sparse-family changes intentionally produce a new configuration ID and rebuild the
             // hidden index. Semantic routing remains compatible as long as its bit width matches.
-            it.featureHashBits == configuration.entropy.bitCount &&
+            configuration.searchSupport.supportsSemantic &&
+                it.featureHashBits == configuration.entropy.bitCount &&
                 it.hasSemanticSignature
+        }
+        val compatibleHnsw = existing?.takeIf {
+            configuration.searchSupport.supportsSemantic && it.hasHnswVector
         }
         return PreparedVectorRepresentation(
             representation = VectorRepresentation(
@@ -57,19 +61,64 @@ object VectorEntityEncoder {
                 featureHashBits = configuration.entropy.bitCount,
                 configurationId = configuration.configurationId,
                 calibrationId = compatibleSemantic?.calibrationId ?: VectorRepresentation.NO_CALIBRATION,
-                hnswCalibrationId = existing?.hnswCalibrationId ?: VectorRepresentation.NO_CALIBRATION,
+                hnswCalibrationId = compatibleHnsw?.hnswCalibrationId
+                    ?: VectorRepresentation.NO_CALIBRATION,
                 bucketId = compatibleSemantic?.bucketId ?: VectorRepresentation.NO_BUCKET,
                 boundaryConfidence = compatibleSemantic?.boundaryConfidence ?: 0f,
                 cells = compatibleSemantic?.cells ?: intArrayOf(),
                 cellCounts = compatibleSemantic?.cellCounts ?: intArrayOf(),
                 semanticFingerprint = compatibleSemantic?.semanticFingerprint ?: longArrayOf(),
                 semanticBands = compatibleSemantic?.semanticBands ?: longArrayOf(),
-                hnswVector = existing?.hnswVector ?: byteArrayOf(),
+                hnswVector = compatibleHnsw?.hnswVector ?: byteArrayOf(),
                 featureWords = words
             ),
             featureRouteKeys = routeKeys.toLongArray()
         )
     }
+
+    /** Whether this entity type selected at least one field for whole-record term search. */
+    fun hasSearchableTextFields(descriptor: EntityDescriptor): Boolean {
+        val configuration = VectorManagedConfiguration.forClass(descriptor.entityClass)
+        return configuration.searchableTextAttributes.any(descriptor.attributes::containsKey)
+    }
+
+    /** Stable text submitted to an application's automatic embedding provider. */
+    fun searchableText(
+        entity: VectorManagedEntity,
+        descriptor: EntityDescriptor,
+    ): String {
+        val configuration = VectorManagedConfiguration.forClass(descriptor.entityClass)
+        return configuration.searchableTextAttributes.asSequence()
+            .mapNotNull { attributeName ->
+                val value = descriptor.attributes[attributeName]?.field?.get(entity)
+                    ?: return@mapNotNull null
+                searchableValueText(value).takeIf(String::isNotBlank)
+            }
+            .joinToString("\n")
+    }
+
+    /** Mirrors scalar text ingestion without leaking array identities or unordered container order. */
+    private fun searchableValueText(value: Any): String = when (value) {
+        is Map<*, *> -> value.entries.map { entry ->
+            listOfNotNull(entry.key, entry.value)
+                .joinToString(" ", transform = ::stableSearchableScalarText)
+        }.sorted().joinToString("\n")
+        is Set<*> -> value.filterNotNull().map(::stableSearchableScalarText).sorted().joinToString("\n")
+        is Iterable<*> -> value.filterNotNull().joinToString("\n", transform = ::stableSearchableScalarText)
+        is Array<*> -> value.filterNotNull().joinToString("\n", transform = ::stableSearchableScalarText)
+        is BooleanArray -> value.joinToString("\n", transform = ::stableSearchableScalarText)
+        is ByteArray -> value.joinToString("\n", transform = ::stableSearchableScalarText)
+        is ShortArray -> value.joinToString("\n", transform = ::stableSearchableScalarText)
+        is IntArray -> value.joinToString("\n", transform = ::stableSearchableScalarText)
+        is LongArray -> value.joinToString("\n", transform = ::stableSearchableScalarText)
+        is FloatArray -> value.joinToString("\n", transform = ::stableSearchableScalarText)
+        is DoubleArray -> value.joinToString("\n", transform = ::stableSearchableScalarText)
+        is CharArray -> value.joinToString("\n", transform = ::stableSearchableScalarText)
+        else -> stableSearchableScalarText(value)
+    }
+
+    /** Embedding input must not inherit legacy locale or JVM-default-timezone rendering. */
+    private fun stableSearchableScalarText(value: Any): String = VectorValueCodec.predicateText(value)
 
     internal fun namespace(descriptor: EntityDescriptor, configuration: VectorManagedConfiguration): String =
         "onyx-vector/${configuration.encodingVersion}/seed:" +

@@ -36,7 +36,9 @@ enum class QueryCriteriaOperator {
     /** Explicitly approximate, bounded lexical search admission. */
     SEARCH_CANDIDATES,
     /** Explicitly approximate, bounded native-HNSW nearest-neighbor admission. */
-    HNSW_CANDIDATES;
+    HNSW_CANDIDATES,
+    /** High-level bounded lexical, semantic-HNSW, or hybrid search. Appended for ordinal compatibility. */
+    SEARCH;
 
     /**
      * Indicates if the operator supports indexing capabilities
@@ -81,6 +83,9 @@ enum class QueryCriteriaOperator {
             NOT_IN -> IN
             BETWEEN -> NOT_BETWEEN
             NOT_BETWEEN -> BETWEEN
+            SEARCH -> throw UnsupportedOperationException(
+                "SEARCH criteria cannot be negated"
+            )
             CANDIDATES -> throw UnsupportedOperationException(
                 "Approximate CANDIDATES criteria cannot be negated"
             )
