@@ -1,5 +1,7 @@
 package com.onyx.cloud
 
+import com.google.gson.JsonParser
+import com.onyx.cloud.api.EntityWireFormat
 import com.onyx.cloud.api.FetchInit
 import com.onyx.cloud.api.FetchResponse
 import com.onyx.cloud.impl.OnyxClient
@@ -181,6 +183,64 @@ class OnyxClientTest {
             OnyxClient(baseUrl = "https://example.com", databaseId = "db", apiKey = "key", apiSecret = "secret", connectTimeoutMsOverride = -1)
         }
         assertTrue(exConnect.message?.contains("connectTimeoutMs") == true)
+    }
+
+    @Test
+    fun schemaPublishPreservesSearchableEntityAndVectorIndexes() {
+        var capturedUrl: String? = null
+        var capturedInit: FetchInit? = null
+        val schemaClient = OnyxClient(
+            baseUrl = "https://example.com",
+            databaseId = "db",
+            apiKey = "key",
+            apiSecret = "secret",
+            entityWireFormat = EntityWireFormat.MESSAGE_PACK,
+            fetch = { url, init ->
+                capturedUrl = url
+                capturedInit = init
+                StubFetchResponse(
+                    bodyText =
+                        """{"databaseId":"db","revisionDescription":"Gemma","entities":[]}"""
+                )
+            }
+        )
+        val schema = mapOf(
+            "revisionDescription" to "Gemma",
+            "entities" to listOf(
+                mapOf(
+                    "name" to "ActiveDocumentChunk",
+                    "type" to "SEARCHABLE",
+                    "partition" to "headRevisionId",
+                    "identifier" to mapOf(
+                        "name" to "chunkId",
+                        "generator" to "None",
+                        "type" to "String"
+                    ),
+                    "attributes" to listOf(
+                        mapOf("name" to "chunkId", "type" to "String", "isNullable" to false),
+                        mapOf("name" to "headRevisionId", "type" to "String", "isNullable" to false),
+                        mapOf("name" to "content", "type" to "String", "isNullable" to false)
+                    ),
+                    "indexes" to listOf(
+                        mapOf("name" to "content", "type" to "VECTOR")
+                    ),
+                    "resolvers" to emptyList<Any>(),
+                    "triggers" to emptyList<Any>()
+                )
+            )
+        )
+
+        schemaClient.updateSchema(schema, publish = true)
+
+        assertEquals("https://example.com/schemas/db?publish=true", capturedUrl)
+        assertEquals("application/json; charset=utf-8", capturedInit?.headers?.get("Content-Type"))
+        assertNull(capturedInit?.bodyBytes, "schema routes remain JSON even when entity routes use MessagePack")
+        val payload = JsonParser.parseString(requireNotNull(capturedInit?.body)).asJsonObject
+        assertEquals("db", payload["databaseId"].asString)
+        val activeChunk = payload["entities"].asJsonArray.single().asJsonObject
+        assertEquals("ActiveDocumentChunk", activeChunk["name"].asString)
+        assertEquals("SEARCHABLE", activeChunk["type"].asString)
+        assertEquals("VECTOR", activeChunk["indexes"].asJsonArray.single().asJsonObject["type"].asString)
     }
 
     private data class ExampleEntity(val id: String)

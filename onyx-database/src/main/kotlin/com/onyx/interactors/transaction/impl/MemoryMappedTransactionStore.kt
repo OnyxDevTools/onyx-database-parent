@@ -60,6 +60,7 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
                 val walFiles = journalingDirector.listWalFiles()
                 walFiles.dropLast(1).forEach { sealedWalFile ->
                     if (!sealedWalFile.file.toPath().isCompressedWal()) {
+                        sealedWalFile.file.toPath().normalizeRegularWalForReopen()
                         compressWalFileOrThrow(sealedWalFile.file.toPath())
                     }
                 }
@@ -153,9 +154,12 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
 
     private fun openMappedWalFile(filePath: String): FileChannel {
         val file = File(filePath)
-        if (!file.exists()) {
+        val existingFile = file.exists()
+        if (!existingFile) {
             file.parentFile?.mkdirs()
             file.createNewFile()
+        } else if (file.length() > 0L) {
+            file.toPath().normalizeRegularWalForReopen()
         }
 
         val channel = file.path.openFileChannel()

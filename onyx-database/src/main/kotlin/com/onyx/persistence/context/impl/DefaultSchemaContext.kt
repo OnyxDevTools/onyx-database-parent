@@ -454,29 +454,30 @@ open class DefaultSchemaContext : SchemaContext {
      * @param systemEntity Parent System Entity
      * @param indexName Index to rebuild
      */
-    protected open fun rebuildIndex(systemEntity: SystemEntity, indexName: String) = catchAll {
+    protected open fun rebuildIndex(systemEntity: SystemEntity, indexName: String) {
         val entityDescriptor = getBaseDescriptorForEntity(systemEntity.name)
-        val indexDescriptor = entityDescriptor.indexes[indexName]
+        val indexDescriptor = checkNotNull(entityDescriptor.indexes[indexName]) {
+            "Index $indexName is missing from ${systemEntity.name} while rebuilding its schema"
+        }
         if (entityDescriptor.partition != null) {
-
-            val entries = getAllPartitions(entityDescriptor.entityClass)
-
-            entries.forEach {
-                val partitionEntityDescriptor = getDescriptorForEntity(entityDescriptor.entityClass, it.value)
-
-                async {
-                    catchAll {
-                        getIndexInteractor(partitionEntityDescriptor.indexes[indexDescriptor!!.name]!!).rebuild()
-                    }
+            // Rebuild one partition at a time.  Each interactor streams its records from the
+            // authoritative store, and keeping only one rebuild active prevents schema activation
+            // from retaining an unbounded Future/task set for databases with many partitions.
+            getAllPartitions(entityDescriptor.entityClass).forEach { partition ->
+                val partitionEntityDescriptor = getDescriptorForEntity(
+                    entityDescriptor.entityClass,
+                    partition.value
+                )
+                val partitionIndexDescriptor = checkNotNull(
+                    partitionEntityDescriptor.indexes[indexDescriptor.name]
+                ) {
+                    "Index ${indexDescriptor.name} is missing from partition ${partition.value} " +
+                        "of ${systemEntity.name} while rebuilding its schema"
                 }
+                getIndexInteractor(partitionIndexDescriptor).rebuild()
             }
-
         } else {
-            async {
-                catchAll {
-                    getIndexInteractor(indexDescriptor!!).rebuild()
-                }
-            }
+            getIndexInteractor(indexDescriptor).rebuild()
         }
     }
 
