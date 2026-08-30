@@ -489,6 +489,9 @@ val validation = db.validateSchema(mapOf(
     "entities" to listOf(
         mapOf(
             "name" to "Profile",
+            "type" to "SEARCHABLE",
+            // LEXICAL, SEMANTIC, or BOTH (the backward-compatible default)
+            "searchSupport" to "BOTH",
             "identifier" to mapOf("name" to "id", "generator" to "UUID"),
             "attributes" to listOf(
                 mapOf("name" to "id", "type" to "String", "isNullable" to false),
@@ -513,6 +516,12 @@ println("Added: ${diff.addedTables}")
 println("Removed: ${diff.removedTables}")
 println("Changed: ${diff.changedTables}")
 ```
+
+`searchSupport` controls which indexes a `SEARCHABLE` entity maintains and
+which high-level query modes it accepts. Omitted values retain the
+backward-compatible `BOTH` behavior. Use `LEXICAL` for term matching,
+`SEMANTIC` for embedding/HNSW retrieval, or `BOTH` for all three query modes,
+including hybrid. It is ignored for ordinary entities.
 
 ---
 

@@ -200,7 +200,7 @@ class OnyxClientTest {
                 capturedInit = init
                 StubFetchResponse(
                     bodyText =
-                        """{"databaseId":"db","revisionDescription":"Gemma","entities":[]}"""
+                        """{"databaseId":"db","revisionDescription":"Gemma","entities":[{"name":"ActiveDocumentChunk","type":"SEARCHABLE","searchSupport":"BOTH"}]}"""
                 )
             }
         )
@@ -210,6 +210,7 @@ class OnyxClientTest {
                 mapOf(
                     "name" to "ActiveDocumentChunk",
                     "type" to "SEARCHABLE",
+                    "searchSupport" to "BOTH",
                     "partition" to "headRevisionId",
                     "identifier" to mapOf(
                         "name" to "chunkId",
@@ -230,7 +231,7 @@ class OnyxClientTest {
             )
         )
 
-        schemaClient.updateSchema(schema, publish = true)
+        val result = schemaClient.updateSchema(schema, publish = true)
 
         assertEquals("https://example.com/schemas/db?publish=true", capturedUrl)
         assertEquals("application/json; charset=utf-8", capturedInit?.headers?.get("Content-Type"))
@@ -240,7 +241,40 @@ class OnyxClientTest {
         val activeChunk = payload["entities"].asJsonArray.single().asJsonObject
         assertEquals("ActiveDocumentChunk", activeChunk["name"].asString)
         assertEquals("SEARCHABLE", activeChunk["type"].asString)
+        assertEquals("BOTH", activeChunk["searchSupport"].asString)
         assertEquals("VECTOR", activeChunk["indexes"].asJsonArray.single().asJsonObject["type"].asString)
+        @Suppress("UNCHECKED_CAST")
+        val returnedEntity = (result["entities"] as List<Map<String, Any?>>).single()
+        assertEquals("BOTH", returnedEntity["searchSupport"])
+    }
+
+    @Test
+    fun schemaDiffUsesEffectiveBothSearchSupportAndDetectsCapabilityChanges() {
+        val schemaClient = OnyxClient(
+            baseUrl = "https://example.com",
+            databaseId = "db",
+            apiKey = "key",
+            apiSecret = "secret",
+            fetch = { _, _ ->
+                StubFetchResponse(
+                    bodyText =
+                        """{"databaseId":"db","entities":[{"name":"Article","type":"SEARCHABLE","searchSupport":"BOTH","entityText":"generated source","attributes":[],"indexes":[],"resolvers":[],"triggers":[]}]}"""
+                )
+            }
+        )
+        val legacyLocalSchema = mapOf(
+            "entities" to listOf(
+                mapOf("name" to "Article", "type" to "SEARCHABLE", "partition" to "   ")
+            )
+        )
+        val semanticLocalSchema = mapOf(
+            "entities" to listOf(
+                mapOf("name" to "Article", "type" to "SEARCHABLE", "searchSupport" to "SEMANTIC")
+            )
+        )
+
+        assertTrue(schemaClient.diffSchema(legacyLocalSchema).changedTables.isEmpty())
+        assertEquals(listOf("Article"), schemaClient.diffSchema(semanticLocalSchema).changedTables)
     }
 
     private data class ExampleEntity(val id: String)

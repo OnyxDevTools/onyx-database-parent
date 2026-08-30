@@ -702,25 +702,50 @@ class OnyxClient(
      */
     fun diffSchema(localSchema: Map<String, Any?>): SchemaDiffResult {
         val currentSchema = getSchema()
-        
+
         @Suppress("UNCHECKED_CAST")
         val currentEntities = (currentSchema["entities"] as? List<Map<String, Any?>>)
-            ?.mapNotNull { it["name"] as? String }
-            ?.toSet() ?: emptySet()
-        
+            ?.mapNotNull { entity -> (entity["name"] as? String)?.let { it to entity } }
+            ?.toMap() ?: emptyMap()
+
         @Suppress("UNCHECKED_CAST")
         val localEntities = (localSchema["entities"] as? List<Map<String, Any?>>)
-            ?.mapNotNull { it["name"] as? String }
-            ?.toSet() ?: emptySet()
-        
-        val added = (localEntities - currentEntities).toList()
-        val removed = (currentEntities - localEntities).toList()
-        val common = currentEntities.intersect(localEntities)
-        
-        // Simple change detection based on entity presence (could be enhanced)
-        val changed = common.toList()
-        
+            ?.mapNotNull { entity -> (entity["name"] as? String)?.let { it to entity } }
+            ?.toMap() ?: emptyMap()
+
+        val currentNames = currentEntities.keys
+        val localNames = localEntities.keys
+        val added = (localNames - currentNames).sorted()
+        val removed = (currentNames - localNames).sorted()
+        val changed = currentNames.intersect(localNames)
+            .filter { name ->
+                normalizeSchemaEntity(currentEntities.getValue(name)) !=
+                    normalizeSchemaEntity(localEntities.getValue(name))
+            }
+            .sorted()
+
         return SchemaDiffResult(added, removed, changed)
+    }
+
+    private fun normalizeSchemaEntity(entity: Map<String, Any?>): Map<String, Any?> {
+        val normalized = entity
+            .filterKeys { it != "meta" && it != "entityText" }
+            .toMutableMap()
+        val type = (entity["type"] as? String)?.uppercase(Locale.ROOT) ?: "DEFAULT"
+        normalized["type"] = type
+        if (type == "SEARCHABLE") {
+            normalized["searchSupport"] =
+                (entity["searchSupport"] as? String)?.uppercase(Locale.ROOT) ?: "BOTH"
+        } else {
+            // searchSupport has no effect on an ordinary entity.
+            normalized.remove("searchSupport")
+        }
+        normalized["partition"] = (entity["partition"] as? String)?.trim() ?: ""
+        normalized["identifier"] = entity["identifier"]
+        listOf("attributes", "indexes", "resolvers", "triggers").forEach { key ->
+            normalized[key] = entity[key] ?: emptyList<Any?>()
+        }
+        return normalized
     }
 
     // ---------------------------------------------------------------------
