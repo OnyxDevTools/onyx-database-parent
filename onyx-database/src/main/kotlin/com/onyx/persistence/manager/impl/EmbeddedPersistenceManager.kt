@@ -1,6 +1,5 @@
 package com.onyx.persistence.manager.impl
 
-import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.truncateData
 import com.onyx.descriptor.truncatePartitionData
 import com.onyx.diskmap.DiskMapEntry
@@ -9,8 +8,6 @@ import com.onyx.extension.*
 import com.onyx.extension.common.instance
 import com.onyx.interactors.query.QueryCollector
 import com.onyx.interactors.query.impl.DefaultQueryInteractor
-import com.onyx.interactors.record.withRecordMutationLock
-import com.onyx.interactors.record.withRelationshipMutationLock
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.*
 import com.onyx.persistence.collections.LazyQueryCollection
@@ -80,46 +77,30 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                 context.ensureDefaultPartition(descriptor)
             }
 
-            val persist = {
-                context.withRecordMutationLock(descriptor) {
-                    val putResult = entity.save(context, descriptor)
-                    onRecordSavedBeforeIndexes(entity, descriptor, putResult.recordId, putResult.isInsert)
+            val putResult = entity.save(context, descriptor)
 
-                    journal {
-                        context.transactionInteractor.writeSave(entity)
-                    }
-
-                    entity.saveIndexes(
-                        context,
-                        if (putResult.isInsert) 0L else putResult.recordId,
-                        putResult.recordId,
-                        descriptor,
-                        putResult.previousValue as? IManagedEntity
-                    )
-                    entity.saveRelationships(context, descriptor = descriptor)
-
-                    // A conditional update using this store cannot observe the new row before its
-                    // indexes, relationships, cache and listeners reach the same logical version.
-                    context.queryCacheInteractor.updateCachedQueryResultsForEntity(
-                        entity,
-                        descriptor,
-                        entity.reference(putResult.recordId, context, descriptor),
-                        if (putResult.isInsert) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE
-                    )
-                }
+            journal {
+                context.transactionInteractor.writeSave(entity)
             }
-            if (descriptor.hasRelationships) context.withRelationshipMutationLock(persist) else persist()
+
+            entity.saveIndexes(
+                context,
+                if (putResult.isInsert) 0L else putResult.recordId,
+                putResult.recordId,
+                descriptor,
+                putResult.previousValue as? IManagedEntity
+            )
+            entity.saveRelationships(context, descriptor = descriptor)
+
+            context.queryCacheInteractor.updateCachedQueryResultsForEntity(
+                entity,
+                descriptor,
+                entity.reference(putResult.recordId, context, descriptor),
+                if (putResult.isInsert) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE
+            )
         }
         return entity
     }
-
-    /** Test seam for proving that the row-to-index portion remains under one store monitor. */
-    protected open fun onRecordSavedBeforeIndexes(
-        entity: IManagedEntity,
-        descriptor: EntityDescriptor,
-        recordId: Long,
-        isInsert: Boolean,
-    ) = Unit
 
     /**
      * Batch saves a list of entities.
@@ -164,24 +145,19 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
     override fun deleteEntity(entity: IManagedEntity): Boolean {
         context.checkForKillSwitch()
         val descriptor = context.getDescriptorForEntity(entity)
-        val delete = {
-            context.withRecordMutationLock(descriptor) {
-                val previousReferenceId = entity.referenceId(context, descriptor)
-                if (previousReferenceId <= 0L) return@withRecordMutationLock false
-                val recordInteractor = entity.recordInteractor(context, descriptor)
-                val persistedEntity = requireNotNull(recordInteractor.getWithReferenceId(previousReferenceId)) {
-                    "Record $previousReferenceId disappeared before its indexes could be deleted"
-                }
-                journal {
-                    context.transactionInteractor.writeDelete(entity)
-                }
-                persistedEntity.deleteAllIndexes(context, previousReferenceId, descriptor)
-                entity.deleteRelationships(context)
-                recordInteractor.delete(entity)
-                true
-            }
+        val previousReferenceId = entity.referenceId(context, descriptor)
+        if (previousReferenceId <= 0L) return false
+        val recordInteractor = entity.recordInteractor(context, descriptor)
+        val persistedEntity = requireNotNull(recordInteractor.getWithReferenceId(previousReferenceId)) {
+            "Record $previousReferenceId disappeared before its indexes could be deleted"
         }
-        return if (descriptor.hasRelationships) context.withRelationshipMutationLock(delete) else delete()
+        journal {
+            context.transactionInteractor.writeDelete(entity)
+        }
+        persistedEntity.deleteAllIndexes(context, previousReferenceId, descriptor)
+        entity.deleteRelationships(context)
+        recordInteractor.delete(entity)
+        return true
     }
 
     /**
@@ -204,51 +180,39 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
         query.isUpdateOrDelete = true
         query.validate(context, descriptor)
 
-        val executeDelete = {
-            journal {
-                context.transactionInteractor.writeDeleteQuery(query)
-            }
+        journal {
+            context.transactionInteractor.writeDeleteQuery(query)
+        }
 
-            if (query.isDefaultQuery(descriptor)) {
-                val count = countForQuery(query)
+        return if (query.isDefaultQuery(descriptor)) {
+            val count = countForQuery(query)
 
-                val sampleEntity: ManagedEntity = query.entityType!!.createNewEntity(context.contextId)
-                val baseDescriptor = context.getDescriptorForEntity(sampleEntity)
+            val sampleEntity: ManagedEntity = query.entityType!!.createNewEntity(context.contextId)
+            val baseDescriptor = context.getDescriptorForEntity(sampleEntity)
 
-                val partitionId = query.partition
-                if (partitionId.toString().isNotBlank() && baseDescriptor.hasPartition && partitionId.toString() != QueryPartitionMode.ALL.toString()) {
-                    val partitionEntry = context.getPartitionWithValue(baseDescriptor.entityClass, partitionId)
-                    if (partitionEntry != null) {
-                        baseDescriptor.truncatePartitionData(partitionEntry.index)
-                    }
-                } else {
-                    baseDescriptor.truncateData(true)
+            val partitionId = query.partition
+            if (partitionId.toString().isNotBlank() && baseDescriptor.hasPartition && partitionId.toString() != QueryPartitionMode.ALL.toString()) {
+                val partitionEntry = context.getPartitionWithValue(baseDescriptor.entityClass, partitionId)
+                if (partitionEntry != null) {
+                    baseDescriptor.truncatePartitionData(partitionEntry.index)
                 }
-                count.toInt()
             } else {
-                val boundedMutationScan = query.maxResults > 0 && query.firstRow == 0 &&
-                    query.queryOrders.isNullOrEmpty()
-                val queryController = DefaultQueryInteractor(
-                    descriptor,
-                    this,
-                    context,
-                    if (boundedMutationScan) DefaultQueryInteractor.ScannerSelection.FULL_TABLE
-                    else DefaultQueryInteractor.ScannerSelection.AUTOMATIC,
-                )
-                val results: QueryCollector<IManagedEntity> = queryController.getReferencesForQuery(query)
-                query.resultsCount = results.getNumberOfResults()
-                queryController.deleteRecordsWithReferences(results.references, query)
+                baseDescriptor.truncateData(true)
             }
-        }
-        val concreteStore = descriptor.partition == null ||
-            query.partition != QueryPartitionMode.ALL && query.partition.toString().isNotBlank()
-        val guardedDelete = {
-            if (concreteStore) context.withRecordMutationLock(descriptor, executeDelete) else executeDelete()
-        }
-        return if (descriptor.hasRelationships) {
-            context.withRelationshipMutationLock(guardedDelete)
+            count.toInt()
         } else {
-            guardedDelete()
+            val boundedMutationScan = query.maxResults > 0 && query.firstRow == 0 &&
+                query.queryOrders.isNullOrEmpty()
+            val queryController = DefaultQueryInteractor(
+                descriptor,
+                this,
+                context,
+                if (boundedMutationScan) DefaultQueryInteractor.ScannerSelection.FULL_TABLE
+                else DefaultQueryInteractor.ScannerSelection.AUTOMATIC,
+            )
+            val results: QueryCollector<IManagedEntity> = queryController.getReferencesForQuery(query)
+            query.resultsCount = results.getNumberOfResults()
+            queryController.deleteRecordsWithReferences(results.references, query)
         }
     }
 
@@ -273,91 +237,15 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
         query.isUpdateOrDelete = true
         query.validate(context, descriptor)
 
-        val executeUpdate = {
-            val queryController = DefaultQueryInteractor(descriptor, this, context)
-            val results: QueryCollector<IManagedEntity> = queryController.getReferencesForQuery(query)
-            query.resultsCount = results.getNumberOfResults()
+        val queryController = DefaultQueryInteractor(descriptor, this, context)
+        val results: QueryCollector<IManagedEntity> = queryController.getReferencesForQuery(query)
+        query.resultsCount = results.getNumberOfResults()
 
-            journal {
-                context.transactionInteractor.writeQueryUpdate(query)
-            }
-
-            queryController.updateRecordsWithReferences(query, results.references)
-        }
-        val updatesPartition = descriptor.partition?.name?.let { partitionName ->
-            query.updates.any { it.fieldName == partitionName }
-        } == true
-        val concreteStore = descriptor.partition == null ||
-            query.partition != QueryPartitionMode.ALL && query.partition.toString().isNotBlank()
-        if (updatesPartition || !concreteStore) {
-            return if (updatesPartition && descriptor.hasRelationships) {
-                context.withRelationshipMutationLock(executeUpdate)
-            } else {
-                executeUpdate()
-            }
-        }
-
-        // Criteria evaluation and writes observe one physical entity-store state. The record
-        // monitor is partition-specific and reentrant through DefaultRecordInteractor.save, so a
-        // concrete-partition conditional update is a real per-store compare-and-set. Partition
-        // moves and ALL-partition bulk updates deliberately avoid this single-store contract.
-        return context.withRecordMutationLock(descriptor, executeUpdate)
-    }
-
-    /**
-     * Executes the already-validated single-row branch used by a guarded keyed update.
-     *
-     * The caller holds both the guard and concrete target record monitors. Resolve the identifier
-     * directly instead of admitting a scalar posting or scanning a partition, then evaluate every
-     * additional AND criterion against that one authoritative row before reusing the normal
-     * row/index/cache update path.
-     */
-    internal fun executeGuardedSingleUpdate(
-        query: Query,
-        descriptor: EntityDescriptor,
-        identifier: Any,
-    ): Int {
-        context.checkForKillSwitch()
-        val recordInteractor = context.getRecordInteractor(descriptor)
-        val referenceId = recordInteractor.getReferenceId(identifier)
-        if (referenceId <= 0L) {
-            query.resultsCount = 0
-            return 0
-        }
-        val entity = recordInteractor.getWithReferenceId(referenceId) ?: run {
-            query.resultsCount = 0
-            return 0
-        }
-        val reference = entity.reference(referenceId, context, descriptor)
-        if (!query.meetsCriteria(entity, reference, context, descriptor)) {
-            query.resultsCount = 0
-            return 0
-        }
-
-        query.resultsCount = 1
         journal {
             context.transactionInteractor.writeQueryUpdate(query)
         }
-        return DefaultQueryInteractor(descriptor, this, context)
-            .updateRecordsWithReferences(query, listOf(reference))
-    }
 
-    /**
-     * Delete an already bounded, already predicate-checked reference page for a guarded caller.
-     * The caller retains the guard and concrete target record monitors for the complete operation.
-     */
-    internal fun executeGuardedDeleteWithReferences(
-        query: Query,
-        descriptor: EntityDescriptor,
-        references: List<Reference>,
-    ): Int {
-        context.checkForKillSwitch()
-        query.resultsCount = references.size
-        journal {
-            context.transactionInteractor.writeDeleteQuery(query)
-        }
-        return DefaultQueryInteractor(descriptor, this, context)
-            .deleteRecordsWithReferences(references, query)
+        return queryController.updateRecordsWithReferences(query, results.references)
     }
 
     /**

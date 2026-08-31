@@ -1,7 +1,6 @@
 
 package com.onyx.descriptor
 
-import com.onyx.exception.InitializationException
 import com.onyx.extension.common.ClassMetadata
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.annotations.*

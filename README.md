@@ -310,23 +310,10 @@ val updatedUsers = manager.from<User>()
     .executeUpdate()
 ```
 
-For a concrete entity store or partition, `executeUpdate` holds the same record-interactor monitor
-across criteria evaluation and writes. A query that includes an identifier plus expected
-owner/generation values can therefore act as a compare-and-set: exactly one concurrent contender
-receives an update count of `1`. Use a concrete partition for partitioned lease records; an
-all-partitions update is a bulk operation, not a cross-partition compare-and-set.
-
-Ordinary embedded saves and deletes use that same concrete-store monitor from the authoritative
-row mutation through indexes, HNSW, relationships, cache updates, and listeners. A conditional
-update therefore cannot observe a newly written row and then be overwritten by a stale trailing
-index update. Batch operations retain this boundary per entity; partition moves are two ordered,
-independently consistent store mutations rather than a cross-partition transaction.
-
-For create-only ownership records, import `com.onyx.persistence.manager.createEntityIfAbsent`.
-It executes existence detection and the complete save/index path under that same concrete-partition
-monitor, returning the saved entity to the winner and `null` when the stable identifier already
-exists. A sequence-generated null or zero identifier is rejected before mutation; assign an
-explicit non-zero key when using create-only semantics with a sequence entity.
+Queries and mutations do not acquire an entity-store-wide coordination lock. Records, indexes,
+relationships, and caches apply their own synchronization independently, so concurrent changes may
+enter or leave a query's criteria while it executes. Update counts describe the rows selected by
+that execution; they are not compare-and-set or transaction guarantees.
 
 #### Executing a Delete Query (Kotlin)
 

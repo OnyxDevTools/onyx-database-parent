@@ -43,23 +43,6 @@ internal fun interface HnswSearchWorkObserver {
     fun onHnswSearchWork(work: HnswSearchWork)
 }
 
-/** Aggregate work performed by one exact posting-driven guarded delete page. */
-internal data class GuardedDeleteWork(
-    val pageLimit: Int,
-    val eligibleIndexCount: Int,
-    val cardinalityProbePostingVisits: Int,
-    val postingVisits: Int,
-    val recordLookups: Int,
-    val matchedReferenceCount: Int,
-    val deletedCount: Int,
-    val drivingAttribute: String,
-)
-
-/** Optional aggregate diagnostics, reported once for each posting-driven guarded delete page. */
-internal fun interface GuardedDeleteWorkObserver {
-    fun onGuardedDeleteWork(work: GuardedDeleteWork)
-}
-
 /** Physical query operations exposed to [QueryExecutionObserver]. */
 internal enum class QueryExecutionEvent {
     VECTOR_INDEX_INTERACTOR_LOOKUP,
@@ -83,8 +66,4 @@ internal fun SchemaContext.reportFingerprintSearchWork(work: FingerprintSearchWo
 
 internal fun SchemaContext.reportHnswSearchWork(work: HnswSearchWork) {
     (this as? HnswSearchWorkObserver)?.onHnswSearchWork(work)
-}
-
-internal fun SchemaContext.reportGuardedDeleteWork(work: GuardedDeleteWork) {
-    (this as? GuardedDeleteWorkObserver)?.onGuardedDeleteWork(work)
 }

@@ -10,7 +10,6 @@ import com.onyx.interactors.relationship.data.RelationshipTransaction
 import com.onyx.interactors.relationship.RelationshipInteractor
 import com.onyx.interactors.relationship.data.RelationshipReference
 import com.onyx.extension.*
-import com.onyx.interactors.record.withRecordMutationLock
 import com.onyx.persistence.query.QueryListenerEvent
 
 /**
@@ -50,24 +49,21 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
                 && relationshipObject != null
                 && !transaction.contains(relationshipObject, context)) {
             val childDescriptor = relationshipObject.descriptor(context)
-            val putResult = context.withRecordMutationLock(childDescriptor) {
-                val result = relationshipObject.save(context, childDescriptor)
-                relationshipObject.saveIndexes(
-                    context,
-                    if (result.isInsert) 0L else result.recordId,
-                    result.recordId,
-                    childDescriptor,
-                    previousEntity = result.previousValue as? IManagedEntity,
-                )
-                relationshipObject.saveRelationships(context, RelationshipTransaction(entity, context))
-                context.queryCacheInteractor.updateCachedQueryResultsForEntity(
-                    relationshipObject,
-                    childDescriptor,
-                    relationshipObject.reference(result.recordId, context, childDescriptor),
-                    if (result.isInsert) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE,
-                )
-                result
-            }
+            val putResult = relationshipObject.save(context, childDescriptor)
+            relationshipObject.saveIndexes(
+                context,
+                if (putResult.isInsert) 0L else putResult.recordId,
+                putResult.recordId,
+                childDescriptor,
+                previousEntity = putResult.previousValue as? IManagedEntity,
+            )
+            relationshipObject.saveRelationships(context, RelationshipTransaction(entity, context))
+            context.queryCacheInteractor.updateCachedQueryResultsForEntity(
+                relationshipObject,
+                childDescriptor,
+                relationshipObject.reference(putResult.recordId, context, childDescriptor),
+                if (putResult.isInsert) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE,
+            )
             currentRelationshipReference!!.identifier = putResult.key
         }
 
@@ -83,13 +79,11 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
 
                 if (existingRefManagedObject != null && !transaction.contains(existingRefManagedObject, context)) {
                     val childDescriptor = existingRefManagedObject.descriptor(context)
-                    context.withRecordMutationLock(childDescriptor) {
-                        val referenceId = existingRefManagedObject.referenceId(context, childDescriptor)
-                        existingRefManagedObject.deleteAllIndexes(context, referenceId, childDescriptor)
-                        existingRefManagedObject.deleteRelationships(context, transaction)
-                        existingRefManagedObject.recordInteractor(context, childDescriptor)
-                            .deleteWithId(existingRefManagedObject.identifier(context, childDescriptor)!!)
-                    }
+                    val referenceId = existingRefManagedObject.referenceId(context, childDescriptor)
+                    existingRefManagedObject.deleteAllIndexes(context, referenceId, childDescriptor)
+                    existingRefManagedObject.deleteRelationships(context, transaction)
+                    existingRefManagedObject.recordInteractor(context, childDescriptor)
+                        .deleteWithId(existingRefManagedObject.identifier(context, childDescriptor)!!)
                 }
             }
         } else if(relationshipDescriptor.shouldDeleteEntityReference && existingReference != null && existingReference != currentRelationshipReference) {

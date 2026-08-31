@@ -60,7 +60,7 @@ dependencies {
 
 ```groovy
 dependencies {
-    implementation 'dev.onyx:onyx-cloud-client:4.2.0'
+    implementation 'dev.onyx:onyx-cloud-client:4.2.1'
 }
 ```
 
@@ -70,7 +70,7 @@ dependencies {
 <dependency>
     <groupId>dev.onyx</groupId>
     <artifactId>onyx-cloud-client</artifactId>
-    <version>4.2.0</version>
+    <version>4.2.1</version>
 </dependency>
 ```
 

@@ -9,7 +9,6 @@ import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.extension.common.compare
 import com.onyx.extension.common.get
-import com.onyx.extension.identifier
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.resolveVectorSearchQuery

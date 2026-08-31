@@ -4,7 +4,6 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap
 import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.record.descriptorForReference
-import com.onyx.interactors.record.withRecordMutationLock
 import com.onyx.interactors.scanner.ScannerFactory
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.IManagedEntity
@@ -130,17 +129,12 @@ class DefaultQueryInteractor internal constructor(
                 query.entityType!!,
                 descriptor,
             )
-            val deleted = context.withRecordMutationLock(sourceDescriptor) {
-                val entity = reference.toManagedEntity(context, query.entityType!!, descriptor)
-                    ?: return@withRecordMutationLock false
-                entity.deleteAllIndexes(context, reference.reference, sourceDescriptor)
-                entity.deleteRelationships(context, descriptor = sourceDescriptor)
-                entity.recordInteractor(context, sourceDescriptor).delete(entity)
-                true
-            }
-            if (deleted) {
-                deleteCount++
-            }
+            val entity = reference.toManagedEntity(context, query.entityType!!, descriptor)
+                ?: return@forEach
+            entity.deleteAllIndexes(context, reference.reference, sourceDescriptor)
+            entity.deleteRelationships(context, descriptor = sourceDescriptor)
+            entity.recordInteractor(context, sourceDescriptor).delete(entity)
+            deleteCount++
         }
 
         return deleteCount
@@ -170,84 +164,46 @@ class DefaultQueryInteractor internal constructor(
             }
 
             if (partitionUpdate == null) {
-                context.withRecordMutationLock(sourceDescriptor) {
-                    val entity = reference.toManagedEntity(context, query.entityType!!, descriptor)
-                        ?: return@withRecordMutationLock
-                    query.updates.forEach {
-                        entity.set(
-                            context = context,
-                            descriptor = sourceDescriptor,
-                            name = it.fieldName!!,
-                            value = it.value,
-                        )
-                    }
-                    val putResult = entity.save(context, sourceDescriptor)
-                    entity.saveIndexes(
-                        context,
-                        if (putResult.isInsert) 0L else reference.reference,
-                        putResult.recordId,
-                        sourceDescriptor,
-                        previousEntity = putResult.previousValue as? IManagedEntity,
+                val entity = reference.toManagedEntity(context, query.entityType!!, descriptor)
+                    ?: return@forEach
+                query.updates.forEach {
+                    entity.set(
+                        context = context,
+                        descriptor = sourceDescriptor,
+                        name = it.fieldName!!,
+                        value = it.value,
                     )
-                    context.queryCacheInteractor.updateCachedQueryResultsForEntity(
-                        entity,
-                        sourceDescriptor,
-                        entity.reference(putResult.recordId, context, sourceDescriptor),
-                        QueryListenerEvent.UPDATE,
-                    )
-                    updateCount++
                 }
+                val putResult = entity.save(context, sourceDescriptor)
+                entity.saveIndexes(
+                    context,
+                    if (putResult.isInsert) 0L else reference.reference,
+                    putResult.recordId,
+                    sourceDescriptor,
+                    previousEntity = putResult.previousValue as? IManagedEntity,
+                )
+                context.queryCacheInteractor.updateCachedQueryResultsForEntity(
+                    entity,
+                    sourceDescriptor,
+                    entity.reference(putResult.recordId, context, sourceDescriptor),
+                    QueryListenerEvent.UPDATE,
+                )
+                updateCount++
                 return@forEach
             }
 
-            // A partition move is two independently consistent store mutations, not a cross-store
-            // CAS. Remove the source row+indexes together, release its monitor before relationship
-            // traversal, then add the target row+indexes under the target monitor.
-            var movingEntity: IManagedEntity? = null
-            var moved = false
-            var completedInSource = false
-            context.withRecordMutationLock(sourceDescriptor) {
-                val entity = reference.toManagedEntity(context, query.entityType!!, descriptor)
-                    ?: return@withRecordMutationLock
-                movingEntity = entity
-                moved = !entity.get<Any?>(
-                    context,
-                    sourceDescriptor,
-                    partitionUpdate.fieldName!!,
-                ).compare(partitionUpdate.value)
-                if (moved) {
-                    entity.deleteAllIndexes(context, reference.reference, sourceDescriptor)
-                    entity.deleteRelationships(context, descriptor = sourceDescriptor)
-                    entity.recordInteractor(context, sourceDescriptor).delete(entity)
-                } else {
-                    query.updates.forEach {
-                        entity.set(
-                            context = context,
-                            descriptor = sourceDescriptor,
-                            name = it.fieldName!!,
-                            value = it.value,
-                        )
-                    }
-                    val putResult = entity.save(context, sourceDescriptor)
-                    entity.saveIndexes(
-                        context,
-                        if (putResult.isInsert) 0L else reference.reference,
-                        putResult.recordId,
-                        sourceDescriptor,
-                        previousEntity = putResult.previousValue as? IManagedEntity,
-                    )
-                    context.queryCacheInteractor.updateCachedQueryResultsForEntity(
-                        entity,
-                        sourceDescriptor,
-                        entity.reference(putResult.recordId, context, sourceDescriptor),
-                        QueryListenerEvent.UPDATE,
-                    )
-                    updateCount++
-                    completedInSource = true
-                }
+            val entity = reference.toManagedEntity(context, query.entityType!!, descriptor)
+                ?: return@forEach
+            val moved = !entity.get<Any?>(
+                context,
+                sourceDescriptor,
+                partitionUpdate.fieldName!!,
+            ).compare(partitionUpdate.value)
+            if (moved) {
+                entity.deleteAllIndexes(context, reference.reference, sourceDescriptor)
+                entity.deleteRelationships(context, descriptor = sourceDescriptor)
+                entity.recordInteractor(context, sourceDescriptor).delete(entity)
             }
-            if (completedInSource) return@forEach
-            val entity = movingEntity ?: return@forEach
             query.updates.forEach {
                 entity.set(
                     context = context,
@@ -256,24 +212,22 @@ class DefaultQueryInteractor internal constructor(
                     value = it.value,
                 )
             }
-            val targetDescriptor = context.getDescriptorForEntity(entity)
-            context.withRecordMutationLock(targetDescriptor) {
-                val putResult = entity.save(context, targetDescriptor)
-                entity.saveIndexes(
-                    context,
-                    if (moved || putResult.isInsert) 0L else reference.reference,
-                    putResult.recordId,
-                    targetDescriptor,
-                    previousEntity = putResult.previousValue as? IManagedEntity,
-                )
-                context.queryCacheInteractor.updateCachedQueryResultsForEntity(
-                    entity,
-                    targetDescriptor,
-                    entity.reference(putResult.recordId, context, targetDescriptor),
-                    QueryListenerEvent.UPDATE,
-                )
-                updateCount++
-            }
+            val targetDescriptor = if (moved) context.getDescriptorForEntity(entity) else sourceDescriptor
+            val putResult = entity.save(context, targetDescriptor)
+            entity.saveIndexes(
+                context,
+                if (moved || putResult.isInsert) 0L else reference.reference,
+                putResult.recordId,
+                targetDescriptor,
+                previousEntity = putResult.previousValue as? IManagedEntity,
+            )
+            context.queryCacheInteractor.updateCachedQueryResultsForEntity(
+                entity,
+                targetDescriptor,
+                entity.reference(putResult.recordId, context, targetDescriptor),
+                QueryListenerEvent.UPDATE,
+            )
+            updateCount++
         }
 
         return updateCount

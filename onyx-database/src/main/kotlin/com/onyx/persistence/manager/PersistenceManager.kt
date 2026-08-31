@@ -2,12 +2,8 @@ package com.onyx.persistence.manager
 
 import com.onyx.exception.OnyxException
 import com.onyx.extension.get
-import com.onyx.extension.identifier
 import com.onyx.interactors.record.data.Reference
-import com.onyx.interactors.record.withRecordMutationLock
-import com.onyx.interactors.record.withRelationshipMutationLock
 import com.onyx.persistence.IManagedEntity
-import com.onyx.persistence.annotations.values.IdentifierGenerator
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.*
 import com.onyx.persistence.query.QueryListener
@@ -755,32 +751,6 @@ interface PersistenceManager {
     @Suppress("UNUSED")
     @Throws(OnyxException::class)
     fun findRelationship(entity: IManagedEntity, attribute: String): Any? = getRelationship(entity, attribute)
-}
-
-/**
- * Creates [entity] only when its identifier is absent from its concrete entity partition.
- *
- * The existence check and complete save/index/relationship path share the same reentrant
- * partition [com.onyx.interactors.record.RecordInteractor] monitor. Concurrent embedded managers
- * using one [SchemaContext] therefore have exactly one winner for a stable identifier. A null
- * result means another row already owns that identifier. Sequence-generated null or zero
- * identifiers do not describe a stable create-only key and are rejected before mutation.
- */
-fun <E : IManagedEntity> PersistenceManager.createEntityIfAbsent(entity: E): E? {
-    val descriptor = context.getDescriptorForEntity(entity)
-    if (descriptor.identifier?.generator == IdentifierGenerator.SEQUENCE) {
-        val identifier = entity.identifier(context, descriptor) as? Number
-        require(identifier != null && identifier.toLong() != 0L) {
-            "createEntityIfAbsent requires an explicit non-zero identifier for sequence-generated entities"
-        }
-    }
-    val recordInteractor = context.getRecordInteractor(descriptor)
-    val create = {
-        context.withRecordMutationLock(descriptor) {
-            if (recordInteractor.exists(entity)) null else saveEntity(entity)
-        }
-    }
-    return if (descriptor.hasRelationships) context.withRelationshipMutationLock(create) else create()
 }
 
 @Throws(OnyxException::class)

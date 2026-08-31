@@ -323,7 +323,7 @@ manager.searchEmbeddingProvider = SearchEmbeddingProvider { text, entityType ->
 
 For `SEMANTIC` and `BOTH` entity types, every save deterministically joins the selected searchable
 fields, embeds that text once after generated identifiers and pre-save callbacks run, quantizes it,
-and updates the native HNSW graph atomically with the row. Query text goes through the same provider.
+and updates the native HNSW graph as part of the save. Query text goes through the same provider.
 One hybrid request on a `BOTH` entity also embeds the query once and reuses that embedding across
 the semantic channel and every concrete partition. `LEXICAL` entities do not invoke the provider or
 maintain an automatic HNSW vector. Use the lower-level `hnswCandidates(...)` API when the application
@@ -333,11 +333,10 @@ text fields are never modified by automatic embedding. An explicit `hnswVector(.
 save. The override marker is then consumed, so a later save without another explicit vector refreshes
 the provider-managed embedding normally.
 
-Provider calls run inside the record mutation lock to keep callback-mutated text, the row, and its
-index synchronized; keep the provider bounded and reliable. Rows written before a provider was
-configured are not automatically backfilled, and an index rebuild cannot invent their embeddings.
-Explicitly stream those authoritative rows through the application and save them again before
-depending on semantic retrieval.
+Provider calls run synchronously while the record is saved; keep the provider bounded and reliable.
+Rows written before a provider was configured are not automatically backfilled, and an index
+rebuild cannot invent their embeddings. Explicitly stream those authoritative rows through the
+application and save them again before depending on semantic retrieval.
 
 `SEARCH` admits one global bounded candidate pool and then composes ordinary `AND`/`OR` filters
 against it, independent of fluent call order. It is read-only and cannot be negated, cached, used
