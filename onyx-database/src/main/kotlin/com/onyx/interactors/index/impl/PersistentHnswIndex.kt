@@ -45,62 +45,20 @@ data class HnswRemovalWork(
 internal class PersistentHnswIndex(
     private val nodes: DiskMap<Long, ByteArray>,
     private val metadata: DiskMap<Long, ByteArray>,
-    private val state: DiskMap<Long, ByteArray>,
-    private val durabilityBarrier: () -> Unit,
 ) {
     private val graphLock = ReentrantReadWriteLock(true)
     private val activeSearches = AtomicInteger()
-    private val pendingPreparedMutations = HashMap<Thread, Int>()
     private val nodeCache = object : LinkedHashMap<Long, HnswNode>(NODE_CACHE_CAPACITY, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, HnswNode>?): Boolean =
             size > NODE_CACHE_CAPACITY
     }
 
     @Volatile
-    private var sessionHealthy: Boolean = initialSessionHealth()
-    @Volatile
     private var removalWork = emptyRemovalWork(0L)
     private var rebuildOwner: Thread? = null
 
-    /** Read-only validation used before the authoritative entity row is overwritten. */
-    fun preflightUpsert(calibrationId: Long, vectorBytes: ByteArray) = graphLock.read {
-        preflightUpsertUnsafe(calibrationId, vectorBytes)
-    }
-
-    /**
-     * Persist the crash marker before the entity row can change. The marker remains durable for
-     * the lifetime of this open index; [shutdown] flushes graph data before publishing CLEAN.
-     */
-    fun prepareMutation(calibrationId: Long, vectorBytes: ByteArray) = graphLock.write {
-        preflightUpsertUnsafe(calibrationId, vectorBytes)
-        ensureMutationArmedUnsafe()
-        addPreparedMutationUnsafe()
-    }
-
-    /** Arms a removal-only update before the authoritative entity row drops its vector. */
-    fun prepareMutation() = graphLock.write {
-        ensureMutationArmedUnsafe()
-        addPreparedMutationUnsafe()
-    }
-
     fun upsert(recordId: Long, calibrationId: Long, vectorBytes: ByteArray) = graphLock.write {
-        preflightUpsertUnsafe(calibrationId, vectorBytes)
-        val existing = loadNode(recordId)
-        if (
-            existing != null &&
-            existing.calibrationId == calibrationId &&
-            existing.vectorBytes.contentEquals(vectorBytes)
-        ) {
-            return@write
-        }
-        ensureMutationArmedUnsafe()
-        try {
-            upsertUnsafe(recordId, calibrationId, vectorBytes)
-            completePreparedMutationUnsafe()
-        } catch (failure: Throwable) {
-            sessionHealthy = false
-            throw failure
-        }
+        upsertUnsafe(recordId, calibrationId, vectorBytes)
     }
 
     private fun upsertUnsafe(recordId: Long, calibrationId: Long, vectorBytes: ByteArray) {
@@ -115,8 +73,7 @@ internal class PersistentHnswIndex(
         ) {
             return
         }
-        // Target metadata was checked before this destructive remove. Keep the defensive check in
-        // this internal rebuild path too, where callers deliberately bypass the normal save hook.
+        // Validate the target graph before removing an existing node.
         loadMetadata(calibrationId)?.let { graph ->
             require(graph.dimensions == vector.dimensions) {
                 "HNSW calibration $calibrationId has ${graph.dimensions} dimensions; received ${vector.dimensions}"
@@ -184,15 +141,7 @@ internal class PersistentHnswIndex(
             removalWork = emptyRemovalWork(recordId)
             return@write
         }
-        requireSessionHealthyUnsafe()
-        ensureMutationArmedUnsafe()
-        try {
-            removalWork = removeUnsafe(recordId)
-            completePreparedMutationUnsafe()
-        } catch (failure: Throwable) {
-            sessionHealthy = false
-            throw failure
-        }
+        removalWork = removeUnsafe(recordId)
     }
 
     private fun removeUnsafe(recordId: Long): HnswRemovalWork {
@@ -376,7 +325,6 @@ internal class PersistentHnswIndex(
         query: HnswSearchQuery,
         allowedRecordIds: Set<Long>? = null,
     ): PersistentHnswSearchResult = graphLock.read {
-        requireSearchHealthyUnsafe()
         val concurrent = activeSearches.incrementAndGet()
         try {
             searchUnsafe(query, allowedRecordIds, concurrent)
@@ -452,24 +400,14 @@ internal class PersistentHnswIndex(
     }
 
     fun clear() = graphLock.write {
-        requireSearchHealthyUnsafe()
-        ensureMutationArmedUnsafe()
-        try {
-            clearGraphUnsafe()
-        } catch (failure: Throwable) {
-            sessionHealthy = false
-            throw failure
-        }
+        clearGraphUnsafe()
     }
 
-    /** Holds the exclusive graph lock and durable DIRTY marker for one streaming rebuild. */
+    /** Holds the exclusive graph lock for one streaming rebuild. */
     fun beginRebuild() {
         graphLock.writeLock().lock()
         try {
             check(rebuildOwner == null) { "An HNSW rebuild is already in progress" }
-            writeDirtyStateAndBarrierUnsafe()
-            sessionHealthy = false
-            pendingPreparedMutations.clear()
             rebuildOwner = Thread.currentThread()
             clearGraphUnsafe()
         } catch (failure: Throwable) {
@@ -481,32 +419,23 @@ internal class PersistentHnswIndex(
 
     fun upsertDuringRebuild(recordId: Long, calibrationId: Long, vectorBytes: ByteArray) {
         check(rebuildOwner === Thread.currentThread()) { "HNSW rebuild is not owned by this thread" }
-        preflightUpsertUnsafe(calibrationId, vectorBytes, allowRecovery = true)
         upsertUnsafe(recordId, calibrationId, vectorBytes)
     }
 
     fun completeRebuild() {
         check(rebuildOwner === Thread.currentThread()) { "HNSW rebuild is not owned by this thread" }
-        sessionHealthy = true
         rebuildOwner = null
         graphLock.writeLock().unlock()
     }
 
     fun abortRebuild() {
         check(rebuildOwner === Thread.currentThread()) { "HNSW rebuild is not owned by this thread" }
-        sessionHealthy = false
         rebuildOwner = null
         graphLock.writeLock().unlock()
     }
 
-    /** True after reopening a DIRTY graph or after a failed mutation/rebuild. */
-    fun requiresRebuild(): Boolean = graphLock.read {
-        !sessionHealthy || pendingPreparedMutations.isNotEmpty()
-    }
-
     /** Explicit maintenance check; never runs on the prompt-time search path. */
     fun validateGraph(calibrationId: Long): Long = graphLock.read {
-        requireSearchHealthyUnsafe()
         val graph = loadMetadata(calibrationId) ?: return@read 0L
         var count = 0L
         nodes.forEach { (id, bytes) ->
@@ -546,81 +475,6 @@ internal class PersistentHnswIndex(
     fun nodeDegree(recordId: Long, layer: Int = 0): Int? = graphLock.read {
         loadNode(recordId)?.takeIf { layer in 0..it.level }?.neighborsAt(layer)?.size
     }
-
-    /** Flushes graph bytes before publishing a durable CLEAN state on orderly shutdown. */
-    fun shutdown() = graphLock.write {
-        if (!sessionHealthy || pendingPreparedMutations.isNotEmpty()) return@write
-        val persisted = loadStateUnsafe()
-        if (persisted == HnswPersistentState.DIRTY) {
-            durabilityBarrier()
-            state[STATE_KEY] = HnswStateCodec.encode(HnswPersistentState.CLEAN)
-            durabilityBarrier()
-        } else if (persisted == null && nodes.isEmpty() && metadata.isEmpty()) {
-            state[STATE_KEY] = HnswStateCodec.encode(HnswPersistentState.CLEAN)
-            durabilityBarrier()
-        }
-    }
-
-    private fun preflightUpsertUnsafe(
-        calibrationId: Long,
-        vectorBytes: ByteArray,
-        allowRecovery: Boolean = false,
-    ) {
-        require(calibrationId != 0L) { "HNSW calibrationId must be non-zero" }
-        if (!allowRecovery) requireSessionHealthyUnsafe()
-        val vector = QuantizedCosineVector.fromBytes(vectorBytes)
-        loadMetadata(calibrationId)?.let { graph ->
-            require(graph.dimensions == vector.dimensions) {
-                "HNSW calibration $calibrationId has ${graph.dimensions} dimensions; received ${vector.dimensions}"
-            }
-        }
-    }
-
-    private fun ensureMutationArmedUnsafe() {
-        requireSessionHealthyUnsafe()
-        if (loadStateUnsafe() != HnswPersistentState.DIRTY) writeDirtyStateAndBarrierUnsafe()
-    }
-
-    private fun writeDirtyStateAndBarrierUnsafe() {
-        state[STATE_KEY] = HnswStateCodec.encode(HnswPersistentState.DIRTY)
-        // This is deliberately before any row/graph mutation. The state stays DIRTY on disk while
-        // the database is open, avoiding two fsyncs per ingested vector. Orderly shutdown first
-        // flushes all graph bytes and only then publishes CLEAN.
-        durabilityBarrier()
-    }
-
-    private fun requireSessionHealthyUnsafe() {
-        check(sessionHealthy) { DIRTY_GRAPH_MESSAGE }
-    }
-
-    private fun requireSearchHealthyUnsafe() {
-        check(sessionHealthy && pendingPreparedMutations.isEmpty()) { DIRTY_GRAPH_MESSAGE }
-    }
-
-    private fun addPreparedMutationUnsafe() {
-        val thread = Thread.currentThread()
-        pendingPreparedMutations[thread] = (pendingPreparedMutations[thread] ?: 0) + 1
-    }
-
-    private fun completePreparedMutationUnsafe() {
-        val thread = Thread.currentThread()
-        val pending = pendingPreparedMutations[thread] ?: return
-        if (pending <= 1) pendingPreparedMutations.remove(thread)
-        else pendingPreparedMutations[thread] = pending - 1
-    }
-
-    private fun initialSessionHealth(): Boolean {
-        val encoded = state[STATE_KEY] ?: return nodes.isEmpty() && metadata.isEmpty()
-        return try {
-            HnswStateCodec.decode(encoded) == HnswPersistentState.CLEAN
-        } catch (_: IllegalArgumentException) {
-            // Corrupt or older state is indistinguishable from an interrupted mutation. Keep the
-            // index constructible so the explicit rebuild path can overwrite it safely.
-            false
-        }
-    }
-
-    private fun loadStateUnsafe(): HnswPersistentState? = state[STATE_KEY]?.let(HnswStateCodec::decode)
 
     private fun clearGraphUnsafe() {
         nodes.clear()
@@ -1016,41 +870,6 @@ internal class PersistentHnswIndex(
         }
     }
 
-    private enum class HnswPersistentState(val code: Byte) {
-        CLEAN(1),
-        DIRTY(2);
-
-        companion object {
-            fun fromCode(code: Byte): HnswPersistentState = entries.firstOrNull { it.code == code }
-                ?: throw IllegalArgumentException("Unsupported HNSW persistent state $code")
-        }
-    }
-
-    private object HnswStateCodec {
-        private const val MAGIC = 0x4f485354 // OHST
-        private const val VERSION: Short = 2 // v2 requires bounded, strictly reciprocal edges.
-        private const val PAYLOAD_BYTES = 4 + 2 + 1
-
-        fun encode(value: HnswPersistentState): ByteArray {
-            val bytes = ByteArray(PAYLOAD_BYTES + 4)
-            val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN)
-            buffer.putInt(MAGIC)
-            buffer.putShort(VERSION)
-            buffer.put(value.code)
-            putChecksum(buffer, bytes, PAYLOAD_BYTES)
-            return bytes
-        }
-
-        fun decode(bytes: ByteArray): HnswPersistentState {
-            val buffer = checkedPayload(bytes, PAYLOAD_BYTES)
-            require(buffer.remaining() == PAYLOAD_BYTES) { "Invalid HNSW state length" }
-            require(buffer.int == MAGIC && buffer.short == VERSION) {
-                "Unsupported HNSW state format; rebuild the vector index"
-            }
-            return HnswPersistentState.fromCode(buffer.get())
-        }
-    }
-
     companion object {
         private val BEST_FIRST_COMPARATOR =
             compareByDescending<ScoredNode>(ScoredNode::score).thenBy(ScoredNode::id)
@@ -1077,10 +896,6 @@ internal class PersistentHnswIndex(
         private const val NODE_CACHE_CAPACITY = 4_096
         private const val INITIAL_SEARCH_CAPACITY = 4_096
         private const val MIN_NODE_PAYLOAD_BYTES = 4 + 2 + 8 + 4 + 1 + 4
-        private const val STATE_KEY = 1L
-        private const val DIRTY_GRAPH_MESSAGE =
-            "HNSW graph is dirty; explicitly rebuild the vector index before searching or saving"
-
         private fun emptyRemovalWork(recordId: Long) =
             HnswRemovalWork(recordId, 0, 0, 0, 0, 0, 0)
 

@@ -16,7 +16,6 @@ import com.onyx.persistence.query.hnswCandidates
 import com.onyx.persistence.manager.findById
 import com.onyx.extension.referenceId
 import com.onyx.vector.SemanticVectorSignature
-import com.onyx.vector.VectorRepresentation
 import entities.VectorPartitionedEntity
 import entities.VectorSearchEntity
 import org.junit.After
@@ -24,13 +23,10 @@ import org.junit.Before
 import org.junit.Test
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
-import java.util.zip.CRC32
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -234,21 +230,21 @@ class HnswCandidateIntegrationTest {
     }
 
     @Test
-    fun rejectedWrongDimensionUpdatePreservesRowAndGraphThenValidRetrySucceeds() {
+    fun rejectedWrongDimensionIndexUpdateLeavesWrittenRowAndAllowsValidRetry() {
         val moving = save("moving", floatArrayOf(1f, 0f, 0f))
         save("anchor", floatArrayOf(0f, 1f, 0f))
-        val originalVector = moving.vectorRepresentation()!!.hnswVector.copyOf()
 
         moving.hnswVector(floatArrayOf(1f, 0f), CALIBRATION_ONE)
+        val attemptedVector = moving.vectorRepresentation()!!.hnswVector
         assertFailsWith<IllegalArgumentException> { manager.saveEntity<IManagedEntity>(moving) }
 
         val persisted = manager.findById<VectorSearchEntity>(moving.id)!!
-        assertTrue(persisted.vectorRepresentation()!!.hnswVector.contentEquals(originalVector))
+        assertTrue(persisted.vectorRepresentation()!!.hnswVector.contentEquals(attemptedVector))
         assertEquals("moving", query(floatArrayOf(1f, 0f, 0f), maxCandidates = 1).single().title)
         assertEquals(2L, hnswInteractor().validateHnswGraph(CALIBRATION_ONE))
 
-        moving.hnswVector(floatArrayOf(-1f, 0f, 0f), CALIBRATION_ONE)
-        manager.saveEntity<IManagedEntity>(moving)
+        persisted.hnswVector(floatArrayOf(-1f, 0f, 0f), CALIBRATION_ONE)
+        manager.saveEntity<IManagedEntity>(persisted)
         assertEquals("moving", query(floatArrayOf(-1f, 0f, 0f), maxCandidates = 1).single().title)
         assertEquals(2L, hnswInteractor().validateHnswGraph(CALIBRATION_ONE))
     }
@@ -424,7 +420,7 @@ class HnswCandidateIntegrationTest {
     }
 
     @Test
-    fun failedStreamingRebuildStaysDirtyAcrossReopenUntilExplicitRecovery() {
+    fun failedStreamingRebuildCanBeCorrectedAndRetriedExplicitly() {
         save("valid-three", floatArrayOf(1f, 0f, 0f), CALIBRATION_ONE)
         val incompatible = save("valid-two", floatArrayOf(0f, 1f), CALIBRATION_TWO)
         val corrupted = incompatible.vectorRepresentation()!!.copy(
@@ -434,86 +430,13 @@ class HnswCandidateIntegrationTest {
         rawRecords()[incompatible.id] = incompatible
 
         assertFailsWith<IllegalArgumentException> { hnswInteractor().rebuild() }
-        assertTrue(hnswInteractor().hnswRequiresRebuild())
-        assertFailsWith<IllegalStateException> { query(floatArrayOf(1f, 0f, 0f)) }
-
-        closeDatabase()
-        openDatabase()
-        assertTrue(hnswInteractor().hnswRequiresRebuild())
-        assertFailsWith<IllegalStateException> { query(floatArrayOf(1f, 0f, 0f)) }
 
         val repaired = manager.findById<VectorSearchEntity>(incompatible.id)!!
         repaired.hnswVector(floatArrayOf(0f, 1f, 0f), CALIBRATION_ONE)
         rawRecords()[repaired.id] = repaired
         hnswInteractor().rebuild()
-        assertFalse(hnswInteractor().hnswRequiresRebuild())
         assertEquals(2L, hnswInteractor().validateHnswGraph(CALIBRATION_ONE))
         assertTrue(query(floatArrayOf(0f, 1f, 0f)).isNotEmpty())
-    }
-
-    @Test
-    fun legacyOrCorruptPersistentStateFailsClosedButExplicitRebuildRemainsReachable() {
-        save("recoverable-state", floatArrayOf(1f, 0f, 0f))
-        closeDatabase()
-
-        openDatabase()
-        hnswStateMap()[1L] = legacyHnswState()
-        manager.context.getDataFile(vectorDescriptor()).commit()
-        closeDatabase()
-
-        openDatabase()
-        assertTrue(hnswInteractor().hnswRequiresRebuild())
-        assertFailsWith<IllegalStateException> { query(floatArrayOf(1f, 0f, 0f)) }
-        hnswInteractor().rebuild()
-        assertEquals(1L, hnswInteractor().validateHnswGraph(CALIBRATION_ONE))
-        closeDatabase()
-
-        openDatabase()
-        hnswStateMap()[1L] = byteArrayOf(1, 2, 3)
-        manager.context.getDataFile(vectorDescriptor()).commit()
-        closeDatabase()
-
-        openDatabase()
-        assertTrue(hnswInteractor().hnswRequiresRebuild())
-        assertFailsWith<IllegalStateException> { query(floatArrayOf(1f, 0f, 0f)) }
-        hnswInteractor().rebuild()
-        assertEquals(1L, hnswInteractor().validateHnswGraph(CALIBRATION_ONE))
-    }
-
-    @Test
-    fun vectorRemovalArmsDurableDirtyMarkerBeforeRecordWrite() {
-        val entityId = save("remove-vector", floatArrayOf(1f, 0f, 0f)).id
-        closeDatabase()
-        openDatabase()
-        val entity = manager.findById<VectorSearchEntity>(entityId)!!
-        val descriptor = requireNotNull(manager.context.getBaseDescriptorForEntity(VectorSearchEntity::class.java))
-        val stateMap: DiskMap<Long, ByteArray> = manager.context.getDataFile(descriptor).getHashMap(
-            Long::class.java,
-            hnswMapBaseName() + "_hnsw_state",
-        )
-        val cleanState = stateMap.getValue(1L).copyOf()
-        val withoutHnsw = entity.vectorRepresentation()!!.copy(
-            hnswCalibrationId = VectorRepresentation.NO_CALIBRATION,
-            hnswVector = byteArrayOf(),
-        )
-        entity.vectorRepresentation(withoutHnsw)
-
-        // Save only the authoritative record, deliberately stopping before saveIndexes to model
-        // the crash window. The pre-write index hook must already have persisted DIRTY.
-        manager.context.getRecordInteractor(descriptor).save(entity)
-        assertFalse(
-            stateMap.getValue(1L).contentEquals(cleanState),
-            "DIRTY marker was not armed before the row write",
-        )
-        assertTrue(hnswInteractor().hnswRequiresRebuild())
-
-        closeDatabase()
-        openDatabase()
-        assertTrue(hnswInteractor().hnswRequiresRebuild())
-        assertFailsWith<IllegalStateException> { query(floatArrayOf(1f, 0f, 0f)) }
-        hnswInteractor().rebuild()
-        assertFalse(hnswInteractor().hnswRequiresRebuild())
-        assertTrue(query(floatArrayOf(1f, 0f, 0f)).isEmpty())
     }
 
     @Test
@@ -635,12 +558,6 @@ class HnswCandidateIntegrationTest {
     private fun graphRecordId(entity: VectorSearchEntity): Long =
         entity.referenceId(manager.context, vectorDescriptor())
 
-    private fun hnswMapBaseName(): String {
-        val descriptor = vectorDescriptor()
-        val index = requireNotNull(descriptor.indexes[VectorManagedEntity.REPRESENTATION_FIELD])
-        return descriptor.entityClass.name + index.name + "_fingerprint_v${index.encodingVersion}"
-    }
-
     private fun rawRecords(): DiskMap<Long, IManagedEntity> {
         val descriptor = vectorDescriptor()
         return manager.context.getDataFile(descriptor).getHashMap(
@@ -652,23 +569,6 @@ class HnswCandidateIntegrationTest {
     private fun vectorDescriptor() = requireNotNull(
         manager.context.getBaseDescriptorForEntity(VectorSearchEntity::class.java)
     )
-
-    private fun hnswStateMap(): DiskMap<Long, ByteArray> =
-        manager.context.getDataFile(vectorDescriptor()).getHashMap(
-            Long::class.java,
-            hnswMapBaseName() + "_hnsw_state",
-        )
-
-    private fun legacyHnswState(): ByteArray {
-        val payloadSize = 4 + 2 + 1
-        val bytes = ByteArray(payloadSize + 4)
-        val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN)
-        buffer.putInt(0x4f485354)
-        buffer.putShort(1.toShort())
-        buffer.put(1.toByte())
-        buffer.putInt(CRC32().apply { update(bytes, 0, payloadSize) }.value.toInt())
-        return bytes
-    }
 
     private fun openDatabase() {
         val location = databaseDirectory.toString()
