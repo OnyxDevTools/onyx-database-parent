@@ -2,6 +2,7 @@ package com.onyx.cloud
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.onyx.cloud.api.EntityWireFormat
 import com.onyx.cloud.api.QueryCriteriaOperator
 import com.onyx.cloud.api.notBetween
 import com.onyx.cloud.impl.OnyxClient
@@ -24,7 +25,8 @@ class NotBetweenWireTest {
             baseUrl = server.url("/").toString().trimEnd('/'),
             databaseId = "db",
             apiKey = "key",
-            apiSecret = "secret"
+            apiSecret = "secret",
+            entityWireFormat = EntityWireFormat.JSON,
         )
     }
 

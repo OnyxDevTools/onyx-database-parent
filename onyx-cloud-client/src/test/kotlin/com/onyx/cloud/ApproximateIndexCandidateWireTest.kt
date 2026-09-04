@@ -3,6 +3,7 @@ package com.onyx.cloud
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.onyx.cloud.api.ApproximateIndexCandidateQuery
+import com.onyx.cloud.api.EntityWireFormat
 import com.onyx.cloud.api.FULL_TEXT_ATTRIBUTE
 import com.onyx.cloud.api.MAX_APPROXIMATE_INDEX_CANDIDATES
 import com.onyx.cloud.api.MAX_APPROXIMATE_INDEX_ROUTE_VALUES
@@ -34,7 +35,8 @@ class ApproximateIndexCandidateWireTest {
             baseUrl = server.url("/").toString().trimEnd('/'),
             databaseId = "db",
             apiKey = "key",
-            apiSecret = "secret"
+            apiSecret = "secret",
+            entityWireFormat = EntityWireFormat.JSON,
         )
     }
 

@@ -1216,8 +1216,8 @@ inline fun <reified T> ICascadeBuilder.delete(primaryKey: Any) =
 /**
  * Wire representation used by core entity CRUD, query, and live-query routes.
  *
- * [JSON] remains the default for backwards compatibility. [MESSAGE_PACK] opts into the recursive,
- * schema-free entity binary protocol while document, schema, secret, and AI routes remain JSON.
+ * [MESSAGE_PACK] is the default recursive, schema-free entity protocol. [JSON] remains available
+ * as an explicit compatibility mode. Document, schema, secret, and AI routes always use JSON.
  */
 enum class EntityWireFormat {
     JSON,
@@ -1240,7 +1240,7 @@ enum class EntityWireFormat {
  * @property connectTimeoutMs Optional override for the socket connect timeout in milliseconds.
  * @property aiBaseUrl The base URL for AI/Chat API (defaults to https://ai.onyx.dev).
  * @property defaultModel The default AI model to use for chat completions (defaults to "onyx").
- * @property entityWireFormat Entity-route wire representation. JSON is the backwards-compatible default.
+ * @property entityWireFormat Entity-route wire representation. MessagePack is the default.
  */
 data class OnyxConfig(
     val baseUrl: String? = null,
@@ -1256,7 +1256,7 @@ data class OnyxConfig(
     val connectTimeoutMs: Int? = null,
     val aiBaseUrl: String? = null,
     val defaultModel: String? = null,
-    val entityWireFormat: EntityWireFormat = EntityWireFormat.JSON,
+    val entityWireFormat: EntityWireFormat = EntityWireFormat.MESSAGE_PACK,
 )
 
 /**

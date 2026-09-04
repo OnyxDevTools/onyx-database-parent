@@ -145,7 +145,25 @@ class EntityMessagePackTransportTest {
     }
 
     @Test
-    fun defaultWireFormatRemainsJson() {
+    fun defaultWireFormatIsMessagePack() {
+        server.enqueue(messagePackResponse(mapOf("records" to emptyList<Any>(), "totalResults" to 0L)))
+        val client = OnyxClient(
+            baseUrl = server.url("/").toString(),
+            databaseId = "db",
+            apiKey = "key",
+            apiSecret = "secret",
+        )
+
+        client.executeQuery("ExampleEntity", mapOf("limit" to 1))
+
+        val request = server.takeRequest()
+        assertEquals(ENTITY_MESSAGE_PACK_MEDIA_TYPE, request.getHeader("Content-Type"))
+        assertTrue(request.getHeader("Accept")!!.startsWith(ENTITY_MESSAGE_PACK_MEDIA_TYPE))
+        assertEquals(1L, (EntityMessagePack.decode(request.body.readByteArray()) as Map<*, *>)["limit"])
+    }
+
+    @Test
+    fun jsonWireFormatRemainsAvailableAsAnExplicitCompatibilityMode() {
         server.enqueue(
             MockResponse()
                 .setResponseCode(200)
@@ -157,6 +175,7 @@ class EntityMessagePackTransportTest {
             databaseId = "db",
             apiKey = "key",
             apiSecret = "secret",
+            entityWireFormat = EntityWireFormat.JSON,
         )
 
         client.executeQuery("ExampleEntity", mapOf("limit" to 1))
@@ -177,7 +196,6 @@ class EntityMessagePackTransportTest {
                 databaseId = "db",
                 apiKey = "key",
                 apiSecret = "secret",
-                entityWireFormat = EntityWireFormat.MESSAGE_PACK,
                 fetch = { _, init ->
                     captured = init
                     object : FetchResponse {

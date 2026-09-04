@@ -146,7 +146,7 @@ val db = onyx.init<Any>(OnyxConfig(
     partition = "tenantA",                // optional default partition
     requestLoggingEnabled = true,         // optional request logging
     responseLoggingEnabled = true,        // optional response logging
-    entityWireFormat = EntityWireFormat.MESSAGE_PACK, // optional entity binary protocol
+    entityWireFormat = EntityWireFormat.JSON, // optional compatibility override; defaults to MESSAGE_PACK
     aiBaseUrl = "https://ai.onyx.dev",    // optional AI endpoint
     defaultModel = "onyx"                 // optional default model
 ))
@@ -178,16 +178,16 @@ val db = onyx.init(
 | `responseLoggingEnabled` | Log HTTP responses |
 | `requestTimeoutMs` | Non-streaming read timeout (default: 120,000ms) |
 | `connectTimeoutMs` | Socket connect timeout (default: 30,000ms) |
-| `entityWireFormat` | `JSON` (default) or opt-in `MESSAGE_PACK` for entity routes |
+| `entityWireFormat` | `MESSAGE_PACK` (default) or explicit `JSON` compatibility mode for entity routes |
 | `aiBaseUrl` | AI API endpoint (defaults to `https://ai.onyx.dev`) |
 | `defaultModel` | Default AI model (defaults to `onyx`) |
 
 ### Binary entity protocol
 
-Set `entityWireFormat = EntityWireFormat.MESSAGE_PACK` to use the registered
-`application/vnd.msgpack` media type for entity save/find/delete, select/count/update/delete queries,
-and live-query streams. JSON remains the default, so updating the SDK does not change existing
-deployments. Documents, schemas, secrets, and AI/model APIs always remain JSON.
+Entity save/find/delete, select/count/update/delete queries, and live-query streams use the registered
+`application/vnd.msgpack` media type by default. Set `entityWireFormat = EntityWireFormat.JSON` only
+when connecting to a deployment that still requires the legacy entity representation. Documents,
+schemas, secrets, and AI/model APIs always remain JSON.
 
 The representation is schema-free and recursive like JSON. Its portable v1 profile supports null,
 booleans, signed 64-bit integers, finite floating-point values, UTF-8 strings, arrays, and string-keyed

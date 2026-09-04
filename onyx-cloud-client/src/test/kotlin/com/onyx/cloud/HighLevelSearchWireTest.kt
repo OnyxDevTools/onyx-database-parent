@@ -2,6 +2,7 @@ package com.onyx.cloud
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.onyx.cloud.api.EntityWireFormat
 import com.onyx.cloud.api.FULL_TEXT_ATTRIBUTE
 import com.onyx.cloud.api.FullTextSearchResult
 import com.onyx.cloud.api.MAX_SEARCH_CANDIDATES
@@ -35,6 +36,7 @@ class HighLevelSearchWireTest {
             databaseId = "db",
             apiKey = "key",
             apiSecret = "secret",
+            entityWireFormat = EntityWireFormat.JSON,
         )
     }
 
@@ -90,6 +92,7 @@ class HighLevelSearchWireTest {
             apiKey = "key",
             apiSecret = "secret",
             defaultPartition = "tenant-a",
+            entityWireFormat = EntityWireFormat.JSON,
         )
 
         server.enqueue(emptyQueryPage())

@@ -2,6 +2,7 @@ package com.onyx.cloud
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.onyx.cloud.api.EntityWireFormat
 import com.onyx.cloud.api.FULL_TEXT_ATTRIBUTE
 import com.onyx.cloud.api.HNSW_QUERY_FORMAT_VERSION
 import com.onyx.cloud.api.HnswSearchQuery
@@ -33,6 +34,7 @@ class HnswCandidateWireTest {
             databaseId = "db",
             apiKey = "key",
             apiSecret = "secret",
+            entityWireFormat = EntityWireFormat.JSON,
         )
     }
 
