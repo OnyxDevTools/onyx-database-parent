@@ -323,7 +323,7 @@ manager.searchEmbeddingProvider = SearchEmbeddingProvider { text, entityType ->
 
 For `SEMANTIC` and `BOTH` entity types, every save deterministically joins the selected searchable
 fields, embeds that text once after generated identifiers and pre-save callbacks run, quantizes it,
-and updates the native HNSW graph atomically with the row. Query text goes through the same provider.
+and updates the native HNSW graph as part of the save. Query text goes through the same provider.
 One hybrid request on a `BOTH` entity also embeds the query once and reuses that embedding across
 the semantic channel and every concrete partition. `LEXICAL` entities do not invoke the provider or
 maintain an automatic HNSW vector. Use the lower-level `hnswCandidates(...)` API when the application
@@ -333,11 +333,10 @@ text fields are never modified by automatic embedding. An explicit `hnswVector(.
 save. The override marker is then consumed, so a later save without another explicit vector refreshes
 the provider-managed embedding normally.
 
-Provider calls run inside the record mutation lock to keep callback-mutated text, the row, and its
-index synchronized; keep the provider bounded and reliable. Rows written before a provider was
-configured are not automatically backfilled, and an index rebuild cannot invent their embeddings.
-Explicitly stream those authoritative rows through the application and save them again before
-depending on semantic retrieval.
+Provider calls run synchronously while the record is saved; keep the provider bounded and reliable.
+Rows written before a provider was configured are not automatically backfilled, and an index
+rebuild cannot invent their embeddings. Explicitly stream those authoritative rows through the
+application and save them again before depending on semantic retrieval.
 
 `SEARCH` admits one global bounded candidate pool and then composes ordinary `AND`/`OR` filters
 against it, independent of fluent call order. It is read-only and cannot be negated, cached, used
@@ -474,23 +473,17 @@ rebuilding. This is a data reingestion requirement, not a query-time migration.
 
 ### Failure and recovery contract
 
-HNSW validates a new calibration and dimension before overwriting the authoritative entity row or
-removing its old graph node. A rejected update therefore leaves both the stored representation and
-the searchable graph unchanged, and a corrected retry is safe.
+The entity row is saved before its independent index updates. HNSW validates calibration,
+configuration, and vector dimensions when its own mutation runs. If validation rejects that
+mutation, or a save fails or is interrupted after writing the row, Onyx does not roll the row back
+and does not guarantee coherence between the row and graph for that attempted save.
 
-The index persists a versioned `DIRTY` marker and forces it to storage before the first row or graph
-mutation in an open session. It remains dirty on disk during ingestion so ordinary saves do not pay
-two durability barriers apiece. On orderly shutdown, Onyx first flushes graph data and then
-publishes `CLEAN`. A process crash, interrupted index save, or failed rebuild consequently causes
-the next open to fail HNSW searches and HNSW-bearing saves closed with an explicit rebuild error.
-It never repairs by scanning the entity table on a prompt query.
-
-Recovery is an explicit streaming internal-index rebuild. The marker remains dirty throughout the
-entire posting clear, entity walk, and graph construction, and becomes eligible for `CLEAN` only
-after successful completion. Rebuild heap use is bounded; elapsed work is proportional to the live
-records and emitted routes. A graph created before the reciprocal-edge state version also requires
-this one-time rebuild. Rows already carrying codec-v3 int8 vectors need no re-embedding for that
-upgrade; signature-only/codec-v2 rows still require the reingestion described above.
+An explicit streaming internal-index rebuild is available when the graph must be reconstructed
+from the stored rows. Rebuild clears the existing postings and graph, walks the live records, and
+recreates their index entries; prompt queries never repair the graph by scanning the entity table.
+Rebuild heap use is bounded, while elapsed work is proportional to the live records and emitted
+routes. Rows already carrying compatible codec-v3 int8 vectors need no re-embedding;
+signature-only/codec-v2 rows still require the reingestion described above.
 
 ## Internal index ownership
 
@@ -543,7 +536,7 @@ The database contract remains the normal query AST plus compact semantic metadat
 * Higher entropy increases representation size and generally reduces structured hash collisions.
 * Semantic band width also grows with entropy, so measure semantic recall and candidate counts for the application corpus.
 * HNSW stores one byte per embedding dimension plus bounded graph edges; choose `efSearch` from held-out recall and latency measurements.
-* Searches fail closed after an unclean HNSW session until an explicit streaming index rebuild succeeds; no entity scan occurs on the query path.
+* A failed or interrupted save has no rollback or row/graph coherence guarantee; use an explicit streaming index rebuild when graph reconstruction is required.
 * Legacy/signature-only rows require re-embedding before they can enter the HNSW graph.
 * Candidate records can be loaded for authoritative predicate verification and optional downstream reranking.
 * Calibration must be representative, deterministic, and shared by document and query encoders.

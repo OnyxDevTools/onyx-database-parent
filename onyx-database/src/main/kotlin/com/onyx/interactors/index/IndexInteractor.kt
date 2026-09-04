@@ -11,20 +11,6 @@ import com.onyx.exception.OnyxException
 interface IndexInteractor {
 
     /**
-     * Validate an index mutation before the containing entity record is overwritten.
-     *
-     * Implementations must not mutate persistent state here. This hook exists for indexes whose
-     * persisted topology has invariants (for example, one vector dimension per calibration) that
-     * cannot be checked safely after the authoritative entity bytes have already changed.
-     */
-    @Throws(OnyxException::class)
-    fun validateSave(oldIndexValue: Any?, indexValue: Any?, existingReferenceId: Long) = Unit
-
-    /** Arms any durable mutation guard after every index has passed [validateSave]. */
-    @Throws(OnyxException::class)
-    fun prepareSave(oldIndexValue: Any?, indexValue: Any?, existingReferenceId: Long) = Unit
-
-    /**
      * Save an index key with the record reference
      *
      * @param indexValue Index value to save

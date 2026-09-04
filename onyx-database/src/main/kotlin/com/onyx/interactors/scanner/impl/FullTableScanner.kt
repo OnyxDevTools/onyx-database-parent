@@ -75,7 +75,7 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
         return matching
     }
 
-    /** Guarded update/delete scans can stop as soon as their bounded collector is full. */
+    /** Bounded update/delete scans can stop as soon as their collector is full. */
     protected fun shouldContinueBoundedMutationScan(): Boolean =
         !query.isUpdateOrDelete || query.maxResults <= 0 ||
             (collector?.references?.size ?: 0) < query.maxResults

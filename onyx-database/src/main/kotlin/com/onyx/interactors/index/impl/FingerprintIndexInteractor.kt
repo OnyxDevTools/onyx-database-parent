@@ -69,42 +69,11 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
         get() = dataFile.getHashMap(Long::class.java, "${mapBaseName}_hnsw_nodes")
     private val hnswMetadata: DiskMap<Long, ByteArray>
         get() = dataFile.getHashMap(Long::class.java, "${mapBaseName}_hnsw_metadata")
-    private val hnswState: DiskMap<Long, ByteArray>
-        get() = dataFile.getHashMap(Long::class.java, "${mapBaseName}_hnsw_state")
     private val hnswIndex by lazy {
-        PersistentHnswIndex(hnswNodes, hnswMetadata, hnswState, dataFile::commit)
+        PersistentHnswIndex(hnswNodes, hnswMetadata)
     }
     private val records: DiskMap<Any, IManagedEntity>
         get() = dataFile.getHashMap(descriptor.identifier!!.type, descriptor.entityClass.name)
-
-    override fun validateSave(oldIndexValue: Any?, indexValue: Any?, existingReferenceId: Long) {
-        val representation = prepare(indexValue)?.representation ?: return
-        representation.validateConfiguration()
-        if (representation.hasHnswVector) {
-            hnswIndex.preflightUpsert(representation.hnswCalibrationId, representation.hnswVector)
-        }
-    }
-
-    override fun prepareSave(oldIndexValue: Any?, indexValue: Any?, existingReferenceId: Long) {
-        val oldRepresentation = prepare(oldIndexValue)?.representation
-        val representation = prepare(indexValue)?.representation
-        val oldHnsw = oldRepresentation?.takeIf(VectorRepresentation::hasHnswVector)
-        val newHnsw = representation?.takeIf(VectorRepresentation::hasHnswVector)
-        val changed = when {
-            oldHnsw == null -> newHnsw != null
-            newHnsw == null -> true
-            else -> oldHnsw.hnswCalibrationId != newHnsw.hnswCalibrationId ||
-                !oldHnsw.hnswVector.contentEquals(newHnsw.hnswVector)
-        }
-        if (!changed) return
-        when {
-            newHnsw != null -> hnswIndex.prepareMutation(
-                newHnsw.hnswCalibrationId,
-                newHnsw.hnswVector,
-            )
-            oldHnsw != null -> hnswIndex.prepareMutation()
-        }
-    }
 
     @Synchronized
     override fun save(indexValue: Any?, oldReferenceId: Long, newReferenceId: Long) {
@@ -235,9 +204,6 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
 
     /** Reads one compact graph node rather than hydrating its entity payload. */
     fun hnswNodeDegree(recordId: Long, layer: Int = 0): Int? = hnswIndex.nodeDegree(recordId, layer)
-
-    /** Signals durable fail-closed recovery state without scanning entity records. */
-    fun hnswRequiresRebuild(): Boolean = hnswIndex.requiresRebuild()
 
     override fun matchAll(indexValue: Any?, limit: Int, maxCandidates: Int): Map<Long, Any?> {
         context.reportQueryExecution(QueryExecutionEvent.FINGERPRINT_MATCH_ALL)
@@ -393,7 +359,7 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
         universePostings.clear()
     }
 
-    override fun shutdown() = hnswIndex.shutdown()
+    override fun shutdown() = Unit
 
     override fun deleteResources() = clear()
 

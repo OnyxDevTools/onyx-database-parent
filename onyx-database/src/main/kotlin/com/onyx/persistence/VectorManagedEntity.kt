@@ -187,10 +187,6 @@ abstract class VectorManagedEntity : ManagedEntity() {
         preparedVectorRepresentation?.also { preparedVectorRepresentation = null }
             ?: __vectorRepresentation
 
-    /** Peeks at prepared write state without consuming it during pre-record index validation. */
-    internal fun preparedVectorIndexValue(): Any =
-        preparedVectorRepresentation ?: __vectorRepresentation
-
     private fun requireSemanticSearchSupport(configuration: VectorManagedConfiguration) {
         require(configuration.searchSupport.supportsSemantic) {
             "${javaClass.name} declares searchSupport=${configuration.searchSupport.name} and " +
