@@ -11,11 +11,15 @@ Kotlin core and Cloud clients expose the same shape:
 ```kotlin
 db.from<EmbeddingBucket>()
     .inPartition("revision-7")
-    .approximateCandidates(
-        "bucketId",
-        values = neighboringBuckets,
-        maxCandidates = 32
+    .where(
+        approximateCandidates(
+            "bucketId",
+            values = neighboringBuckets,
+            maxCandidates = 32
+        )
     )
+    .and("active" eq true)
+    .and("corpusId" eq "corpus-a")
     .limit(20)
     .list<EmbeddingBucket>()
 ```
@@ -39,9 +43,12 @@ The schema-free JSON request criterion is:
 }
 ```
 
-For partitioned entities, send one concrete `partition` request option. A candidate criterion must
-be the sole root criterion; filter or rerank admitted records in the caller. It is not accepted for
-updates, deletes, cached queries, or live-query listeners.
+For partitioned entities, send one concrete `partition` request option. A query may contain one
+candidate criterion plus any number of ordinary predicates in a non-negated `AND` tree. Source
+order does not affect admission: the server visits the candidate postings once, then evaluates the
+whole predicate tree only over the admitted references. `OR` and negated composition are rejected
+because they could expand beyond the bounded set. Candidate queries are not accepted for updates,
+deletes, cached queries, or live-query listeners.
 
 ## Bounds and result semantics
 
@@ -49,8 +56,9 @@ updates, deletes, cached queries, or live-query listeners.
 - `values` must contain between 1 and 5,000 non-null route values.
 - The number of routes may exceed `maxCandidates`. For example, 128 neighboring routes with a
   32-posting admission budget is valid; empty point lookups do not consume the posting budget.
-- `totalResults` / core `Query.resultsCount` is the number of records admitted before the ordinary
-  response `limit` and offset. It is not an exhaustive matching-row total.
+- `totalResults` / core `Query.resultsCount` is the number of admitted records remaining after
+  `AND` filters and before the ordinary response `limit` and offset. It is not an exhaustive
+  matching-row total.
 - Explicit sorting, offset, and limiting apply only within the admitted sample.
 
 The built-in posting map stops B+ tree traversal at the shared bound. A custom `IndexInteractor`

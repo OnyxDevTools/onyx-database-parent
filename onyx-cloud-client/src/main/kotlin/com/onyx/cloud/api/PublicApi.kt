@@ -866,10 +866,8 @@ interface IQueryBuilder {
         )
     )
 
-    /**
-     * Seeds the query with one explicitly approximate bounded secondary-index route. It must be
-     * the sole criterion. For partitioned tables call [inPartition] with one concrete partition.
-     */
+    /** Compatibility shortcut; prefer `where(approximateCandidates(...))`. */
+    @Deprecated("Use where(approximateCandidates(...)) so CANDIDATES is expressed as a condition")
     fun approximateCandidates(
         attribute: String,
         candidateQuery: ApproximateIndexCandidateQuery
@@ -880,23 +878,29 @@ interface IQueryBuilder {
     )
 
     /** Bounded `EQUAL`-style candidate admission. */
+    @Deprecated("Use where(approximateCandidates(...)) so CANDIDATES is expressed as a condition")
     fun approximateCandidates(
         attribute: String,
         value: Any,
         maxCandidates: Int = DEFAULT_APPROXIMATE_INDEX_CANDIDATES
-    ): IQueryBuilder = approximateCandidates(
-        attribute,
-        ApproximateIndexCandidateQuery(value, maxCandidates)
+    ): IQueryBuilder = and(
+        com.onyx.cloud.api.approximateCandidates(
+            attribute,
+            ApproximateIndexCandidateQuery(value, maxCandidates)
+        )
     )
 
     /** Bounded `IN`-style admission with one shared physical visit budget. */
+    @Deprecated("Use where(approximateCandidates(...)) so CANDIDATES is expressed as a condition")
     fun approximateCandidates(
         attribute: String,
         values: Collection<Any>,
         maxCandidates: Int = DEFAULT_APPROXIMATE_INDEX_CANDIDATES
-    ): IQueryBuilder = approximateCandidates(
-        attribute,
-        ApproximateIndexCandidateQuery(values.toList(), maxCandidates)
+    ): IQueryBuilder = and(
+        com.onyx.cloud.api.approximateCandidates(
+            attribute,
+            ApproximateIndexCandidateQuery(values.toList(), maxCandidates)
+        )
     )
 
     /** Convenience overload for a semantic-only bounded search. */
@@ -1811,7 +1815,7 @@ fun approximateSearch(
     )
 )
 
-/** Creates the sole root condition for approximate bounded secondary-index admission. */
+/** Creates a bounded secondary-index admission condition composable through non-negated `AND`. */
 fun approximateCandidates(
     attribute: String,
     candidateQuery: ApproximateIndexCandidateQuery

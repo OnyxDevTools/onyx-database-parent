@@ -342,24 +342,28 @@ class QueryBuilder(
         return this
     }
 
-    /**
-     * Admit an explicitly approximate, physically bounded prefix from one ordinary index.
-     * This must be the query's sole criterion; use caller-side filtering after admission.
-     */
+    /** Compatibility shortcut; prefer `where(approximateCandidates(...))`. */
+    @Deprecated("Use where(approximateCandidates(...)) so CANDIDATES is expressed as a criterion")
     fun approximateCandidates(
         attribute: String,
         candidateQuery: ApproximateIndexCandidateQuery
     ): QueryBuilder {
-        require(query.criteria == null) { "CANDIDATES must be the sole root criterion" }
-        query.criteria = QueryCriteria(
+        val candidateCriteria = QueryCriteria(
             attribute,
             QueryCriteriaOperator.CANDIDATES,
             candidateQuery
         )
+        if (query.criteria == null) {
+            query.criteria = candidateCriteria
+        } else {
+            query.criteria!!.and(candidateCriteria)
+        }
         return this
     }
 
     /** Bounded `EQUAL`-style candidate admission. */
+    @Suppress("DEPRECATION")
+    @Deprecated("Use where(approximateCandidates(...)) so CANDIDATES is expressed as a criterion")
     @JvmOverloads
     fun approximateCandidates(
         attribute: String,
@@ -371,6 +375,8 @@ class QueryBuilder(
     )
 
     /** Bounded `IN`-style candidate admission with one shared visit budget. */
+    @Suppress("DEPRECATION")
+    @Deprecated("Use where(approximateCandidates(...)) so CANDIDATES is expressed as a criterion")
     @JvmOverloads
     fun approximateCandidates(
         attribute: String,

@@ -1291,7 +1291,6 @@ class QueryBuilder(
      */
     override fun where(condition: IConditionBuilder): IQueryBuilder {
         val replacement = condition.toCondition()
-        replacement?.requireCandidateSoleRoot()
         val replacementHasSearchContract = replacement.containsReadOnlySearch()
         if (replacementHasSearchContract) replacement.validateSearchContract()
         this.conditions = replacement
@@ -1370,19 +1369,19 @@ class QueryBuilder(
     }
 
     /** Seeds the request with one explicitly approximate bounded index route. */
+    @Deprecated("Use where(approximateCandidates(...)) so CANDIDATES is expressed as a condition")
     override fun approximateCandidates(
         attribute: String,
         candidateQuery: ApproximateIndexCandidateQuery
     ): IQueryBuilder {
-        require(conditions == null) { "CANDIDATES must be the sole root criterion" }
-        conditions = ConditionBuilderImpl(
+        val condition = ConditionBuilderImpl(
             QueryCriteria(
                 attribute,
                 QueryCriteriaOperator.CANDIDATES,
                 candidateQuery
             )
-        ).toCondition()
-        hasSearchContract = true
+        )
+        addCondition(condition, LogicalOperator.AND)
         return this
     }
 
@@ -1405,7 +1404,6 @@ class QueryBuilder(
     private fun addCondition(builderToAdd: IConditionBuilder, logicalOperator: LogicalOperator) {
         val conditionToAdd = builderToAdd.toCondition() ?: return
         val currentCondition = this.conditions
-        requireCandidateCompositionIsValid(currentCondition, conditionToAdd)
         val combinedHasSearchContract = hasSearchContract || conditionToAdd.containsReadOnlySearch()
         val combined = when {
             currentCondition == null -> conditionToAdd
@@ -1421,40 +1419,8 @@ class QueryBuilder(
         this.hasSearchContract = combinedHasSearchContract
     }
 
-    private fun requireCandidateCompositionIsValid(
-        currentCondition: QueryCondition?,
-        incomingCondition: QueryCondition?,
-    ) {
-        currentCondition?.requireCandidateSoleRoot()
-        incomingCondition?.requireCandidateSoleRoot()
-        val candidateOperator = currentCondition?.candidateOperator()
-            ?: incomingCondition?.candidateOperator()
-        require(currentCondition == null || candidateOperator == null) {
-            "$candidateOperator must be the sole root criterion"
-        }
-    }
-
-    private fun QueryCondition.requireCandidateSoleRoot() {
-        val candidateOperator = candidateOperator() ?: return
-        require(
-            this is QueryCondition.SingleCondition && criteria.operator == candidateOperator
-        ) {
-            "$candidateOperator must be the sole root criterion"
-        }
-    }
-
-    private fun QueryCondition.candidateOperator(): QueryCriteriaOperator? = when (this) {
-        is QueryCondition.SingleCondition -> criteria.operator.takeIf { it.isCandidateAdmission }
-        is QueryCondition.CompoundCondition -> conditions.firstNotNullOfOrNull { it.candidateOperator() }
-    }
-
-    private val QueryCriteriaOperator.isCandidateAdmission: Boolean
-        get() = this == QueryCriteriaOperator.CANDIDATES ||
-            this == QueryCriteriaOperator.SEARCH_CANDIDATES ||
-            this == QueryCriteriaOperator.HNSW_CANDIDATES
-
     private fun serializableConditions(): QueryCondition? = this.conditions?.also {
-        it.requireCandidateSoleRoot()
+        if (it.containsReadOnlySearch()) it.validateSearchContract()
     }?.normalizeSubQueries()
 
     private fun QueryCondition.normalizeSubQueries(): QueryCondition =
@@ -1810,12 +1776,14 @@ sealed class QueryCondition {
 }
 
 private val SOLE_ROOT_CANDIDATE_OPERATORS = setOf(
-    QueryCriteriaOperator.CANDIDATES,
     QueryCriteriaOperator.SEARCH_CANDIDATES,
     QueryCriteriaOperator.HNSW_CANDIDATES,
 )
 
-private val READ_ONLY_SEARCH_OPERATORS = SOLE_ROOT_CANDIDATE_OPERATORS + QueryCriteriaOperator.SEARCH
+private val READ_ONLY_SEARCH_OPERATORS = SOLE_ROOT_CANDIDATE_OPERATORS + setOf(
+    QueryCriteriaOperator.CANDIDATES,
+    QueryCriteriaOperator.SEARCH,
+)
 
 private fun QueryCondition?.allCriteria(): List<QueryCriteria> = when (this) {
     null -> emptyList()
@@ -1825,6 +1793,7 @@ private fun QueryCondition?.allCriteria(): List<QueryCriteria> = when (this) {
 
 /** Enforces the structural search rules before an invalid query can reach the server. */
 private fun QueryCondition?.validateSearchContract() {
+    if (this == null) return
     val criteria = allCriteria()
     val candidate = criteria.firstOrNull { it.operator in SOLE_ROOT_CANDIDATE_OPERATORS }
     require(
@@ -1832,6 +1801,16 @@ private fun QueryCondition?.validateSearchContract() {
             this is QueryCondition.SingleCondition && this.criteria.operator == candidate.operator
     ) {
         "${candidate?.operator} must be the sole root criterion"
+    }
+
+    val approximateCandidates = criteria.filter {
+        it.operator == QueryCriteriaOperator.CANDIDATES
+    }
+    require(approximateCandidates.size <= 1) {
+        "A query may contain only one CANDIDATES criterion"
+    }
+    require(approximateCandidates.isEmpty() || isConjunction()) {
+        "CANDIDATES can be combined only with non-negated AND predicates"
     }
 
     val searches = criteria.filter { it.operator == QueryCriteriaOperator.SEARCH }
@@ -1846,6 +1825,12 @@ private fun QueryCondition?.validateSearchContract() {
             "SEARCH cannot be combined with another full-text search criterion"
         }
     }
+}
+
+private fun QueryCondition.isConjunction(): Boolean = when (this) {
+    is QueryCondition.SingleCondition -> true
+    is QueryCondition.CompoundCondition ->
+        operator == LogicalOperator.AND && conditions.all { it.isConjunction() }
 }
 
 private fun QueryCondition?.firstReadOnlySearchOperator(): QueryCriteriaOperator? =

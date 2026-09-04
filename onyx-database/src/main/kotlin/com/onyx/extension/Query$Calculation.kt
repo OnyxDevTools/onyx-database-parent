@@ -51,6 +51,11 @@ fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, con
                 graphMeetsCriteria(entity, it)
             }
         }
+        else if (it.operator == QueryCriteriaOperator.CANDIDATES) {
+            // Composed approximate-index queries pre-admit this bounded set once. The
+            // remaining predicate tree is then evaluated only for those references.
+            subCriteria = approximateIndexCandidateMatches?.contains(entityReference) == true
+        }
         else if (it.attribute == Query.FULL_TEXT_ATTRIBUTE) {
             val isHighLevelAdmission = it.operator == QueryCriteriaOperator.SEARCH
             val evaluatedScore = if (entity is VectorManagedEntity && !isHighLevelAdmission) {

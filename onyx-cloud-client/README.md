@@ -52,7 +52,7 @@ Kotlin/JVM client SDK for **Onyx Cloud Database** — a typed, builder-pattern A
 
 ```kotlin
 dependencies {
-    implementation("dev.onyx:onyx-cloud-client:4.2.0")
+    implementation("dev.onyx:onyx-cloud-client:4.2.1")
 }
 ```
 
@@ -60,7 +60,7 @@ dependencies {
 
 ```groovy
 dependencies {
-    implementation 'dev.onyx:onyx-cloud-client:4.2.0'
+    implementation 'dev.onyx:onyx-cloud-client:4.2.1'
 }
 ```
 
@@ -70,7 +70,7 @@ dependencies {
 <dependency>
     <groupId>dev.onyx</groupId>
     <artifactId>onyx-cloud-client</artifactId>
-    <version>4.2.0</version>
+    <version>4.2.1</version>
 </dependency>
 ```
 
@@ -676,6 +676,26 @@ val filteredSearch = db.from<User>()
 Legacy `minScore` filters the server's candidate score; it is not a probability. Applications that
 need the lower-level PCA/SimHash or caller-supplied HNSW contracts can still use
 `VectorSearchQuery` or `HnswSearchQuery` and rerank returned content with their embedding model.
+
+### Bounded index candidates
+
+Pass `approximateCandidates(...)` to `where(...)`, just like `eq(...)`, to cap physical visits
+across one or more values in an ordinary secondary index, then compose normal filters with `AND`:
+
+```kotlin
+val candidates = db.from<ChunkAttentionHash>()
+    .inPartition(headRevisionId)
+    .where(approximateCandidates("bucketId", neighboringBuckets, maxCandidates = 128))
+    .and("active" eq true)
+    .and("documentId" eq requestedDocumentId)
+    .list<ChunkAttentionHash>()
+```
+
+The server admits the route once and evaluates the complete conjunction only over that bounded
+set, regardless of call order. A query may contain one `CANDIDATES` condition; `OR` composition is
+rejected because it could expand beyond the admission bound.
+The builder-level `approximateCandidates(...)` method remains only as a deprecated compatibility
+shortcut.
 
 ### Native HNSW candidates
 

@@ -100,9 +100,11 @@ fun Query.validate(context: SchemaContext, descriptor: EntityDescriptor = contex
         it.operator == QueryCriteriaOperator.CANDIDATES
     }
     if (approximateCandidates.isNotEmpty()) {
-        require(approximateCandidates.size == 1 && criteria === approximateCandidates.single() &&
-            approximateCandidates.single().subCriteria.isEmpty()) {
-            "CANDIDATES must be the sole root criterion; filter its admitted rows in the caller"
+        require(approximateCandidates.size == 1) {
+            "A query may contain only one CANDIDATES criterion"
+        }
+        require(requireNotNull(criteria).isNonNegatedConjunction()) {
+            "CANDIDATES can be combined only with non-negated AND predicates"
         }
         require(!isUpdateOrDelete) {
             "CANDIDATES is a read-only approximate admission operation"
@@ -229,6 +231,19 @@ fun Query.validate(context: SchemaContext, descriptor: EntityDescriptor = contex
     }
 
     return true
+}
+
+/**
+ * `CANDIDATES` is a bounded admission operation, so composition is safe only when every
+ * other criterion narrows the one admitted set. The root's relation flags describe its
+ * first child in the legacy criteria representation; each child's flags describe its
+ * relation to the parent.
+ */
+private fun QueryCriteria.isNonNegatedConjunction(): Boolean {
+    if (isNot || flip) return false
+    return subCriteria.all { child ->
+        child.isAnd && !child.isOr && child.isNonNegatedConjunction()
+    }
 }
 
 private fun VectorManagedConfiguration.requireSearchMode(mode: SearchMode) {

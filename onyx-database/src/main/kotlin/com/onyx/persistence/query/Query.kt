@@ -173,6 +173,13 @@ class Query : BufferStreamable {
     internal var vectorSearchMatches: Map<QueryCriteria, Set<Reference>>? = null
 
     /**
+     * The one-shot set admitted by a composed `CANDIDATES` criterion. Ordinary `AND`
+     * predicates evaluate only inside this set, independent of their source order.
+     */
+    @Transient
+    internal var approximateIndexCandidateMatches: Set<Reference>? = null
+
+    /**
      * Get the functions associated to the query selection
      *
      * @since 2.1.0

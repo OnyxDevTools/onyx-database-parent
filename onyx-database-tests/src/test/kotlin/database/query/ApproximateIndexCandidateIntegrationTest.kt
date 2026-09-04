@@ -107,22 +107,101 @@ class ApproximateIndexCandidateIntegrationTest {
     }
 
     @Test
-    fun `partitioned candidate route requires one partition and sole root`() {
+    fun `partitioned candidate route requires one partition`() {
         val allPartitions = Query(
             IndexPartitionEntity::class.java,
             approximateCandidates("indexVal", 5L, maxCandidates = 3)
         )
-        val composed = Query(
-            IndexPartitionEntity::class.java,
-            approximateCandidates("indexVal", 5L, maxCandidates = 3)
-                .and("id", QueryCriteriaOperator.GREATER_THAN, 0L)
-        ).apply { partition = 7L }
 
         assertFailsWith<IllegalArgumentException> {
             manager.executeQuery<IndexPartitionEntity>(allPartitions)
         }
+    }
+
+    @Test
+    fun `AND predicates filter one stable admitted set regardless of source order`() {
+        val candidateFirst = Query(
+            IndexPartitionEntity::class.java,
+            approximateCandidates("indexVal", listOf(5L, 6L), maxCandidates = 10)
+                .and("indexVal", QueryCriteriaOperator.EQUAL, 6L)
+        ).apply { partition = 7L }
+        val predicateFirst = Query(
+            IndexPartitionEntity::class.java,
+            QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 6L).and(
+                approximateCandidates("indexVal", listOf(5L, 6L), maxCandidates = 10)
+            )
+        ).apply { partition = 7L }
+
+        val candidateFirstResults = manager.executeQuery<IndexPartitionEntity>(candidateFirst)
+        val predicateFirstResults = manager.executeQuery<IndexPartitionEntity>(predicateFirst)
+
+        assertEquals(3, candidateFirstResults.size)
+        assertEquals(3, candidateFirst.resultsCount)
+        assertEquals(
+            candidateFirstResults.map { it.id },
+            predicateFirstResults.map { it.id }
+        )
+        assertTrue(candidateFirstResults.all { it.indexVal == 6L })
+    }
+
+    @Test
+    fun `nested AND predicates evaluate only inside the admitted set`() {
+        val nestedGroup = QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 6L).and(
+            approximateCandidates("indexVal", listOf(5L, 6L), maxCandidates = 10)
+        )
+        val query = Query(
+            IndexPartitionEntity::class.java,
+            QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 0L).and(nestedGroup)
+        ).apply { partition = 7L }
+
+        val results = manager.executeQuery<IndexPartitionEntity>(query)
+
+        assertEquals(3, results.size)
+        assertEquals(3, query.resultsCount)
+        assertTrue(results.all { it.indexVal == 6L })
+    }
+
+    @Test
+    fun `candidate admission rejects duplicate routes and mutations`() {
+        val duplicate = Query(
+            IndexPartitionEntity::class.java,
+            approximateCandidates("indexVal", 5L, maxCandidates = 3).and(
+                approximateCandidates("indexVal", 6L, maxCandidates = 3)
+            )
+        ).apply { partition = 7L }
+        val delete = Query(
+            IndexPartitionEntity::class.java,
+            approximateCandidates("indexVal", listOf(5L, 6L), maxCandidates = 10)
+                .and("indexVal", QueryCriteriaOperator.EQUAL, 6L)
+        ).apply { partition = 7L }
+
         assertFailsWith<IllegalArgumentException> {
-            manager.executeQuery<IndexPartitionEntity>(composed)
+            manager.executeQuery<IndexPartitionEntity>(duplicate)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            manager.executeDelete(delete)
+        }
+    }
+
+    @Test
+    fun `candidate admission rejects OR and negated composition`() {
+        val disjunction = Query(
+            IndexPartitionEntity::class.java,
+            approximateCandidates("indexVal", 5L, maxCandidates = 3)
+                .or("id", QueryCriteriaOperator.GREATER_THAN, 0L)
+        ).apply { partition = 7L }
+        val negatedCriteria = approximateCandidates("indexVal", 5L, maxCandidates = 3)
+            .and("id", QueryCriteriaOperator.GREATER_THAN, 0L)
+        val negated = Query(
+            IndexPartitionEntity::class.java,
+            !negatedCriteria
+        ).apply { partition = 7L }
+
+        assertFailsWith<IllegalArgumentException> {
+            manager.executeQuery<IndexPartitionEntity>(disjunction)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            manager.executeQuery<IndexPartitionEntity>(negated)
         }
     }
 

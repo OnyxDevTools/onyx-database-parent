@@ -61,6 +61,7 @@ class DefaultQueryInteractor internal constructor(
     override fun <T> getReferencesForQuery(query: Query):QueryCollector<T> {
         query.fullTextScores = null
         query.vectorSearchMatches = null
+        query.approximateIndexCandidateMatches = null
         if (query.isTerminated) {
             val collector = QueryCollectorFactory.create<T>(Contexts.get(contextId)!!, descriptor, query)
             collector.finalizeResults()
@@ -68,8 +69,12 @@ class DefaultQueryInteractor internal constructor(
         }
 
         val requestedCriteria = query.criteria!!
-        val requestedSearch = query.getAllCriteria().singleOrNull {
+        val allCriteria = query.getAllCriteria()
+        val requestedSearch = allCriteria.singleOrNull {
             it.operator == QueryCriteriaOperator.SEARCH
+        }
+        val requestedApproximateCandidates = allCriteria.singleOrNull {
+            it.operator == QueryCriteriaOperator.CANDIDATES
         }
         val vectorGroupNegation = requestedCriteria.hasGroupNegation() &&
             ScannerFactory.isVectorManagedCriteriaTree(descriptor, requestedCriteria)
@@ -94,11 +99,31 @@ class DefaultQueryInteractor internal constructor(
                 executionCriteria.findSearchCriteria()?.let { put(it, admitted) }
             }
         }
+
+        val approximateCandidateDomain = requestedApproximateCandidates
+            ?.takeIf { allCriteria.size > 1 }
+            ?.let { candidateCriteria ->
+                val candidateScanner = ScannerFactory.getScannerForQueryCriteria(
+                    Contexts.get(contextId)!!,
+                    candidateCriteria,
+                    query.entityType!!,
+                    query,
+                    persistenceManager,
+                )
+                candidateScanner.scan().also { admitted ->
+                    // Admission happens exactly once, before any structured predicate. This
+                    // makes an AND tree order-independent and preserves the physical visit cap.
+                    query.approximateIndexCandidateMatches = admitted
+                }
+            }
         val pair = getReferencesForCriteria<T>(
             query,
             executionCriteria,
-            null,
-            forceFullScan = requestedCriteria.isNot && !vectorGroupNegation
+            approximateCandidateDomain?.toCollection(linkedSetOf()),
+            // FullTableScanner.scan(existing) evaluates the complete criteria tree only over
+            // the admitted references; despite its name, it does not traverse the table here.
+            forceFullScan = approximateCandidateDomain != null ||
+                requestedCriteria.isNot && !vectorGroupNegation
         )
         val references = pair.first.orderedBySearchScore(query)
         var collector = pair.second

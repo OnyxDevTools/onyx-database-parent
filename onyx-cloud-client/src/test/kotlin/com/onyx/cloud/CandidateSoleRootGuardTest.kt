@@ -26,8 +26,8 @@ class CandidateSoleRootGuardTest {
     )
 
     @Test
-    fun candidateConditionCannotBeAddedAfterAnExactRoot() {
-        candidateConditions().forEach { (operator, candidateCondition) ->
+    fun soleRootCandidateConditionCannotBeAddedAfterAnExactRoot() {
+        soleRootCandidateConditions().forEach { (operator, candidateCondition) ->
             val builder = client.from<CandidateGuardEntity>().where("id".eq("record-1"))
 
             assertSoleRootFailure(operator) {
@@ -37,8 +37,8 @@ class CandidateSoleRootGuardTest {
     }
 
     @Test
-    fun candidateRootCannotBeFollowedByAnotherCondition() {
-        candidateConditions().forEach { (operator, candidateCondition) ->
+    fun soleRootCandidateCannotBeFollowedByAnotherCondition() {
+        soleRootCandidateConditions().forEach { (operator, candidateCondition) ->
             val builder = client.from<CandidateGuardEntity>().where(candidateCondition())
 
             assertSoleRootFailure(operator) {
@@ -48,8 +48,8 @@ class CandidateSoleRootGuardTest {
     }
 
     @Test
-    fun whereRejectsACompoundTreeContainingAnyCandidateOperator() {
-        candidateConditions().forEach { (operator, candidateCondition) ->
+    fun whereRejectsACompoundTreeContainingASoleRootCandidateOperator() {
+        soleRootCandidateConditions().forEach { (operator, candidateCondition) ->
             val compound = "id".eq("record-1").and(candidateCondition())
 
             assertSoleRootFailure(operator) {
@@ -75,6 +75,37 @@ class CandidateSoleRootGuardTest {
                 .where("id".eq("record-1"))
         }
     }
+
+    @Test
+    fun indexCandidatesComposeWithAndInEitherOrderAndInsideNestedAnd() {
+        client.from<CandidateGuardEntity>()
+            .where("id".eq("record-1"))
+            .and(indexCandidate())
+        client.from<CandidateGuardEntity>()
+            .where(indexCandidate())
+            .and("id".eq("record-1"))
+        client.from<CandidateGuardEntity>()
+            .where("id".eq("record-1").and(indexCandidate()))
+    }
+
+    @Test
+    fun indexCandidatesRejectOrComposition() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            client.from<CandidateGuardEntity>()
+                .where(indexCandidate())
+                .or("id".eq("record-1"))
+        }
+
+        assertTrue(error.message.orEmpty().contains("non-negated AND"))
+    }
+
+    private fun indexCandidate(): IConditionBuilder = approximateCandidates(
+        "bucketId",
+        ApproximateIndexCandidateQuery(value = 6, maxCandidates = 5),
+    )
+
+    private fun soleRootCandidateConditions(): List<Pair<QueryCriteriaOperator, () -> IConditionBuilder>> =
+        candidateConditions().filterNot { it.first == QueryCriteriaOperator.CANDIDATES }
 
     private fun candidateConditions(): List<Pair<QueryCriteriaOperator, () -> IConditionBuilder>> = listOf(
         QueryCriteriaOperator.CANDIDATES to {

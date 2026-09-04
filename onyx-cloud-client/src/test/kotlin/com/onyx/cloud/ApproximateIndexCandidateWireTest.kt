@@ -8,6 +8,7 @@ import com.onyx.cloud.api.MAX_APPROXIMATE_INDEX_CANDIDATES
 import com.onyx.cloud.api.MAX_APPROXIMATE_INDEX_ROUTE_VALUES
 import com.onyx.cloud.api.QueryCriteria
 import com.onyx.cloud.api.QueryCriteriaOperator
+import com.onyx.cloud.api.approximateCandidates
 import com.onyx.cloud.api.eq
 import com.onyx.cloud.extensions.gson
 import com.onyx.cloud.impl.ConditionBuilderImpl
@@ -48,7 +49,7 @@ class ApproximateIndexCandidateWireTest {
 
         client.from<CandidateWireEntity>()
             .inPartition("revision-7")
-            .approximateCandidates("bucketId", listOf(6, 7), maxCandidates = 17)
+            .where(approximateCandidates("bucketId", listOf(6, 7), maxCandidates = 17))
             .list<CandidateWireEntity>()
 
         val request = server.takeRequest()
@@ -99,20 +100,28 @@ class ApproximateIndexCandidateWireTest {
     }
 
     @Test
-    fun candidateRouteCannotBeAppendedToAnExistingExactCondition() {
+    fun candidateRouteCanBeAppendedToAnExistingCondition() {
+        server.enqueue(emptyQueryPage())
         val builder = client.from<CandidateWireEntity>()
             .search("existing exact-compatible clause")
 
-        val error = assertFailsWith<IllegalArgumentException> {
-            builder.approximateCandidates("bucketId", 6, maxCandidates = 5)
-        }
+        builder.and(approximateCandidates("bucketId", 6, maxCandidates = 5))
+            .list<CandidateWireEntity>()
 
-        assertTrue(error.message.orEmpty().contains("sole root"))
+        val conditions = JsonParser.parseString(server.takeRequest().body.readUtf8())
+            .asJsonObject.objectAt("conditions")
+        assertEquals("AND", conditions["operator"].asString)
+        assertEquals(
+            setOf(QueryCriteriaOperator.MATCHES.name, QueryCriteriaOperator.CANDIDATES.name),
+            conditions["conditions"].asJsonArray.map {
+                it.asJsonObject.objectAt("criteria")["operator"].asString
+            }.toSet()
+        )
     }
 
     @Test
-    fun everyCandidateOperatorRemainsTheSoleRootRegardlessOfCompositionOrder() {
-        candidateOperators.forEach { operator ->
+    fun lexicalAndHnswCandidatesRemainTheSoleRootRegardlessOfCompositionOrder() {
+        soleRootCandidateOperators.forEach { operator ->
             val appendAnd = client.from<CandidateWireEntity>().where(candidateCondition(operator))
             val appendAndError = assertFailsWith<IllegalArgumentException> {
                 appendAnd.and("status" eq "active")
@@ -139,6 +148,23 @@ class ApproximateIndexCandidateWireTest {
             assertTrue(nestedError.message.orEmpty().contains(operator.name))
         }
 
+        assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun indexCandidatesAllowAndButRejectOr() {
+        val candidate = candidateCondition(QueryCriteriaOperator.CANDIDATES)
+
+        client.from<CandidateWireEntity>()
+            .where("status" eq "active")
+            .and(candidate)
+
+        val error = assertFailsWith<IllegalArgumentException> {
+            client.from<CandidateWireEntity>()
+                .where(candidateCondition(QueryCriteriaOperator.CANDIDATES))
+                .or("status" eq "active")
+        }
+        assertTrue(error.message.orEmpty().contains("non-negated AND"))
         assertEquals(0, server.requestCount)
     }
 
@@ -196,6 +222,9 @@ class ApproximateIndexCandidateWireTest {
             QueryCriteriaOperator.SEARCH_CANDIDATES,
             QueryCriteriaOperator.HNSW_CANDIDATES,
         )
+        private val soleRootCandidateOperators = candidateOperators.filterNot {
+            it == QueryCriteriaOperator.CANDIDATES
+        }
     }
 }
 
