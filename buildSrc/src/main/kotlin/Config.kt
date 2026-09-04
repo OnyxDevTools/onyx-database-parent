@@ -13,5 +13,5 @@ object Config {
     const val HUGGING_FACE_TOKENIZERS_VERSION = "0.36.0"
 
     // 3rd Party Dependencies ( HTTP Client )
-    const val KTOR_VERSION = "3.2.3"
+    const val KTOR_VERSION = "3.2.4"
 }
