@@ -1,6 +1,8 @@
 package com.onyx.cloud.integration
 
+import com.onyx.cloud.api.EntityWireFormat
 import com.onyx.cloud.api.IOnyxDatabase
+import com.onyx.cloud.api.OnyxConfig
 import com.onyx.cloud.api.from
 import com.onyx.cloud.api.onyx
 import com.onyx.cloud.impl.OnyxClient
@@ -27,7 +29,15 @@ class OnyxClientErrorHandlingIntegrationTest {
     fun setUp() {
         server = MockWebServer().apply { start() }
         val baseUrl = server.url("/").toString().trimEnd('/')
-        client = onyx.init(baseUrl = baseUrl, databaseId = "db", apiKey = "key", apiSecret = "secret")
+        client = onyx.init(
+            OnyxConfig(
+                baseUrl = baseUrl,
+                databaseId = "db",
+                apiKey = "key",
+                apiSecret = "secret",
+                entityWireFormat = EntityWireFormat.JSON,
+            ),
+        )
     }
 
     @AfterTest

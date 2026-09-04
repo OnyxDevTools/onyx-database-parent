@@ -175,7 +175,7 @@ object ConfigResolver {
             apiKey = apiKey,
             apiSecret = apiSecret,
             partition = partition,
-            entityWireFormat = explicitConfig?.entityWireFormat ?: EntityWireFormat.JSON,
+            entityWireFormat = explicitConfig?.entityWireFormat ?: EntityWireFormat.MESSAGE_PACK,
             requestLoggingEnabled = explicitConfig?.requestLoggingEnabled ?: debugEnabled,
             responseLoggingEnabled = explicitConfig?.responseLoggingEnabled ?: debugEnabled,
             sources = sources

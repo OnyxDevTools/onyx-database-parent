@@ -88,7 +88,7 @@ import kotlin.reflect.KClass
  * transport.
  * @param defaultPartition Default partition applied to queries when none is specified
  * explicitly.
- * @param entityWireFormat Wire representation for entity CRUD/query/stream routes. JSON remains the default.
+ * @param entityWireFormat Wire representation for entity CRUD/query/stream routes. MessagePack is the default.
  * @param requestLoggingEnabled When `true`, the client logs outgoing requests (with
  * sensitive headers redacted).
  * @param responseLoggingEnabled When `true`, the client logs responses received from the
@@ -115,7 +115,7 @@ class OnyxClient(
     connectTimeoutMsOverride: Int? = null,
     aiBaseUrl: String = "https://ai.onyx.dev",
     private val defaultModel: String = "onyx",
-    private val entityWireFormat: EntityWireFormat = EntityWireFormat.JSON,
+    private val entityWireFormat: EntityWireFormat = EntityWireFormat.MESSAGE_PACK,
 ) : IOnyxDatabase<Any> {
 
     private val baseUrl: String = baseUrl.replace(Regex("/+$"), "")

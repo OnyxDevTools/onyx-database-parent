@@ -1,6 +1,7 @@
 package com.onyx.cloud
 
 import com.google.gson.JsonParser
+import com.onyx.cloud.api.EntityWireFormat
 import com.onyx.cloud.api.matches
 import com.onyx.cloud.exceptions.NotFoundException
 import com.onyx.cloud.impl.OnyxClient
@@ -24,7 +25,13 @@ class QueryBuilderErrorHandlingTest {
     fun setUp() {
         server = MockWebServer().apply { start() }
         val base = server.url("/").toString().trimEnd('/')
-        client = OnyxClient(baseUrl = base, databaseId = "db", apiKey = "key", apiSecret = "secret")
+        client = OnyxClient(
+            baseUrl = base,
+            databaseId = "db",
+            apiKey = "key",
+            apiSecret = "secret",
+            entityWireFormat = EntityWireFormat.JSON,
+        )
     }
 
     @AfterTest
