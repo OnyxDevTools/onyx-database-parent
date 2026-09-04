@@ -12,6 +12,7 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import org.junit.Test
 import java.io.IOException
+import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -56,6 +57,28 @@ class DefaultTransactionInteractorReadTest {
             }
             Files.deleteIfExists(walDirectory)
         }
+    }
+
+    @Test
+    fun lenientReplayOverloadHonorsLegacyOverride() {
+        val replayedWalFiles = ArrayList<String>()
+        val interactor = object : DefaultTransactionInteractor(UNUSED_TRANSACTION_STORE, noOpPersistenceManager()) {
+            override fun applyTransactionLog(
+                walTransactionFile: String,
+                executeTransaction: (Transaction) -> Boolean,
+            ): Boolean {
+                replayedWalFiles += walTransactionFile
+                return true
+            }
+        }
+
+        assertTrue(
+            interactor.applyTransactionLog(
+                walTransactionFile = "legacy-override.wal",
+                skipFailedTransactions = true,
+            ) { false },
+        )
+        assertEquals(listOf("legacy-override.wal"), replayedWalFiles)
     }
 
     @Test
@@ -119,6 +142,104 @@ class DefaultTransactionInteractorReadTest {
             assertEquals(0L, failures.single().offset)
             assertIs<DeleteQueryTransaction>(failures.single().transaction)
             assertEquals("cannot apply row 3", failures.single().cause.message)
+        } finally {
+            Files.deleteIfExists(walFile)
+        }
+    }
+
+    @Test
+    fun strictReplayStopsAtFirstTransactionFailure() {
+        val walFile = Files.createTempFile("onyx-strict-wal-recovery", ".wal")
+        val attemptedRows = ArrayList<Int>()
+
+        try {
+            Files.write(walFile, concatenate(deleteQueryRecord(3), deleteQueryRecord(7)))
+
+            val failure = assertFailsWith<TransactionException> {
+                interactor().applyTransactionLog(
+                    walTransactionFile = walFile.toString(),
+                    skipFailedTransactions = false,
+                ) { transaction ->
+                    val row = assertIs<DeleteQueryTransaction>(transaction).query.firstRow
+                    attemptedRows += row
+                    if (row == 3) throw IllegalStateException("cannot apply row 3")
+                    false
+                }
+            }
+
+            assertEquals(listOf(3), attemptedRows)
+            assertTrue(failure.message.orEmpty().contains("at byte 0"))
+            assertEquals("cannot apply row 3", failure.cause?.message)
+        } finally {
+            Files.deleteIfExists(walFile)
+        }
+    }
+
+    @Test
+    fun strictReplayRejectsMalformedSaveBeforeLaterTransactions() {
+        val walFile = Files.createTempFile("onyx-strict-malformed-save", ".wal")
+        val attemptedRows = ArrayList<Int>()
+
+        try {
+            Files.write(
+                walFile,
+                concatenate(
+                    transactionRecord(SAVE, mapOf("value" to emptyMap<String, Any?>())),
+                    deleteQueryRecord(7),
+                ),
+            )
+
+            val failure = assertFailsWith<TransactionException> {
+                interactor().applyTransactionLog(
+                    walTransactionFile = walFile.toString(),
+                    skipFailedTransactions = false,
+                ) { transaction ->
+                    attemptedRows += assertIs<DeleteQueryTransaction>(transaction).query.firstRow
+                    false
+                }
+            }
+
+            assertTrue(attemptedRows.isEmpty())
+            assertTrue(failure.message.orEmpty().contains("at byte 0"))
+            assertEquals(
+                "SAVE transaction payload is missing a valid entity type",
+                failure.cause?.message,
+            )
+        } finally {
+            Files.deleteIfExists(walFile)
+        }
+    }
+
+    @Test
+    fun strictReplayStopsAtFirstPersistenceFailure() {
+        val walFile = Files.createTempFile("onyx-strict-persistence-failure", ".wal")
+        val executedRows = ArrayList<Int>()
+        val persistenceManager = Proxy.newProxyInstance(
+            PersistenceManager::class.java.classLoader,
+            arrayOf(PersistenceManager::class.java),
+        ) { _, method, arguments ->
+            if (method.name == "executeDelete") {
+                val row = (arguments!!.single() as Query).firstRow
+                executedRows += row
+                if (row == 3) throw IllegalStateException("cannot persist row 3")
+            }
+            defaultReturnValue(method)
+        } as PersistenceManager
+
+        try {
+            Files.write(walFile, concatenate(deleteQueryRecord(3), deleteQueryRecord(7)))
+
+            val failure = assertFailsWith<TransactionException> {
+                DefaultTransactionInteractor(UNUSED_TRANSACTION_STORE, persistenceManager)
+                    .applyTransactionLog(
+                        walTransactionFile = walFile.toString(),
+                        skipFailedTransactions = false,
+                    ) { true }
+            }
+
+            assertEquals(listOf(3), executedRows)
+            assertTrue(failure.message.orEmpty().contains("at byte 0"))
+            assertEquals("cannot persist row 3", failure.cause?.message)
         } finally {
             Files.deleteIfExists(walFile)
         }
@@ -443,10 +564,14 @@ class DefaultTransactionInteractorReadTest {
     private fun interactor() = DefaultTransactionInteractor(UNUSED_TRANSACTION_STORE, noOpPersistenceManager())
 
     private fun deleteQueryRecord(firstRow: Int, partition: String = ""): ByteArray {
-        val payload = BufferStream.toBuffer(Query().apply {
+        return transactionRecord(DELETE_QUERY, Query().apply {
             this.firstRow = firstRow
             this.partition = partition
         })
+    }
+
+    private fun transactionRecord(transactionType: Byte, value: Any): ByteArray {
+        val payload = BufferStream.toBuffer(value)
         val payloadBytes = try {
             ByteArray(payload.remaining()).also(payload::get)
         } finally {
@@ -454,7 +579,7 @@ class DefaultTransactionInteractorReadTest {
         }
 
         return ByteBuffer.allocate(WAL_HEADER_SIZE + payloadBytes.size)
-            .put(DELETE_QUERY)
+            .put(transactionType)
             .putInt(payloadBytes.size)
             .put(payloadBytes)
             .array()
@@ -486,6 +611,7 @@ class DefaultTransactionInteractorReadTest {
     )
 
     private companion object {
+        const val SAVE: Byte = 1
         const val DELETE_QUERY: Byte = 3
         const val WAL_HEADER_SIZE = 5
         const val READ_AHEAD_BUFFER_SIZE = 256 * 1024
@@ -499,17 +625,19 @@ class DefaultTransactionInteractorReadTest {
             PersistenceManager::class.java.classLoader,
             arrayOf(PersistenceManager::class.java)
         ) { _, method, _ ->
-            when (method.returnType) {
-                java.lang.Boolean.TYPE -> false
-                java.lang.Byte.TYPE -> 0.toByte()
-                java.lang.Short.TYPE -> 0.toShort()
-                java.lang.Integer.TYPE -> 0
-                java.lang.Long.TYPE -> 0L
-                java.lang.Float.TYPE -> 0F
-                java.lang.Double.TYPE -> 0.0
-                java.lang.Character.TYPE -> 0.toChar()
-                else -> null
-            }
+            defaultReturnValue(method)
         } as PersistenceManager
+
+        private fun defaultReturnValue(method: Method): Any? = when (method.returnType) {
+            java.lang.Boolean.TYPE -> false
+            java.lang.Byte.TYPE -> 0.toByte()
+            java.lang.Short.TYPE -> 0.toShort()
+            java.lang.Integer.TYPE -> 0
+            java.lang.Long.TYPE -> 0L
+            java.lang.Float.TYPE -> 0F
+            java.lang.Double.TYPE -> 0.0
+            java.lang.Character.TYPE -> 0.toChar()
+            else -> null
+        }
     }
 }

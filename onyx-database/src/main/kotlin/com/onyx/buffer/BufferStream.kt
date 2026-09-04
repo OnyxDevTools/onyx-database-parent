@@ -799,7 +799,7 @@ open class BufferStream(buffer: ByteBuffer) {
                     else -> when (mapClass) {
                         HashMap::class.java -> HashMap(initialCapacity)
                         LinkedHashMap::class.java -> LinkedHashMap(initialCapacity)
-                        else -> mapClass!!.instance(context?.contextId ?: "")
+                        else -> mapClass!!.instance<MutableMap<Any?, Any?>>(context?.contextId ?: "")
                     }
                 }
             } catch (_: InstantiationException) {

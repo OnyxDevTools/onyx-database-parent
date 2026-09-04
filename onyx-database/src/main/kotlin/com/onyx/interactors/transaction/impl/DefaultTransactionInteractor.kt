@@ -166,7 +166,31 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
      * @throws TransactionException If the WAL cannot be read safely
      */
     @Throws(TransactionException::class)
-    override fun applyTransactionLog(walTransactionFile: String, executeTransaction:  (Transaction) -> Boolean): Boolean {
+    override fun applyTransactionLog(
+        walTransactionFile: String,
+        executeTransaction: (Transaction) -> Boolean,
+    ): Boolean = replayTransactionLog(
+        walTransactionFile = walTransactionFile,
+        skipFailedTransactions = true,
+        executeTransaction = executeTransaction,
+    )
+
+    @Throws(TransactionException::class)
+    override fun applyTransactionLog(
+        walTransactionFile: String,
+        skipFailedTransactions: Boolean,
+        executeTransaction: (Transaction) -> Boolean,
+    ): Boolean = if (skipFailedTransactions) {
+        applyTransactionLog(walTransactionFile, executeTransaction)
+    } else {
+        replayTransactionLog(walTransactionFile, false, executeTransaction)
+    }
+
+    private fun replayTransactionLog(
+        walTransactionFile: String,
+        skipFailedTransactions: Boolean,
+        executeTransaction: (Transaction) -> Boolean,
+    ): Boolean {
         var transaction: Transaction? = null
         try {
             openWalReadSource(Path.of(walTransactionFile)).use { source ->
@@ -220,7 +244,10 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
                                     SAVE -> {
                                         val value = BufferStream.fromBuffer(transactionBuffer, persistenceManager.context) as Map<String, Any?>
                                         val className = value["type"] as? String
-                                        if (className != null && !className.contains("SystemPartitionEntry")) {
+                                            ?: throw IllegalArgumentException(
+                                                "SAVE transaction payload is missing a valid entity type",
+                                            )
+                                        if (className != SystemPartitionEntry::class.java.name) {
                                             val instance = metadata(persistenceManager.context.contextId).classForName(className).createNewEntity<ManagedEntity>(this.persistenceManager.context.contextId)
                                             instance.fromMap(value["value"] as Map<String, Any?>, persistenceManager.context)
                                             transaction = SaveTransaction(instance)
@@ -238,17 +265,18 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
                                     DELETE -> {
                                         val value = BufferStream.fromBuffer(transactionBuffer, persistenceManager.context) as Map<String, Any?>
                                         val className = value["type"] as? String
-                                        if (className != null) {
-                                            val instance = metadata(persistenceManager.context.contextId).classForName(className).createNewEntity<ManagedEntity>(this.persistenceManager.context.contextId)
-                                            instance.fromMap(value["value"] as Map<String, Any?>, persistenceManager.context)
-                                            transaction = DeleteTransaction(instance)
-                                            if (executeTransaction.invoke(transaction!!)) {
-                                                instance.ignoreListeners = true
-                                                try {
-                                                    this.persistenceManager.deleteEntity(instance)
-                                                } finally {
-                                                    instance.ignoreListeners = false
-                                                }
+                                            ?: throw IllegalArgumentException(
+                                                "DELETE transaction payload is missing a valid entity type",
+                                            )
+                                        val instance = metadata(persistenceManager.context.contextId).classForName(className).createNewEntity<ManagedEntity>(this.persistenceManager.context.contextId)
+                                        instance.fromMap(value["value"] as Map<String, Any?>, persistenceManager.context)
+                                        transaction = DeleteTransaction(instance)
+                                        if (executeTransaction.invoke(transaction!!)) {
+                                            instance.ignoreListeners = true
+                                            try {
+                                                this.persistenceManager.deleteEntity(instance)
+                                            } finally {
+                                                instance.ignoreListeners = false
                                             }
                                         }
                                     }
@@ -285,9 +313,21 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
                                 cause
                             )
                         } catch (cause: TransactionException) {
-                            onTransactionReplayFailure(walTransactionFile, transactionOffset, transaction, cause)
+                            handleTransactionReplayFailure(
+                                walTransactionFile,
+                                transactionOffset,
+                                transaction,
+                                cause,
+                                skipFailedTransactions,
+                            )
                         } catch (cause: Exception) {
-                            onTransactionReplayFailure(walTransactionFile, transactionOffset, transaction, cause)
+                            handleTransactionReplayFailure(
+                                walTransactionFile,
+                                transactionOffset,
+                                transaction,
+                                cause,
+                                skipFailedTransactions,
+                            )
                         }
                     }
                 }
@@ -303,6 +343,24 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
         }
 
         return true
+    }
+
+    private fun handleTransactionReplayFailure(
+        walTransactionFile: String,
+        transactionOffset: Long,
+        transaction: Transaction?,
+        cause: Exception,
+        skipFailedTransactions: Boolean,
+    ) {
+        if (!skipFailedTransactions) {
+            val transactionName = transaction?.javaClass?.simpleName ?: "unknown transaction"
+            throw TransactionException(
+                "Failed to replay $transactionName from WAL '$walTransactionFile' at byte $transactionOffset",
+                transaction,
+                cause,
+            )
+        }
+        onTransactionReplayFailure(walTransactionFile, transactionOffset, transaction, cause)
     }
 
     /** Reports a failed transaction without preventing later WAL records from being replayed. */

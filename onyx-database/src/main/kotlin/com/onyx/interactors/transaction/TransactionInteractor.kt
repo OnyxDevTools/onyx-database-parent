@@ -79,4 +79,23 @@ interface TransactionInteractor {
     @Throws(TransactionException::class)
     fun applyTransactionLog(walTransactionFile: String, executeTransaction: (Transaction) -> Boolean): Boolean
 
+    /**
+     * Roll a transaction log forward with explicit control over record-level failures.
+     *
+     * @param walTransactionFile File that contains the transaction log.
+     * @param skipFailedTransactions When true, report a failed record and continue with the next one.
+     * When false, abort replay at the first record that cannot be decoded or applied.
+     * @param executeTransaction Function that determines whether or not you should execute the transaction.
+     */
+    @Throws(TransactionException::class)
+    fun applyTransactionLog(
+        walTransactionFile: String,
+        skipFailedTransactions: Boolean,
+        executeTransaction: (Transaction) -> Boolean,
+    ): Boolean = if (skipFailedTransactions) {
+        applyTransactionLog(walTransactionFile, executeTransaction)
+    } else {
+        throw UnsupportedOperationException("Strict WAL replay is not supported by this transaction interactor")
+    }
+
 }

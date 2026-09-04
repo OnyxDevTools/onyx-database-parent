@@ -162,6 +162,32 @@ class BufferStreamOptimizationTest {
     }
 
     @Test
+    fun compactEmptyMapRoundTrips() {
+        val original = mapOf(
+            "value" to mapOf(
+                "headers" to emptyMap<String, String>()
+            )
+        )
+
+        val buffer = BufferStream.toBuffer(original)
+        val decoded = BufferStream.fromBuffer(buffer)
+
+        assertEquals(original, decoded)
+        BufferPool.recycle(buffer)
+    }
+
+    @Test
+    fun legacyEmptyMapRoundTrips() {
+        val original = emptyMap<String, String>()
+
+        val buffer = BufferStream.toLegacyBuffer(original)
+        val decoded = BufferStream.fromBuffer(buffer)
+
+        assertEquals(original, decoded)
+        BufferPool.recycle(buffer)
+    }
+
+    @Test
     fun compactReaderRejectsStringLengthBeyondFrameBeforeAllocating() {
         val frame = ByteBuffer.allocate(16)
         frame.position(Integer.BYTES)
