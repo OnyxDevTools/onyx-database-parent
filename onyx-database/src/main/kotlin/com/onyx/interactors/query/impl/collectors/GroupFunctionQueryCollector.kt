@@ -108,6 +108,8 @@ class GroupFunctionQueryCollector(
                 limit()
             }
 
+            finalizeResultLimits()
+
             // Remove un-selected attributes
             val itemsToRemove = allQueryAttributes.map { it.selection } - query.selections!!
             if(itemsToRemove.isNotEmpty()) {

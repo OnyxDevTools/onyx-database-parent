@@ -152,6 +152,19 @@ abstract class BaseQueryCollector<T>(
      * @since 2.1.3
      */
     protected open fun limit():Boolean {
+        if (query.shouldSortResults()) {
+            if (query.maxResults <= 0) return false
+            val retainedRows = query.firstRow.coerceAtLeast(0).toLong() + query.maxResults.toLong()
+            return resultLock.perform {
+                if (results.size.toLong() > retainedRows) {
+                    results.remove(results.last())
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+
         if(query.firstRow > 0
                 && startIndex <= query.firstRow
                 && query.maxResults > 0
@@ -175,6 +188,16 @@ abstract class BaseQueryCollector<T>(
             }
         }
         return false
+    }
+
+    /** Apply an ordered offset only after every matching row has had a chance to sort into it. */
+    protected fun finalizeResultLimits() {
+        if (query.firstRow > 0 || query.maxResults > 0) {
+            while (limit()) { }
+        }
+        if (query.shouldSortResults() && query.firstRow > 0) {
+            results = results.asSequence().drop(query.firstRow).toMutableList()
+        }
     }
 
     /**
@@ -214,6 +237,9 @@ abstract class BaseQueryCollector<T>(
      */
     override fun finalizeResults() {
         if(!isFinalized) {
+            // Preserve sort attributes until limiting is complete. References retain their
+            // full domain for caching and lazy queries, whose offset is applied separately.
+            finalizeResultLimits()
 
             // If it is only entity results, hydrate the relationships
             if (query.groupBy?.isEmpty() != false
@@ -234,13 +260,6 @@ abstract class BaseQueryCollector<T>(
                         }
                     }
                 }
-            }
-
-            // Limit results.  This is dome to ensure the results are limited.  If the query was marked as distinct
-            // real-time limiting may not have been ran
-            if(query.firstRow > 0 || query.maxResults > 0) {
-                @Suppress("ControlFlowWithEmptyBody")
-                while (limit()) {}
             }
 
             @Suppress("UNCHECKED_CAST")

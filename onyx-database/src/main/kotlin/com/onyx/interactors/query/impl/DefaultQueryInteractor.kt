@@ -5,8 +5,11 @@ import com.onyx.diskmap.DiskMap
 import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.record.descriptorForReference
 import com.onyx.interactors.scanner.ScannerFactory
+import com.onyx.exception.MaxCardinalityExceededException
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.VectorManagedEntity
+import com.onyx.persistence.annotations.values.IndexType
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.*
@@ -18,6 +21,7 @@ import com.onyx.persistence.context.Contexts
 import com.onyx.interactors.query.QueryInteractor
 import com.onyx.interactors.scanner.impl.*
 import java.util.IdentityHashMap
+import java.util.concurrent.ExecutionException
 
 /**
  * Created by timothy.osborn on 3/5/15.
@@ -335,6 +339,18 @@ class DefaultQueryInteractor internal constructor(
             scanner.isLast = true
         }
 
+        // A full scanner evaluates the complete query. Seed it with one mandatory indexed
+        // predicate so an unindexed first predicate does not force a table traversal.
+        if (scanner is FullTableScanner && criteria === query.criteria &&
+            existingReferences == null && !forceFullScan &&
+            scannerSelection == ScannerSelection.AUTOMATIC && !query.isUpdateOrDelete
+        ) {
+            val candidates = indexedConjunctReferences(query, context)
+            if (candidates != null) {
+                return Pair(scanner.scan(candidates), scanner.collector as QueryCollector<T>?)
+            }
+        }
+
         // Check to see if it is a range criteria
         var subCriteriaIsRange = false
         if((criteria.operator === QueryCriteriaOperator.GREATER_THAN_EQUAL || criteria.operator === QueryCriteriaOperator.GREATER_THAN)
@@ -405,6 +421,79 @@ class DefaultQueryInteractor internal constructor(
 
         return Pair(criteriaResults, scanner.collector as QueryCollector<T>?)
     }
+
+    /**
+     * Exact equality routes only: range indexes omit nulls, and mixed-type predicates can
+     * coerce stored values differently from index keys. Keep those queries on their existing
+     * path, along with disjunctions, negated groups, and bounded search admission.
+     */
+    private fun indexedConjunctReferences(query: Query, context: SchemaContext): MutableSet<Reference>? {
+        if (VectorManagedEntity::class.java.isAssignableFrom(query.entityType!!)) return null
+        val root = query.criteria ?: return null
+        if (root.subCriteria.isEmpty() || !root.isScalarConjunction()) return null
+
+        val targetDescriptor = context.getDescriptorForEntity(
+            query.entityType,
+            if (query.partition === QueryPartitionMode.ALL) "" else query.partition
+        )
+        if (targetDescriptor.hasPartition && query.partition !== QueryPartitionMode.ALL &&
+            context.getPartitionWithValue(query.entityType!!, query.partition) == null
+        ) return null
+
+        val indexedCriteria = query.getAllCriteria().mapNotNull { candidate ->
+            val isIdentifier = candidate.attribute == targetDescriptor.identifier?.name
+            val type = if (isIdentifier) {
+                targetDescriptor.identifier!!.type
+            } else {
+                targetDescriptor.indexes[candidate.attribute]
+                    ?.takeIf { it.indexType == IndexType.DEFAULT }?.type ?: return@mapNotNull null
+            }.kotlin.javaObjectType
+
+            // Collection predicates have separate comparison semantics; in particular the
+            // scalar scanners interpret any List value as an IN lookup, even for EQUAL.
+            if (type.isArray || Iterable::class.java.isAssignableFrom(type) ||
+                Map::class.java.isAssignableFrom(type) || Pair::class.java.isAssignableFrom(type)
+            ) return@mapNotNull null
+
+            val priority = when (candidate.operator) {
+                QueryCriteriaOperator.EQUAL -> {
+                    if (candidate.value?.javaClass != type) return@mapNotNull null
+                    if (isIdentifier) 0 else 1
+                }
+                QueryCriteriaOperator.IN -> {
+                    val values = candidate.value as? List<*> ?: return@mapNotNull null
+                    if (values.any { it == null || it.javaClass != type }) return@mapNotNull null
+                    2
+                }
+                else -> return@mapNotNull null
+            }
+            priority to candidate
+        }.minByOrNull { it.first }?.second ?: return null
+
+        val indexScanner = ScannerFactory.getScannerForQueryCriteria(
+            context, indexedCriteria, query.entityType!!, query, persistenceManager
+        )
+        if (indexScanner !is IndexScanner && indexScanner !is IdentifierScanner) return null
+
+        // Leave the candidate scanner's collector disabled: pagination and residual predicates
+        // belong to the original scanner. A broad seed must not introduce a cardinality error
+        // when the complete query would have returned only a few rows.
+        return try {
+            indexScanner.scan().takeIf { it.size <= context.maxCardinality }
+        } catch (_: MaxCardinalityExceededException) {
+            null
+        } catch (exception: ExecutionException) {
+            if (exception.cause is MaxCardinalityExceededException) null else throw exception
+        }
+    }
+
+    private fun QueryCriteria.isScalarConjunction(): Boolean =
+        !isNot && !flip && !isOr && attribute != Query.FULL_TEXT_ATTRIBUTE &&
+            operator != QueryCriteriaOperator.CANDIDATES &&
+            operator != QueryCriteriaOperator.SEARCH &&
+            operator != QueryCriteriaOperator.SEARCH_CANDIDATES &&
+            operator != QueryCriteriaOperator.HNSW_CANDIDATES &&
+            subCriteria.all { it.isAnd && it.isScalarConjunction() }
 
     /**
      * Used to correlate existing reference sets with the criteria met from

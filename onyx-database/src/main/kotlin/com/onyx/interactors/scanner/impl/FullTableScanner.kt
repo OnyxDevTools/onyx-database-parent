@@ -60,7 +60,7 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
      */
     @Throws(OnyxException::class)
     override fun scan(existingValues: Set<Reference>): MutableSet<Reference> {
-        context.reportQueryExecution(QueryExecutionEvent.FULL_TABLE_SCAN)
+        context.reportQueryExecution(QueryExecutionEvent.REFERENCE_FILTER_SCAN)
         val context = Contexts.get(contextId)!!
         val matching = HashSet<Reference>()
         val iterator = existingValues.iterator()

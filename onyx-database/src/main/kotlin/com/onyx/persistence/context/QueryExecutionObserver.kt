@@ -52,7 +52,8 @@ internal enum class QueryExecutionEvent {
     FINGERPRINT_DOMAIN_LOOKUP,
     FINGERPRINT_MATCH_ALL,
     HNSW_SEARCH,
-    FULL_TABLE_SCAN
+    FULL_TABLE_SCAN,
+    REFERENCE_FILTER_SCAN
 }
 
 /** Keeps the observer completely off the normal [SchemaContext] contract. */
