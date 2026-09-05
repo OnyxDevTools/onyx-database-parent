@@ -283,7 +283,8 @@ private class MemoryMappedTransactionFileChannel(
     private var wholeFileMapping: WholeFileMapping? = WholeFileMapping(
         channel = channel,
         growthQuantum = growthQuantum,
-        initialRequiredCapacity = logicalSize
+        initialRequiredCapacity = logicalSize,
+        forceMetadataAfterMapping = true
     )
     private var acceptsWrites = true
     private var hasUnforcedChanges = false
@@ -355,20 +356,19 @@ private class MemoryMappedTransactionFileChannel(
         replaceMappingAfterTruncate(size)
         logicalSize = size
         currentPosition = min(currentPosition, logicalSize)
-        hasUnforcedChanges = true
         this
     }
 
     override fun force(metaData: Boolean) = synchronized(lock) {
         ensureOpen()
         forceChanges(metaData)
-        if (metaData) hasUnforcedChanges = false
+        hasUnforcedChanges = false
     }
 
     fun forceIfDirty() = synchronized(lock) {
         ensureOpen()
         if (!hasUnforcedChanges) return@synchronized
-        forceChanges(metaData = true)
+        currentMapping().force()
         hasUnforcedChanges = false
     }
 
@@ -515,7 +515,8 @@ private class MemoryMappedTransactionFileChannel(
             wholeFileMapping = WholeFileMapping(
                 channel = channel,
                 growthQuantum = growthQuantum,
-                initialRequiredCapacity = size
+                initialRequiredCapacity = size,
+                forceMetadataAfterMapping = true
             )
         } catch (failure: Throwable) {
             runCatching { channel.close() }
