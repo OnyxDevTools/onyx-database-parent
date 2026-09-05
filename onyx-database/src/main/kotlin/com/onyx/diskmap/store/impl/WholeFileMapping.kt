@@ -16,7 +16,8 @@ import kotlin.math.max
 internal class WholeFileMapping(
     private val channel: FileChannel,
     private val growthQuantum: Long,
-    initialRequiredCapacity: Long
+    initialRequiredCapacity: Long,
+    private val forceMetadataAfterMapping: Boolean = false
 ) : AutoCloseable {
 
     private data class Mapping(
@@ -142,14 +143,18 @@ internal class WholeFileMapping(
     private fun createMapping(capacity: Long): Mapping {
         val arena = Arena.ofShared()
         try {
+            val memory = channel.map(
+                FileChannel.MapMode.READ_WRITE,
+                0L,
+                capacity,
+                arena
+            )
+            if (forceMetadataAfterMapping) {
+                channel.force(true)
+            }
             return Mapping(
                 arena = arena,
-                memory = channel.map(
-                    FileChannel.MapMode.READ_WRITE,
-                    0L,
-                    capacity,
-                    arena
-                ),
+                memory = memory,
                 capacity = capacity
             )
         } catch (failure: Throwable) {

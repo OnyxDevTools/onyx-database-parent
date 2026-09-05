@@ -3,12 +3,42 @@ package com.onyx.diskmap.store.impl
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
 class WholeFileMappingTest {
+
+    @Test
+    fun `force publishes updates before the mapping and channel close`() {
+        val path = Files.createTempFile("onyx-whole-file-mapping-force", ".db")
+        try {
+            FileChannel.open(
+                path,
+                StandardOpenOption.READ,
+                StandardOpenOption.WRITE
+            ).use { writer ->
+                val mapping = WholeFileMapping(writer, growthQuantum = 64L, initialRequiredCapacity = 0L)
+                try {
+                    val first = byteArrayOf(1, 2, 3, 4)
+                    mapping.write(ByteBuffer.wrap(first), 16L)
+                    mapping.force()
+                    assertContentEquals(first, readBytes(path, 16L, first.size))
+
+                    val updated = byteArrayOf(9, 8, 7, 6)
+                    mapping.write(ByteBuffer.wrap(updated), 16L)
+                    mapping.force()
+                    assertContentEquals(updated, readBytes(path, 16L, updated.size))
+                } finally {
+                    mapping.close()
+                }
+            }
+        } finally {
+            Files.deleteIfExists(path)
+        }
+    }
 
     @Test
     fun `growth replaces the mapping and preserves buffer semantics`() {
@@ -59,4 +89,17 @@ class WholeFileMappingTest {
             Files.deleteIfExists(path)
         }
     }
+
+    private fun readBytes(path: Path, position: Long, size: Int): ByteArray =
+        FileChannel.open(path, StandardOpenOption.READ).use { reader ->
+            val destination = ByteBuffer.allocate(size)
+            var readPosition = position
+            while (destination.hasRemaining()) {
+                val bytesRead = reader.read(destination, readPosition)
+                if (bytesRead < 0) break
+                readPosition += bytesRead
+            }
+            assertEquals(size, destination.position())
+            destination.array()
+        }
 }
