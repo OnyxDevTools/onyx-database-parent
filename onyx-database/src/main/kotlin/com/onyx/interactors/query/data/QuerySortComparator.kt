@@ -52,7 +52,7 @@ class QuerySortComparator(query: Query, private val orderBy: Array<QueryOrder>, 
                 return@compare compareValue
         }
 
-        return if (reference1 == reference2) 0 else -1
+        return 0
     }
 
     fun compare(entity1: IManagedEntity, entity2: IManagedEntity): Int {
@@ -76,7 +76,7 @@ class QuerySortComparator(query: Query, private val orderBy: Array<QueryOrder>, 
                 return@compare compareValue
         }
 
-        return if (entity1 === entity2) 0 else -1
+        return 0
     }
 
     fun compare(entity1: Map<String, Any?>, entity2: Map<String, Any?>): Int {
@@ -97,7 +97,7 @@ class QuerySortComparator(query: Query, private val orderBy: Array<QueryOrder>, 
                 return@compare compareValue
         }
 
-        return if (entity1 === entity2) 0 else -1
+        return 0
     }
 
 

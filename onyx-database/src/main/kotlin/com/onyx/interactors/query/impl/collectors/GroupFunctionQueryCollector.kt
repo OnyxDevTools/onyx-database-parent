@@ -3,7 +3,6 @@ package com.onyx.interactors.query.impl.collectors
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.interactors.query.data.QueryAttributeResource
 import com.onyx.interactors.record.data.Reference
-import com.onyx.lang.SortedList
 import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
@@ -20,7 +19,7 @@ class GroupFunctionQueryCollector(
 ) : BaseQueryCollector<Map<String, Any?>>(query, context, descriptor) {
 
     // Override to define sort comparator
-    override var results: MutableCollection<Map<String, Any?>> = if(query.shouldSortResults()) SortedList(MapComparator(comparator)) else ArrayList()
+    override var results: MutableCollection<Map<String, Any?>> = createResults { MapComparator(comparator) }
 
     // Group results
     private val groups = OptimisticLockingMap(HashMap<List<Any?>, MutableMap<String, Any?>>())

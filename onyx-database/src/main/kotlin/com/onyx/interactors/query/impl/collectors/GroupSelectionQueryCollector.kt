@@ -31,8 +31,7 @@ class GroupSelectionQueryCollector(
 
         resultLock.perform {
             if (!groupedResults.contains(selections)) {
-                if(results.add(selectionResult))
-                    increment()
+                addSelectionResult(selectionResult)
                 groupedResults.add(selections)
             }
         }

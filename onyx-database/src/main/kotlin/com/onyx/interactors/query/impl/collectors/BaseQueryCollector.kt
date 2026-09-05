@@ -5,13 +5,10 @@ import com.onyx.exception.MaxCardinalityExceededException
 import com.onyx.extension.common.parallelForEach
 import com.onyx.extension.hydrateRelationships
 import com.onyx.extension.toManagedEntity
-import com.onyx.interactors.cache.impl.DefaultQueryCacheInteractor
 import com.onyx.interactors.query.QueryCollector
 import com.onyx.interactors.query.data.QueryAttributeResource
 import com.onyx.interactors.query.data.QuerySortComparator
 import com.onyx.interactors.record.data.Reference
-import com.onyx.lang.SortedHashSet
-import com.onyx.lang.SortedList
 import com.onyx.lang.concurrent.impl.DefaultClosureLock
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
@@ -43,16 +40,19 @@ abstract class BaseQueryCollector<T>(
     // Used to compare values and a base comparator that pulls info from the store rather than memory
     protected val comparator: QuerySortComparator by lazy { QuerySortComparator(query, query.queryOrders?.toTypedArray() ?: emptyArray(), descriptor, context) }
 
-    @Suppress("UNCHECKED_CAST")
-    override var results: MutableCollection<T> =
-            if(query.isDistinct) {
-                if(query.queryOrders?.isNotEmpty() == true) {
-                    SortedHashSet(EntityComparator(comparator)) as MutableCollection<T>
-                } else {
-                    HashSet()
-                }
-            } else
-                if(query.queryOrders?.isNotEmpty() == true) SortedList(EntityComparator(comparator)) as MutableCollection<T> else ArrayList()
+    override var results: MutableCollection<T> = ArrayList()
+
+    protected fun createResults(resultComparator: () -> Comparator<T>): MutableCollection<T> =
+        if (query.shouldSortResults()) {
+            val retainedRows = if (query.maxResults > 0) {
+                query.firstRow.coerceAtLeast(0).toLong() + query.maxResults.toLong()
+            } else {
+                null
+            }
+            OrderedQueryResults(resultComparator(), retainedRows)
+        } else {
+            ArrayList()
+        }
 
     // Selection Query Attributes
     private val expandedSelections: List<String> by lazy {
@@ -153,11 +153,20 @@ abstract class BaseQueryCollector<T>(
      */
     protected open fun limit():Boolean {
         if (query.shouldSortResults()) {
+            // The heap applies its bound atomically with each addition. Unbounded results
+            // remain in arrival order until finalization.
+            if (results is OrderedQueryResults<*>) return false
             if (query.maxResults <= 0) return false
             val retainedRows = query.firstRow.coerceAtLeast(0).toLong() + query.maxResults.toLong()
             return resultLock.perform {
                 if (results.size.toLong() > retainedRows) {
-                    results.remove(results.last())
+                    val orderedResults = results
+                    if (orderedResults is MutableList<*>) {
+                        // The worst row is already at the tail; avoid searching for it by value.
+                        orderedResults.removeAt(orderedResults.lastIndex)
+                    } else {
+                        orderedResults.remove(orderedResults.last())
+                    }
                     true
                 } else {
                     false
@@ -192,6 +201,10 @@ abstract class BaseQueryCollector<T>(
 
     /** Apply an ordered offset only after every matching row has had a chance to sort into it. */
     protected fun finalizeResultLimits() {
+        val orderedResults = results
+        if (orderedResults is OrderedQueryResults<T>) {
+            results = orderedResults.sortedResults()
+        }
         if (query.firstRow > 0 || query.maxResults > 0) {
             while (limit()) { }
         }
@@ -275,17 +288,15 @@ abstract class BaseQueryCollector<T>(
      *
      * @since 2.1.3
      */
-    override fun getLimitedReferences(): MutableList<Reference> =
-        if(query.firstRow > 0 || query.maxResults > 0) {
-            if(query.firstRow >= references.size)
-                ArrayList()
-            else {
-                val end = if(query.maxResults <= 0) references.size else if((query.firstRow + query.maxResults) >= references.size) (references.size) else (query.firstRow + query.maxResults)
-                references.subList(query.firstRow, end)
-            }
+    override fun getLimitedReferences(): MutableList<Reference> {
+        val start = query.firstRow.coerceAtLeast(0)
+        if (start >= references.size) return ArrayList()
+        if (start == 0 && query.maxResults <= 0) return references
+        val end = if (query.maxResults <= 0) references.size else {
+            (start.toLong() + query.maxResults).coerceAtMost(references.size.toLong()).toInt()
         }
-        else
-            references
+        return references.subList(start, end)
+    }
 
 
     /**
