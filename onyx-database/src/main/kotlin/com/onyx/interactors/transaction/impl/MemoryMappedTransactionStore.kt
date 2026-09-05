@@ -38,6 +38,7 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
         }
     }
     private var isClosing = false
+    private val periodicForceTarget = PeriodicWalForceTarget(::forceCurrentWal)
 
     private val walDirectory: String
         get() = this.location + File.separator + "wal" + File.separator
@@ -78,6 +79,7 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
 
                 lastWalFile = File(directory + journalFileIndex.get() + WAL_FILE_EXTENSION)
                 lastWalFileChannel = openMappedWalFile(lastWalFile!!.path)
+                PeriodicWalFlusher.register(periodicForceTarget)
             }
 
             if (lastWalFileChannel!!.size() >= maxJournalSize) {
@@ -108,6 +110,7 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
         synchronized(transactionFileLock) {
             if (!isClosing) {
                 isClosing = true
+                PeriodicWalFlusher.unregister(periodicForceTarget)
                 lastWalFileChannel?.let {
                     var canCompress = true
                     val toppedOff = try {
@@ -151,6 +154,17 @@ open class MemoryMappedTransactionStore(val location: String) : TransactionStore
 
     protected open val maxJournalSize: Long
         get() = MAX_JOURNAL_SIZE
+
+    private fun forceCurrentWal() = synchronized(transactionFileLock) {
+        if (isClosing) return@synchronized
+        try {
+            (lastWalFileChannel as? MemoryMappedTransactionFileChannel)?.forceIfDirty()
+        } catch (failure: Throwable) {
+            // Record the failure before releasing the lifecycle lock so a concurrent close reports it.
+            recordAsynchronousFlushFailure(failure)
+            throw failure
+        }
+    }
 
     private fun openMappedWalFile(filePath: String): FileChannel {
         val file = File(filePath)
@@ -272,6 +286,7 @@ private class MemoryMappedTransactionFileChannel(
         initialRequiredCapacity = logicalSize
     )
     private var acceptsWrites = true
+    private var hasUnforcedChanges = false
 
     override fun read(dst: ByteBuffer): Int = synchronized(lock) {
         val bytesRead = read(dst, currentPosition)
@@ -340,13 +355,21 @@ private class MemoryMappedTransactionFileChannel(
         replaceMappingAfterTruncate(size)
         logicalSize = size
         currentPosition = min(currentPosition, logicalSize)
+        hasUnforcedChanges = true
         this
     }
 
     override fun force(metaData: Boolean) = synchronized(lock) {
         ensureOpen()
-        currentMapping().force()
-        channel.force(metaData)
+        forceChanges(metaData)
+        if (metaData) hasUnforcedChanges = false
+    }
+
+    fun forceIfDirty() = synchronized(lock) {
+        ensureOpen()
+        if (!hasUnforcedChanges) return@synchronized
+        forceChanges(metaData = true)
+        hasUnforcedChanges = false
     }
 
     override fun transferTo(position: Long, count: Long, target: WritableByteChannel): Long = synchronized(lock) {
@@ -466,11 +489,17 @@ private class MemoryMappedTransactionFileChannel(
     private fun writeMapped(src: ByteBuffer, position: Long): Int {
         ensureOpen()
         ensureWritable()
+        hasUnforcedChanges = true
         val written = currentMapping().write(src, position)
         if (written > 0) {
             logicalSize = maxOf(logicalSize, Math.addExact(position, written.toLong()))
         }
         return written
+    }
+
+    private fun forceChanges(metaData: Boolean) {
+        currentMapping().force()
+        channel.force(metaData)
     }
 
     private fun currentMapping(): WholeFileMapping =
