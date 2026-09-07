@@ -36,8 +36,12 @@ class QuerySortComparator(query: Query, private val orderBy: Array<QueryOrder>, 
         scanObjects.forEachIndexed { index, scannerProperties ->
             val queryOrder = orderBy[index]
             val attributeValues = parentObjects[index]
-            val attribute1 = attributeValues.getOrPut(reference1) { getAttribute(scannerProperties, reference1, context)}
-            val attribute2 = attributeValues.getOrPut(reference2) { getAttribute(scannerProperties, reference2, context)}
+            val attribute1 = attributeValues.getOrPutIncludingNull(reference1) {
+                getAttribute(scannerProperties, reference1, context)
+            }
+            val attribute2 = attributeValues.getOrPutIncludingNull(reference2) {
+                getAttribute(scannerProperties, reference2, context)
+            }
 
             var compareValue = 0
             catchAll {
@@ -135,4 +139,14 @@ class QuerySortComparator(query: Query, private val orderBy: Array<QueryOrder>, 
         return queryAttributeResource.function?.normalizeInput(value) ?: value
     }
 
+}
+
+/** Reuse resolved null sort values; getOrPut would hydrate their records again. */
+private inline fun MutableMap<Reference, Any?>.getOrPutIncludingNull(
+    key: Reference,
+    defaultValue: () -> Any?,
+): Any? {
+    val value = this[key]
+    if (value != null || containsKey(key)) return value
+    return defaultValue().also { this[key] = it }
 }

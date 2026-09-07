@@ -21,8 +21,9 @@ class DefaultTransactionStoreTest {
     @Test
     fun rotatingWalCompressesSealedFileAndLeavesCurrentFileRegular() {
         val tempDirectory = Files.createTempDirectory("onyx-default-transaction-rotation")
-        val firstWalBytes = ByteArray(128) { 6 }
-        val currentWalBytes = byteArrayOf(7, 8, 9)
+        val firstWalBytes = serializedWalRecord(6, "x".repeat(4096))
+        val currentWalBytes = serializedWalRecord(7)
+        val appendedWalBytes = serializedWalRecord(10)
         val transactionStore = SmallJournalDefaultTransactionStore(tempDirectory.toString())
 
         try {
@@ -46,12 +47,12 @@ class DefaultTransactionStoreTest {
 
             val reopenedStore = SmallJournalDefaultTransactionStore(tempDirectory.toString())
             try {
-                reopenedStore.getTransactionFile().write(ByteBuffer.wrap(byteArrayOf(10)))
+                reopenedStore.getTransactionFile().write(ByteBuffer.wrap(appendedWalBytes))
             } finally {
                 reopenedStore.close()
             }
             assertContentEquals(
-                byteArrayOf(7, 8, 9, 10),
+                currentWalBytes + appendedWalBytes,
                 Files.readAllBytes(tempDirectory.resolve("wal").resolve("1.wal"))
             )
         } finally {
@@ -63,7 +64,8 @@ class DefaultTransactionStoreTest {
     @Test
     fun toppedOffWalIsCompressedWhenStoreCloses() {
         val tempDirectory = Files.createTempDirectory("onyx-default-transaction-close-full")
-        val walBytes = ByteArray(256) { 11 }
+        val walBytes = serializedWalRecord(11, "x".repeat(4096))
+        val appendedWalBytes = serializedWalRecord(12)
         val transactionStore = SmallJournalDefaultTransactionStore(tempDirectory.toString())
 
         try {
@@ -77,12 +79,12 @@ class DefaultTransactionStoreTest {
 
             val reopenedStore = SmallJournalDefaultTransactionStore(tempDirectory.toString())
             try {
-                reopenedStore.getTransactionFile().write(ByteBuffer.wrap(byteArrayOf(12)))
+                reopenedStore.getTransactionFile().write(ByteBuffer.wrap(appendedWalBytes))
             } finally {
                 reopenedStore.close()
             }
             assertContentEquals(
-                byteArrayOf(12),
+                appendedWalBytes,
                 Files.readAllBytes(tempDirectory.resolve("wal").resolve("1.wal"))
             )
         } finally {
@@ -94,7 +96,8 @@ class DefaultTransactionStoreTest {
     @Test
     fun failedCompressionIsRetriedBeforeWalAdvances() {
         val tempDirectory = Files.createTempDirectory("onyx-default-transaction-compression-retry")
-        val walBytes = ByteArray(256) { 13 }
+        val walBytes = serializedWalRecord(13, "x".repeat(4096))
+        val appendedWalBytes = serializedWalRecord(14)
         val failFirstCompression = AtomicBoolean(true)
         val transactionStore = object : SmallJournalDefaultTransactionStore(tempDirectory.toString()) {
             override fun compressWalFile(walFile: Path) {
@@ -115,7 +118,7 @@ class DefaultTransactionStoreTest {
             assertContentEquals(walBytes, Files.readAllBytes(tempDirectory.resolve("wal").resolve("0.wal")))
             assertFalse(Files.exists(tempDirectory.resolve("wal").resolve("1.wal")))
 
-            transactionStore.getTransactionFile().write(ByteBuffer.wrap(byteArrayOf(14)))
+            transactionStore.getTransactionFile().write(ByteBuffer.wrap(appendedWalBytes))
             transactionStore.close()
 
             assertContentEquals(
@@ -123,7 +126,7 @@ class DefaultTransactionStoreTest {
                 Files.readAllBytes(tempDirectory.resolve("wal").resolve("0.wal")).decompressLz77()
             )
             assertContentEquals(
-                byteArrayOf(14),
+                appendedWalBytes,
                 Files.readAllBytes(tempDirectory.resolve("wal").resolve("1.wal"))
             )
         } finally {
@@ -136,13 +139,15 @@ class DefaultTransactionStoreTest {
     fun reopeningCompressesSealedRegularWalLeftByInterruptedRotation() {
         val tempDirectory = Files.createTempDirectory("onyx-default-transaction-interrupted-rotation")
         val walDirectory = Files.createDirectories(tempDirectory.resolve("wal"))
-        val sealedWalBytes = ByteArray(256) { 15 }
+        val sealedWalBytes = serializedWalRecord(15, "x".repeat(4096))
+        val currentWalBytes = serializedWalRecord(16)
+        val appendedWalBytes = serializedWalRecord(17)
         Files.write(walDirectory.resolve("0.wal"), sealedWalBytes)
-        Files.write(walDirectory.resolve("1.wal"), byteArrayOf(16))
+        Files.write(walDirectory.resolve("1.wal"), currentWalBytes)
         val transactionStore = SmallJournalDefaultTransactionStore(tempDirectory.toString())
 
         try {
-            transactionStore.getTransactionFile().write(ByteBuffer.wrap(byteArrayOf(17)))
+            transactionStore.getTransactionFile().write(ByteBuffer.wrap(appendedWalBytes))
             transactionStore.close()
 
             assertContentEquals(
@@ -150,7 +155,7 @@ class DefaultTransactionStoreTest {
                 Files.readAllBytes(walDirectory.resolve("0.wal")).decompressLz77()
             )
             assertContentEquals(
-                byteArrayOf(16, 17),
+                currentWalBytes + appendedWalBytes,
                 Files.readAllBytes(walDirectory.resolve("1.wal"))
             )
         } finally {
@@ -159,9 +164,85 @@ class DefaultTransactionStoreTest {
         }
     }
 
+    @Test
+    fun reopeningAfterMemoryMappedCrashResumesPastCompleteTransactionsAndRemovesPadding() {
+        val tempDirectory = Files.createTempDirectory("onyx-default-transaction-reopen-padding")
+        val walPath = Files.createDirectories(tempDirectory.resolve("wal")).resolve("47.wal")
+        val firstRecord = serializedWalRecord(21)
+        val secondRecord = serializedWalRecord(22)
+        val appendedRecord = serializedWalRecord(23)
+        Files.write(walPath, firstRecord + ByteArray(128 * 1024) + secondRecord + ByteArray(64 * 1024))
+        val transactionStore = DefaultTransactionStore(tempDirectory.toString())
+
+        try {
+            val transactionFile = transactionStore.getTransactionFile()
+            assertEquals((firstRecord.size + secondRecord.size).toLong(), transactionFile.position())
+            transactionFile.write(ByteBuffer.wrap(appendedRecord))
+            transactionStore.close()
+
+            assertContentEquals(firstRecord + secondRecord + appendedRecord, Files.readAllBytes(walPath))
+        } finally {
+            runCatching { transactionStore.close() }
+            deleteDirectory(tempDirectory)
+        }
+    }
+
+    @Test
+    fun reopeningNormalizesSealedWalGapsBeforeCompression() {
+        val tempDirectory = Files.createTempDirectory("onyx-default-transaction-sealed-padding")
+        val walDirectory = Files.createDirectories(tempDirectory.resolve("wal"))
+        val sealedFirstRecord = serializedWalRecord(24)
+        val sealedSecondRecord = serializedWalRecord(25)
+        val currentRecord = serializedWalRecord(26)
+        val appendedRecord = serializedWalRecord(27)
+        Files.write(
+            walDirectory.resolve("46.wal"),
+            sealedFirstRecord + ByteArray(64 * 1024) + sealedSecondRecord + ByteArray(32)
+        )
+        Files.write(walDirectory.resolve("47.wal"), currentRecord)
+        val transactionStore = DefaultTransactionStore(tempDirectory.toString())
+
+        try {
+            transactionStore.getTransactionFile().write(ByteBuffer.wrap(appendedRecord))
+            transactionStore.close()
+
+            assertContentEquals(
+                sealedFirstRecord + sealedSecondRecord,
+                Files.readAllBytes(walDirectory.resolve("46.wal")).decompressLz77()
+            )
+            assertContentEquals(
+                currentRecord + appendedRecord,
+                Files.readAllBytes(walDirectory.resolve("47.wal"))
+            )
+        } finally {
+            runCatching { transactionStore.close() }
+            deleteDirectory(tempDirectory)
+        }
+    }
+
+    @Test
+    fun reopeningRejectsInvalidDataAfterPaddingWithoutChangingWal() {
+        val tempDirectory = Files.createTempDirectory("onyx-default-transaction-invalid-after-padding")
+        val walPath = Files.createDirectories(tempDirectory.resolve("wal")).resolve("47.wal")
+        val malformedWal = serializedWalRecord(28) + ByteArray(64 * 1024) + byteArrayOf(99, 0, 0, 0, 1, 42)
+        Files.write(walPath, malformedWal)
+        val transactionStore = DefaultTransactionStore(tempDirectory.toString())
+
+        try {
+            val failure = assertFailsWith<TransactionException> {
+                transactionStore.getTransactionFile()
+            }
+            assertTrue(failure.cause?.message.orEmpty().contains("invalid transaction header"))
+            assertContentEquals(malformedWal, Files.readAllBytes(walPath))
+        } finally {
+            runCatching { transactionStore.close() }
+            deleteDirectory(tempDirectory)
+        }
+    }
+
     private open class SmallJournalDefaultTransactionStore(location: String) :
         DefaultTransactionStore(location) {
-        override val maxJournalSize: Long = 128L
+        override val maxJournalSize: Long = 4096L
     }
 
     private fun deleteDirectory(path: Path) {

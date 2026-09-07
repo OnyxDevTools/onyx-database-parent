@@ -12,7 +12,6 @@ import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryPartitionMode
 import com.onyx.extension.common.async
-import com.onyx.extension.toManagedEntity
 import com.onyx.persistence.context.Contexts
 
 import java.util.*
@@ -48,7 +47,7 @@ class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: 
             }
             return existingValues.filterTo(HashSet()) {
                 if(results.contains(it)) {
-                    collector?.collect(it, it.toManagedEntity(context, descriptor))
+                    collectReference(it)
                     return@filterTo collector == null
                 }
                 return@filterTo false
@@ -118,7 +117,7 @@ class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: 
         if (criteria.value is List<*>)
             (criteria.value as List<Any>).forEach { value ->
                 find(value, indexInteractor, partitionId).forEach {
-                collector?.collect(it, it.toManagedEntity(context, descriptor))
+                collectReference(it)
                 if (matching.size > maxCardinality)
                     throw MaxCardinalityExceededException(context.maxCardinality)
                 if(collector == null)
@@ -126,7 +125,7 @@ class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: 
             } }
         else
             find(criteria.value, indexInteractor, partitionId).forEach {
-                collector?.collect(it, it.toManagedEntity(context, descriptor))
+                collectReference(it)
                 if (matching.size > maxCardinality)
                     throw MaxCardinalityExceededException(context.maxCardinality)
                 if(collector == null)

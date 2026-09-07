@@ -50,6 +50,14 @@ interface IndexInteractor {
     fun findAll(indexValue: Any?): Map<Long, *>
 
     /**
+     * Test one exact posting using the same value normalization and equality as [findAll].
+     * Implementations must avoid enumerating the value's matching records. Unsupported custom
+     * indexes retain the ordinary query path through this default implementation.
+     */
+    fun containsExactPosting(indexValue: Any?, recordId: Long): Boolean =
+        throw UnsupportedOperationException("${this::class.java.name} does not support exact posting probes")
+
+    /**
      * Find all the references above and perhaps equal to the key parameter
      * @param indexValue The key to compare.  This must be comparable.  It is only sorted by comparable values
      * @param includeValue Whether to compare above and equal or not.
@@ -132,6 +140,21 @@ interface IndexInteractor {
         visitor: (Long) -> Boolean
     ): Int = throw UnsupportedOperationException(
         "${this::class.java.name} does not support streaming exact index postings"
+    )
+
+    /**
+     * Stream a scalar range in ascending index order, including its normalized values so a
+     * caller can detect ties. Null bounds are unbounded. Stop when [visitor] returns false;
+     * otherwise exhaust the range. Custom indexes without this capability use ordinary queries.
+     */
+    fun visitOrderedRange(
+        fromValue: Any?,
+        includeFrom: Boolean,
+        toValue: Any?,
+        includeTo: Boolean,
+        visitor: (Any, Long) -> Boolean
+    ): Int = throw UnsupportedOperationException(
+        "${this::class.java.name} does not support ordered index ranges"
     )
 
     /**

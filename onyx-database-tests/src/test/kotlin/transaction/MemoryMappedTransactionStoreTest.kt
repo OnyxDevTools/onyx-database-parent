@@ -17,6 +17,7 @@ import java.nio.channels.ClosedChannelException
 import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.PosixFilePermissions
 import java.util.Comparator
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -204,26 +205,29 @@ class MemoryMappedTransactionStoreTest {
     }
 
     @Test
-    fun reopeningNormalizesPaddedSealedWalBeforeCompression() {
+    fun reopeningNormalizesGapsAndPaddingInSealedWalBeforeCompression() {
         val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-transaction-sealed-padding")
         val walDirectory = Files.createDirectories(tempDirectory.resolve("wal"))
-        val sealedRecord = walRecord(ByteArray(23) { 5 })
-        val currentRecord = walRecord(ByteArray(19) { 6 })
+        val sealedRecord = serializedWalRecord(5)
+        val laterSealedRecord = serializedWalRecord(6)
+        val currentRecord = serializedWalRecord(7)
+        val appendedRecord = serializedWalRecord(8)
         val paddedSealedWal = ByteArray(4 * 1024 * 1024)
         sealedRecord.copyInto(paddedSealedWal)
+        laterSealedRecord.copyInto(paddedSealedWal, 128 * 1024)
         Files.write(walDirectory.resolve("0.wal"), paddedSealedWal)
         Files.write(walDirectory.resolve("1.wal"), currentRecord)
         val transactionStore = MemoryMappedTransactionStore(tempDirectory.toString())
 
         try {
-            transactionStore.getTransactionFile()
+            transactionStore.getTransactionFile().write(ByteBuffer.wrap(appendedRecord))
             transactionStore.close()
 
             assertContentEquals(
-                sealedRecord,
+                sealedRecord + laterSealedRecord,
                 Files.readAllBytes(walDirectory.resolve("0.wal")).decompressLz77()
             )
-            assertContentEquals(currentRecord, Files.readAllBytes(walDirectory.resolve("1.wal")))
+            assertContentEquals(currentRecord + appendedRecord, Files.readAllBytes(walDirectory.resolve("1.wal")))
         } finally {
             runCatching { transactionStore.close() }
             deleteDirectory(tempDirectory)
@@ -260,16 +264,101 @@ class MemoryMappedTransactionStoreTest {
     }
 
     @Test
-    fun reopeningRefusesToDiscardTransactionsAfterInternalPadding() {
-        val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-transaction-internal-padding")
-        val walDirectory = Files.createDirectories(tempDirectory.resolve("wal"))
-        val walPath = walDirectory.resolve("0.wal")
-        val firstRecord = walRecord(ByteArray(29) { 10 })
-        val laterRecord = walRecord(ByteArray(27) { 11 })
-        val laterRecordPosition = 128 * 1024
-        val malformedWal = ByteArray(laterRecordPosition + laterRecord.size)
-        firstRecord.copyInto(malformedWal)
-        laterRecord.copyInto(malformedWal, laterRecordPosition)
+    fun reopeningResumesAfterInternalPaddingAndPreservesTransactionsAcrossReopens() {
+        for (gapSize in listOf(1, 2, 3, 4, 5, 128 * 1024 + 3)) {
+            val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-transaction-internal-padding")
+            val walDirectory = Files.createDirectories(tempDirectory.resolve("wal"))
+            val walPath = walDirectory.resolve("47.wal")
+            val firstRecord = serializedWalRecord(10)
+            val laterRecord = serializedWalRecord(11)
+            val appendedRecord = serializedWalRecord(12)
+            val nextRecord = serializedWalRecord(13)
+            Files.write(walPath, firstRecord + ByteArray(gapSize) + laterRecord + ByteArray(32))
+            val originalPermissions = if (Files.getFileStore(walPath).supportsFileAttributeView("posix")) {
+                PosixFilePermissions.fromString("rw-r-----").also { Files.setPosixFilePermissions(walPath, it) }
+            } else {
+                null
+            }
+            val transactionStore = MemoryMappedTransactionStore(tempDirectory.toString())
+
+            try {
+                val transactionFile = transactionStore.getTransactionFile()
+                assertEquals((firstRecord.size + laterRecord.size).toLong(), transactionFile.position())
+                transactionFile.write(ByteBuffer.wrap(appendedRecord))
+                transactionStore.close()
+
+                assertContentEquals(firstRecord + laterRecord + appendedRecord, Files.readAllBytes(walPath))
+
+                val reopenedStore = MemoryMappedTransactionStore(tempDirectory.toString())
+                try {
+                    val reopenedFile = reopenedStore.getTransactionFile()
+                    assertEquals(
+                        (firstRecord.size + laterRecord.size + appendedRecord.size).toLong(),
+                        reopenedFile.position()
+                    )
+                    reopenedFile.write(ByteBuffer.wrap(nextRecord))
+                } finally {
+                    reopenedStore.close()
+                }
+                assertContentEquals(
+                    firstRecord + laterRecord + appendedRecord + nextRecord,
+                    Files.readAllBytes(walPath)
+                )
+                assertFalse(Files.exists(walDirectory.resolve("48.wal")))
+                if (originalPermissions != null) {
+                    assertEquals(originalPermissions, Files.getPosixFilePermissions(walPath))
+                }
+                Files.list(walDirectory).use { files ->
+                    assertFalse(files.anyMatch { it.fileName.toString().endsWith(".tmp") })
+                }
+            } finally {
+                runCatching { transactionStore.close() }
+                deleteDirectory(tempDirectory)
+            }
+        }
+    }
+
+    @Test
+    fun reopeningCompactsMultipleGapsBeforeDroppingIncompleteFinalTransaction() {
+        val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-transaction-multiple-gaps")
+        val walPath = Files.createDirectories(tempDirectory.resolve("wal")).resolve("47.wal")
+        val firstRecord = serializedWalRecord(14)
+        val secondRecord = serializedWalRecord(15)
+        val thirdRecord = serializedWalRecord(16)
+        val appendedRecord = serializedWalRecord(17)
+        val incompleteRecord = serializedWalRecord(18).dropLast(3).toByteArray()
+        Files.write(
+            walPath,
+            ByteArray(3) + firstRecord + ByteArray(64 * 1024 - 1) + secondRecord +
+                ByteArray(2) + thirdRecord + incompleteRecord
+        )
+        val transactionStore = MemoryMappedTransactionStore(tempDirectory.toString())
+
+        try {
+            val transactionFile = transactionStore.getTransactionFile()
+            assertEquals(
+                (firstRecord.size + secondRecord.size + thirdRecord.size).toLong(),
+                transactionFile.position()
+            )
+            transactionFile.write(ByteBuffer.wrap(appendedRecord))
+            transactionStore.close()
+
+            assertContentEquals(
+                firstRecord + secondRecord + thirdRecord + appendedRecord,
+                Files.readAllBytes(walPath)
+            )
+        } finally {
+            runCatching { transactionStore.close() }
+            deleteDirectory(tempDirectory)
+        }
+    }
+
+    @Test
+    fun reopeningRejectsInvalidDataAfterPaddingWithoutChangingWal() {
+        val tempDirectory = Files.createTempDirectory("onyx-memory-mapped-transaction-invalid-after-padding")
+        val walPath = Files.createDirectories(tempDirectory.resolve("wal")).resolve("47.wal")
+        val malformedWal = serializedWalRecord(19) + ByteArray(128 * 1024) + serializedWalRecord(20) +
+            ByteArray(3) + byteArrayOf(99, 0, 0, 0, 1, 42)
         Files.write(walPath, malformedWal)
         val transactionStore = MemoryMappedTransactionStore(tempDirectory.toString())
 
@@ -278,7 +367,7 @@ class MemoryMappedTransactionStoreTest {
                 transactionStore.getTransactionFile()
             }
 
-            assertTrue(failure.cause?.message.orEmpty().contains("non-zero data after padding"))
+            assertTrue(failure.cause?.message.orEmpty().contains("invalid transaction header"))
             assertContentEquals(malformedWal, Files.readAllBytes(walPath))
         } finally {
             runCatching { transactionStore.close() }

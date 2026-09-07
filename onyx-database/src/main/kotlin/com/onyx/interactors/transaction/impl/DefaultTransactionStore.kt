@@ -49,6 +49,7 @@ open class DefaultTransactionStore(val location:String): TransactionStore {
                 val walFiles = journalingDirector.listWalFiles()
                 walFiles.dropLast(1).forEach { sealedWalFile ->
                     if (!sealedWalFile.file.toPath().isCompressedWal()) {
+                        sealedWalFile.file.toPath().normalizeRegularWalForReopen()
                         compressWalFileOrThrow(sealedWalFile.file.toPath())
                     }
                 }
@@ -65,6 +66,9 @@ open class DefaultTransactionStore(val location:String): TransactionStore {
                 }
 
                 lastWalFile = File(directory + journalFileIndex.get() + WAL_FILE_EXTENSION)
+                if (lastWalFile!!.exists() && lastWalFile!!.length() > 0L) {
+                    lastWalFile!!.toPath().normalizeRegularWalForReopen()
+                }
                 lastWalFileChannel = lastWalFile!!.path.openFileChannel()
                     ?: throw IOException("Unable to open WAL file channel")
             }

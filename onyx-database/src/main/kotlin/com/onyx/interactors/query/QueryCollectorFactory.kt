@@ -19,7 +19,11 @@ object QueryCollectorFactory {
         else if(query.groupBy?.isEmpty() != false
                 && query.selections?.isEmpty() != false
                 && query.functions().isEmpty()) {
-            DefaultQueryCollector(query, context, descriptor) as QueryCollector<T>
+            if (IndexedEntityQueryCollector.supports(query, descriptor)) {
+                IndexedEntityQueryCollector(query, context, descriptor) as QueryCollector<T>
+            } else {
+                DefaultQueryCollector(query, context, descriptor) as QueryCollector<T>
+            }
         }
         else if(query.groupBy?.isEmpty() != false
                 && query.selections?.isEmpty() != true

@@ -2,6 +2,7 @@ package com.onyx.interactors.query.impl
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap
+import com.onyx.diskmap.impl.DiskBTreeMap
 import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.record.descriptorForReference
 import com.onyx.interactors.scanner.ScannerFactory
@@ -17,6 +18,7 @@ import com.onyx.extension.*
 import com.onyx.extension.common.compare
 import com.onyx.interactors.query.QueryCollector
 import com.onyx.interactors.query.QueryCollectorFactory
+import com.onyx.interactors.query.impl.collectors.OrderedPageQueryCollector
 import com.onyx.persistence.context.Contexts
 import com.onyx.interactors.query.QueryInteractor
 import com.onyx.interactors.scanner.impl.*
@@ -61,7 +63,10 @@ class DefaultQueryInteractor internal constructor(
      * @since 1.3.0 This has been refactored to remove the logic for meeting criteria.  That has
      * been moved to CompareUtil
      */
-    override fun <T> getReferencesForQuery(query: Query):QueryCollector<T> {
+    override fun <T> getReferencesForQuery(query: Query): QueryCollector<T> =
+        query.withPreparedMemberships { collectReferencesForQuery<T>(query) }
+
+    private fun <T> collectReferencesForQuery(query: Query): QueryCollector<T> {
         query.fullTextScores = null
         query.vectorSearchMatches = null
         query.approximateIndexCandidateMatches = null
@@ -69,6 +74,14 @@ class DefaultQueryInteractor internal constructor(
             val collector = QueryCollectorFactory.create<T>(Contexts.get(contextId)!!, descriptor, query)
             collector.finalizeResults()
             return collector
+        }
+
+        getPrimaryKeyPage<T>(query)?.let { return it }
+        if (scannerSelection == ScannerSelection.AUTOMATIC) {
+            SecondaryIndexPageQueryPlanner.collect(query, descriptor, Contexts.get(contextId)!!)?.let {
+                @Suppress("UNCHECKED_CAST")
+                return it as QueryCollector<T>
+            }
         }
 
         val requestedCriteria = query.criteria!!
@@ -138,6 +151,40 @@ class DefaultQueryInteractor internal constructor(
         query.resultsCount = collector.getNumberOfResults()
 
         return collector
+    }
+
+    /** The primary tree already supplies the requested order for an unfiltered, uncached page. */
+    @Suppress("UNCHECKED_CAST")
+    private fun <T> getPrimaryKeyPage(query: Query): QueryCollector<T>? {
+        if (scannerSelection != ScannerSelection.AUTOMATIC || descriptor.hasPartition ||
+            query.cache || query.changeListener != null || query.isUpdateOrDelete || query.maxResults <= 0 ||
+            !query.selections.isNullOrEmpty() || !query.groupBy.isNullOrEmpty() || query.functions().isNotEmpty()
+        ) return null
+
+        val identifier = descriptor.identifier ?: return null
+        val order = query.queryOrders?.singleOrNull() ?: return null
+        if (!order.isAscending || order.attribute != identifier.name) return null
+        if (!identifier.type.isPrimitive && !Comparable::class.java.isAssignableFrom(identifier.type)) return null
+
+        // Validation represents an omitted WHERE clause as `identifier != null`. Negated or
+        // composed variants must still evaluate their predicates through the ordinary scanners.
+        val criteria = query.criteria ?: return null
+        if (!query.isDefaultQuery(descriptor) || criteria.isNot || criteria.flip || criteria.isOr ||
+            criteria.subCriteria.isNotEmpty()
+        ) return null
+        if (!descriptor.hasStoredAttributeOrder(identifier.name)) return null
+
+        val context = Contexts.get(contextId)!!
+        val records = context.getDataFile(descriptor)
+            .getHashMap<DiskMap<Any, IManagedEntity>>(identifier.type, descriptor.entityClass.name)
+            as? DiskBTreeMap<Any, IManagedEntity> ?: return null
+        val collector = OrderedPageQueryCollector(query, context, descriptor)
+        records.visitAscendingReferencePage(query.firstRow.coerceAtLeast(0), query.maxResults, collector::setTotalCount) { recordId ->
+            collector.collect(Reference(0L, recordId), if (query.isLazy) null else records.getWithRecID(recordId))
+        }
+        collector.finalizeResults()
+        query.resultsCount = collector.getNumberOfResults()
+        return collector as QueryCollector<T>
     }
 
     /**
@@ -300,9 +347,61 @@ class DefaultQueryInteractor internal constructor(
                 }
             }
         } else {
+            getIndexedCount(query, context)?.let { return it }
             val results = this.getReferencesForQuery<Nothing>(query)
             return results.getNumberOfResults().toLong()
         }
+    }
+
+    /** Count an exact scalar posting route without hydrating or retaining its matching entities. */
+    private fun getIndexedCount(query: Query, context: SchemaContext): Long? {
+        if (scannerSelection != ScannerSelection.AUTOMATIC || query.isTerminated || query.isUpdateOrDelete ||
+            !query.selections.isNullOrEmpty() || !query.groupBy.isNullOrEmpty() || query.functions().isNotEmpty()
+        ) return null
+        if (VectorManagedEntity::class.java.isAssignableFrom(descriptor.entityClass)) return null
+        // Computed and relationship orders still need the collector's attribute evaluation and validation.
+        if (query.queryOrders?.any { it.attribute !in descriptor.attributes } == true) return null
+
+        val criteria = query.criteria ?: return null
+        if (criteria.operator != QueryCriteriaOperator.EQUAL || criteria.subCriteria.isNotEmpty() ||
+            criteria.isNot || criteria.flip || criteria.isOr ||
+            criteria.attribute == descriptor.identifier?.name || !criteria.hasExactScalarComparison(descriptor)
+        ) return null
+        val indexDescriptor = descriptor.indexes[criteria.attribute]
+            ?.takeIf { it.indexType == IndexType.DEFAULT } ?: return null
+        val indexValues = listOf(requireNotNull(criteria.value))
+
+        val partitions = when {
+            !descriptor.hasPartition -> listOf(descriptor)
+            query.partition === QueryPartitionMode.ALL -> context.getAllPartitions(descriptor.entityClass).map {
+                context.getDescriptorForEntity(descriptor.entityClass, it.value)
+            }
+            context.getPartitionWithValue(descriptor.entityClass, query.partition) == null -> emptyList()
+            else -> listOf(context.getDescriptorForEntity(descriptor.entityClass, query.partition))
+        }
+
+        val maxCardinality = context.maxCardinality
+        var count = 0L
+        for (partitionDescriptor in partitions) {
+            val index = context.getIndexInteractor(partitionDescriptor.indexes.getValue(indexDescriptor.name))
+            try {
+                index.visitExactPostings(indexValues) {
+                    // Preserve the collector's limit across all partitions, even for a paginated query.
+                    count++
+                    count <= maxCardinality
+                }
+            } catch (_: UnsupportedOperationException) {
+                // Custom index interactors may only implement the original materializing lookup API.
+                return null
+            }
+            if (count > maxCardinality) throw MaxCardinalityExceededException(maxCardinality)
+        }
+
+        query.fullTextScores = null
+        query.vectorSearchMatches = null
+        query.approximateIndexCandidateMatches = null
+        query.resultsCount = count.toInt()
+        return count
     }
 
     /**
@@ -339,15 +438,32 @@ class DefaultQueryInteractor internal constructor(
             scanner.isLast = true
         }
 
-        // A full scanner evaluates the complete query. Seed it with one mandatory indexed
-        // predicate so an unindexed first predicate does not force a table traversal.
-        if (scanner is FullTableScanner && criteria === query.criteria &&
+        // Evaluate the complete query only over a selective seed. Indexed roots can use a
+        // bounded identifier lookup instead of materializing broad secondary-index postings.
+        if ((scanner is FullTableScanner || scanner is IndexScanner || scanner is IdentifierScanner) &&
+            criteria === query.criteria &&
             existingReferences == null && !forceFullScan &&
             scannerSelection == ScannerSelection.AUTOMATIC && !query.isUpdateOrDelete
         ) {
-            val candidates = indexedConjunctReferences(query, context)
+            val candidates = indexedConjunctReferences(
+                query,
+                context,
+                requireIdentifierSeed = scanner !is FullTableScanner
+            )
             if (candidates != null) {
-                return Pair(scanner.scan(candidates), scanner.collector as QueryCollector<T>?)
+                val candidateScanner = if (scanner is FullTableScanner) scanner else {
+                    ScannerFactory.getFullTableScanner(context, criteria, query.entityType!!, query, persistenceManager)
+                        .apply { isLast = collect && !query.usesImplicitSearchScoreOrder() }
+                }
+                return Pair(candidateScanner.scan(candidates), candidateScanner.collector as QueryCollector<T>?)
+            }
+
+            if (scanner is IndexScanner) {
+                SecondaryIndexQueryPlanner.findReferences(query, descriptor, context)?.let {
+                    // These references satisfy every predicate through native index comparisons.
+                    // The ordinary collector still owns hydration, ordering, counts and paging.
+                    return Pair(it, null)
+                }
             }
         }
 
@@ -427,7 +543,11 @@ class DefaultQueryInteractor internal constructor(
      * coerce stored values differently from index keys. Keep those queries on their existing
      * path, along with disjunctions, negated groups, and bounded search admission.
      */
-    private fun indexedConjunctReferences(query: Query, context: SchemaContext): MutableSet<Reference>? {
+    private fun indexedConjunctReferences(
+        query: Query,
+        context: SchemaContext,
+        requireIdentifierSeed: Boolean
+    ): MutableSet<Reference>? {
         if (VectorManagedEntity::class.java.isAssignableFrom(query.entityType!!)) return null
         val root = query.criteria ?: return null
         if (root.subCriteria.isEmpty() || !root.isScalarConjunction()) return null
@@ -440,7 +560,20 @@ class DefaultQueryInteractor internal constructor(
             context.getPartitionWithValue(query.entityType!!, query.partition) == null
         ) return null
 
-        val indexedCriteria = query.getAllCriteria().mapNotNull { candidate ->
+        val allCriteria = query.getAllCriteria()
+        val indexedCriteria = if (requireIdentifierSeed) {
+            // Index ordering and entity equality can differ even for identical operand types
+            // (for example BigDecimal scales). Only replace known equivalent comparisons.
+            if (allCriteria.any { !it.hasExactScalarComparison(targetDescriptor) }) return null
+            val identifier = targetDescriptor.identifier?.name ?: return null
+            allCriteria.filter { candidate ->
+                candidate.attribute == identifier &&
+                    (candidate.operator == QueryCriteriaOperator.EQUAL ||
+                        (candidate.value as List<*>).size <= MAX_IDENTIFIER_CONJUNCT_CANDIDATES)
+            }.minByOrNull { candidate ->
+                if (candidate.operator == QueryCriteriaOperator.EQUAL) 1 else (candidate.value as List<*>).size
+            }
+        } else allCriteria.mapNotNull { candidate ->
             val isIdentifier = candidate.attribute == targetDescriptor.identifier?.name
             val type = if (isIdentifier) {
                 targetDescriptor.identifier!!.type
@@ -468,22 +601,38 @@ class DefaultQueryInteractor internal constructor(
                 else -> return@mapNotNull null
             }
             priority to candidate
-        }.minByOrNull { it.first }?.second ?: return null
+        }.minByOrNull { it.first }?.second
+        if (indexedCriteria == null) return null
 
         val indexScanner = ScannerFactory.getScannerForQueryCriteria(
             context, indexedCriteria, query.entityType!!, query, persistenceManager
         )
         if (indexScanner !is IndexScanner && indexScanner !is IdentifierScanner) return null
 
-        // Leave the candidate scanner's collector disabled: pagination and residual predicates
-        // belong to the original scanner. A broad seed must not introduce a cardinality error
-        // when the complete query would have returned only a few rows.
+        // Leave collection to the reference filter, including pagination and residual predicates.
+        // Bound new identifier plans across all partitions too. Without selectivity statistics,
+        // hydrating a broad seed can cost more than intersecting the original index postings.
+        val maxCandidates = if (requireIdentifierSeed) {
+            minOf(context.maxCardinality, MAX_IDENTIFIER_CONJUNCT_CANDIDATES)
+        } else context.maxCardinality
         return try {
-            indexScanner.scan().takeIf { it.size <= context.maxCardinality }
+            indexScanner.scan().takeIf { it.size <= maxCandidates }
         } catch (_: MaxCardinalityExceededException) {
             null
         } catch (exception: ExecutionException) {
             if (exception.cause is MaxCardinalityExceededException) null else throw exception
+        }
+    }
+
+    private fun QueryCriteria.hasExactScalarComparison(descriptor: EntityDescriptor): Boolean {
+        if (isRelationship == true) return false
+        val type = descriptor.attributes[attribute]?.type?.kotlin?.javaObjectType ?: return false
+        if (type !in EXACT_SCALAR_COMPARISON_TYPES && !type.isEnum) return false
+        if (descriptor.indexes[attribute]?.let { it.indexType != IndexType.DEFAULT } == true) return false
+        return when (operator) {
+            QueryCriteriaOperator.EQUAL -> value?.javaClass == type
+            QueryCriteriaOperator.IN -> (value as? List<*>)?.all { it?.javaClass == type } == true
+            else -> false
         }
     }
 
@@ -562,6 +711,21 @@ class DefaultQueryInteractor internal constructor(
             normalized.subCriteria += normalizedChild
         }
         return normalized
+    }
+
+    private companion object {
+        const val MAX_IDENTIFIER_CONJUNCT_CANDIDATES = 1_024
+        val EXACT_SCALAR_COMPARISON_TYPES = setOf(
+            Boolean::class.javaObjectType,
+            Byte::class.javaObjectType,
+            Short::class.javaObjectType,
+            Int::class.javaObjectType,
+            Long::class.javaObjectType,
+            Float::class.javaObjectType,
+            Double::class.javaObjectType,
+            Char::class.javaObjectType,
+            String::class.java
+        )
     }
 
 }

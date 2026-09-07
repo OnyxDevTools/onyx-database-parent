@@ -15,6 +15,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 class DefaultIndexInteractorApproximateCandidateTest {
+    // Interactors hold weak context references; the fixture owns their lifetime during each test.
+    private val retainedContexts = ArrayList<SchemaContext>()
 
     @Test
     fun `shared candidate budget physically stops a simulated million row posting`() {
@@ -90,6 +92,7 @@ class DefaultIndexInteractorApproximateCandidateTest {
                 )
             }
         } as SchemaContext
+        retainedContexts.add(context)
         return DefaultIndexInteractor(
             EntityDescriptor(StringIdentifierEntityIndex::class.java),
             IndexDescriptor(name = "indexValue", type = String::class.java),

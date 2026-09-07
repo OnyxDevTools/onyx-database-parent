@@ -63,12 +63,14 @@ internal fun Path.isCompressedWal(): Boolean {
 }
 
 /**
- * Removes unused memory-mapped capacity or an incomplete final transaction from a regular WAL.
+ * Removes unused memory-mapped capacity and an incomplete final transaction from a regular WAL.
  *
  * A writable memory mapping may leave the physical file larger than the logical transaction stream
  * when the process exits before normal WAL finalization. Reopening at that physical size would put a
- * zero-filled hole between the old and new transactions. Only a terminal tail is removed here; data
- * after a padding marker is treated as corruption and is never discarded automatically.
+ * zero-filled hole between the old and new transactions. Older writers may already have appended
+ * after such a hole. Preserve every complete transaction on both sides by compacting into a forced
+ * replacement before atomically installing it. Invalid non-zero headers still fail without changing
+ * the original file; only a terminal incomplete record may be discarded.
  */
 @Throws(IOException::class)
 internal fun Path.normalizeRegularWalForReopen(): Long {
@@ -76,87 +78,137 @@ internal fun Path.normalizeRegularWalForReopen(): Long {
         throw IOException("Cannot normalize compressed WAL $this as a writable WAL")
     }
 
-    FileChannel.open(
-        this,
-        StandardOpenOption.READ,
-        StandardOpenOption.WRITE
-    ).use { channel ->
-        val physicalSize = channel.size()
-        val logicalSize = channel.regularWalLogicalSize(this)
-        if (logicalSize < physicalSize) {
-            channel.truncate(logicalSize)
-            channel.force(true)
+    var replacement: Path? = null
+    try {
+        val logicalSize = FileChannel.open(
+            this,
+            StandardOpenOption.READ,
+            StandardOpenOption.WRITE
+        ).use { channel ->
+            val ranges = channel.regularWalTransactionRanges(this)
+            val logicalSize = ranges.sumOf { it.end - it.start }
+            if (ranges.size <= 1 && (ranges.firstOrNull()?.start ?: 0L) == 0L) {
+                if (logicalSize < channel.size()) {
+                    channel.truncate(logicalSize)
+                    channel.force(true)
+                }
+            } else {
+                val permissions = posixPermissionsOrNull()
+                val temporary = Files.createTempFile(toAbsolutePath().parent, ".${fileName}.", ".tmp")
+                replacement = temporary
+                FileChannel.open(temporary, StandardOpenOption.WRITE).use { output ->
+                    val buffer = ByteBuffer.allocate(WAL_SCAN_BUFFER_SIZE)
+                    for (range in ranges) {
+                        var position = range.start
+                        while (position < range.end) {
+                            buffer.clear()
+                            buffer.limit(minOf(buffer.capacity().toLong(), range.end - position).toInt())
+                            val bytesRead = channel.read(buffer, position)
+                            if (bytesRead < 0) throw IOException("WAL $this changed during recovery")
+                            if (bytesRead == 0) continue
+                            buffer.flip()
+                            while (buffer.hasRemaining()) output.write(buffer)
+                            position += bytesRead
+                        }
+                    }
+                    if (permissions != null) Files.setPosixFilePermissions(temporary, permissions)
+                    output.force(true)
+                }
+            }
+            logicalSize
+        }
+
+        replacement?.let { temporary ->
+            // Do not fall back to overwriting the original: an interrupted repair must remain retryable.
+            Files.move(temporary, this, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            val parent = toAbsolutePath().parent
+            if (Files.getFileStore(parent).supportsFileAttributeView("posix")) {
+                FileChannel.open(parent, StandardOpenOption.READ).use { it.force(true) }
+            }
         }
         return logicalSize
+    } catch (failure: Throwable) {
+        try {
+            replacement?.let { Files.deleteIfExists(it) }
+        } catch (cleanupFailure: Throwable) {
+            failure.addSuppressed(cleanupFailure)
+        }
+        throw failure
     }
 }
 
+private data class WalTransactionRange(val start: Long, val end: Long)
+
 @Throws(IOException::class)
-private fun FileChannel.regularWalLogicalSize(walFile: Path): Long {
+private fun FileChannel.regularWalTransactionRanges(walFile: Path): List<WalTransactionRange> {
     val physicalSize = size()
+    val ranges = ArrayList<WalTransactionRange>()
     val header = ByteBuffer.allocate(WAL_TRANSACTION_HEADER_SIZE)
     var position = 0L
+    var rangeStart = position
 
     while (position < physicalSize) {
-        if (physicalSize - position < WAL_TRANSACTION_HEADER_SIZE) {
-            // A crash can leave only part of the final transaction header durable.
-            return position
-        }
-
         header.clear()
+        header.limit(minOf(WAL_TRANSACTION_HEADER_SIZE.toLong(), physicalSize - position).toInt())
         var readPosition = position
         while (header.hasRemaining()) {
             val bytesRead = read(header, readPosition)
-            if (bytesRead < 0) return position
+            if (bytesRead < 0) throw IOException("WAL $walFile changed during recovery")
             if (bytesRead == 0) continue
             readPosition += bytesRead
         }
         header.flip()
 
         val transactionType = header.get().toInt() and 0xff
-        val transactionLength = header.int
-        if (transactionType == WAL_PADDING_TYPE && transactionLength == 0) {
-            if (hasNonZeroBytes(position, physicalSize)) {
-                throw IOException(
-                    "WAL $walFile contains non-zero data after padding at byte $position"
-                )
-            }
-            return position
+        if (transactionType == WAL_PADDING_TYPE) {
+            if (position > rangeStart) ranges += WalTransactionRange(rangeStart, position)
+            position = firstNonZeroPosition(position, physicalSize)
+            rangeStart = position
+            continue
         }
-        if (transactionType !in WAL_TRANSACTION_TYPES || transactionLength <= 0) {
+        if (transactionType !in WAL_TRANSACTION_TYPES) {
             throw IOException(
                 "WAL $walFile has an invalid transaction header at byte $position"
             )
+        }
+        if (header.remaining() < Int.SIZE_BYTES) {
+            // A crash can leave only part of the final transaction header durable.
+            break
+        }
+        val transactionLength = header.int
+        if (transactionLength <= 0) {
+            throw IOException("WAL $walFile has an invalid transaction header at byte $position")
         }
 
         val nextPosition = position + WAL_TRANSACTION_HEADER_SIZE + transactionLength.toLong()
         if (nextPosition > physicalSize) {
             // The final transaction was interrupted before its complete payload reached the file.
-            return position
+            break
         }
         position = nextPosition
     }
 
-    return position
+    if (position > rangeStart) ranges += WalTransactionRange(rangeStart, position)
+    return ranges
 }
 
 @Throws(IOException::class)
-private fun FileChannel.hasNonZeroBytes(startPosition: Long, endPosition: Long): Boolean {
+private fun FileChannel.firstNonZeroPosition(startPosition: Long, endPosition: Long): Long {
     val buffer = ByteBuffer.allocate(WAL_SCAN_BUFFER_SIZE)
     var position = startPosition
     while (position < endPosition) {
         buffer.clear()
         buffer.limit(minOf(buffer.capacity().toLong(), endPosition - position).toInt())
         val bytesRead = read(buffer, position)
-        if (bytesRead < 0) break
+        if (bytesRead < 0) throw IOException("WAL changed while scanning padding at byte $position")
         if (bytesRead == 0) continue
         buffer.flip()
         while (buffer.hasRemaining()) {
-            if (buffer.get() != 0.toByte()) return true
+            if (buffer.get() != 0.toByte()) return position + buffer.position() - 1L
         }
         position += bytesRead
     }
-    return false
+    return endPosition
 }
 
 /**

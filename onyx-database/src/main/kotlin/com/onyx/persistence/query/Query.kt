@@ -179,6 +179,10 @@ class Query : BufferStreamable {
     @Transient
     internal var approximateIndexCandidateMatches: Set<Reference>? = null
 
+    /** Scalar membership lookups owned only by the active query execution. */
+    @Transient
+    internal var preparedMemberships: Map<QueryCriteria, PreparedMembership>? = null
+
     /**
      * Get the functions associated to the query selection
      *

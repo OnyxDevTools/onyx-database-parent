@@ -196,26 +196,21 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
             openWalReadSource(Path.of(walTransactionFile)).use { source ->
                 WalReadBuffer(source.channel, source.logSize, WAL_READ_BUFFER_SIZE).use { wal ->
                     while (true) {
-                        val transactionOffset = source.logSize - wal.bytesRemaining
+                        var transactionOffset = source.logSize - wal.bytesRemaining
                         try {
                             transaction = null
-                            val metadataBytesAvailable = wal.ensureAvailable(TRANSACTION_METADATA_SIZE)
-                            if (metadataBytesAvailable == 0) {
+                            if (!wal.skipZeroPadding()) {
                                 break
                             }
+                            transactionOffset = source.logSize - wal.bytesRemaining
+                            val metadataBytesAvailable = wal.ensureAvailable(TRANSACTION_METADATA_SIZE)
                             if (metadataBytesAvailable < TRANSACTION_METADATA_SIZE) {
-                                if (wal.isZeroFilled()) {
-                                    break
-                                }
                                 throw WalFormatException("WAL transaction header is incomplete")
                             }
 
                             val transactionType = wal.byte
                             val transactionDataLength = wal.int
 
-                            if (transactionType == PADDING && transactionDataLength == 0) {
-                                break
-                            }
                             if (transactionType !in TRANSACTION_TYPES || transactionDataLength <= 0) {
                                 throw WalFormatException("WAL transaction header is invalid")
                             }
@@ -379,7 +374,6 @@ open class DefaultTransactionInteractor(private val transactionStore: Transactio
     }
 
     companion object {
-        private const val PADDING: Byte = 0
         private const val SAVE: Byte = 1
         private const val DELETE: Byte = 2
         private const val DELETE_QUERY: Byte = 3
@@ -746,11 +740,20 @@ private class WalReadBuffer(
         return total
     }
 
-    fun isZeroFilled(): Boolean {
-        for (index in buffer.position() until buffer.limit()) {
-            if (buffer.get(index) != 0.toByte()) return false
+    /** Skips padding only at a record boundary, leaving the first nonzero header byte unread. */
+    fun skipZeroPadding(): Boolean {
+        while (ensureAvailable(1) > 0) {
+            var position = buffer.position()
+            while (buffer.limit() - position >= Long.SIZE_BYTES && buffer.getLong(position) == 0L) {
+                position += Long.SIZE_BYTES
+            }
+            while (position < buffer.limit() && buffer.get(position) == 0.toByte()) {
+                position++
+            }
+            buffer.position(position)
+            if (buffer.hasRemaining()) return true
         }
-        return true
+        return false
     }
 
     override fun close() {

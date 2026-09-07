@@ -121,6 +121,9 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(
         return matches
     }
 
+    override fun containsExactPosting(indexValue: Any?, recordId: Long): Boolean =
+        indexValue != null && recordId > 0L && references.contains(normalize(indexValue), recordId)
+
     /** Return the distinct, currently active values represented by this index. */
     @Throws(OnyxException::class)
     override fun findAllValues(): Set<Any> {
@@ -216,6 +219,22 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(
         var lastRecordId: Long = Long.MIN_VALUE,
         var started: Boolean = false,
         var exhausted: Boolean = false
+    )
+
+    override fun visitOrderedRange(
+        fromValue: Any?,
+        includeFrom: Boolean,
+        toValue: Any?,
+        includeTo: Boolean,
+        visitor: (Any, Long) -> Boolean
+    ): Int = references.visitPostingsInRange(
+        fromValue?.let(::normalize),
+        if (includeFrom) Long.MIN_VALUE else Long.MAX_VALUE,
+        includeFrom,
+        toValue?.let(::normalize),
+        if (includeTo) Long.MAX_VALUE else Long.MIN_VALUE,
+        includeTo,
+        visitor
     )
 
     private fun distinctNormalizedValues(indexValues: List<Any>): List<Any> {

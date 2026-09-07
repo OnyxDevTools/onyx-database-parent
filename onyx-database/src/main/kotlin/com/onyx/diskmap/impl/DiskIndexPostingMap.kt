@@ -95,8 +95,8 @@ class DiskIndexPostingMap(
     ) = lock.readLock {
         val from = fromValue?.let(::normalize)
         val to = toValue?.let(::normalize)
-        visitRecordIds(from, fromRecordId, includeFrom, to, toRecordId, includeTo, Int.MAX_VALUE) {
-            action(it)
+        visitPostings(from, fromRecordId, includeFrom, to, toRecordId, includeTo, Int.MAX_VALUE) { page, index ->
+            action(page.recordIds[index])
             true
         }
         Unit
@@ -116,7 +116,25 @@ class DiskIndexPostingMap(
         if (maxVisits == 0) return@readLock 0
         val from = fromValue?.let(::normalize)
         val to = toValue?.let(::normalize)
-        visitRecordIds(from, fromRecordId, includeFrom, to, toRecordId, includeTo, maxVisits, visitor)
+        visitPostings(from, fromRecordId, includeFrom, to, toRecordId, includeTo, maxVisits) { page, index ->
+            visitor(page.recordIds[index])
+        }
+    }
+
+    override fun visitPostingsInRange(
+        fromValue: Any?,
+        fromRecordId: Long,
+        includeFrom: Boolean,
+        toValue: Any?,
+        toRecordId: Long,
+        includeTo: Boolean,
+        visitor: (Any, Long) -> Boolean
+    ): Int = lock.readLock {
+        val from = fromValue?.let(::normalize)
+        val to = toValue?.let(::normalize)
+        visitPostings(from, fromRecordId, includeFrom, to, toRecordId, includeTo, Int.MAX_VALUE) { page, index ->
+            visitor(valueAt(page, index), page.recordIds[index])
+        }
     }
 
     override fun forEachDistinctValue(action: (Any) -> Unit) = lock.readLock {
@@ -663,7 +681,7 @@ class DiskIndexPostingMap(
         }
     }
 
-    private fun visitRecordIds(
+    private inline fun visitPostings(
         fromValue: Any?,
         fromRecordId: Long,
         includeFrom: Boolean,
@@ -671,7 +689,7 @@ class DiskIndexPostingMap(
         toRecordId: Long,
         includeTo: Boolean,
         maxVisits: Int,
-        visitor: (Long) -> Boolean
+        visitor: (IndexPostingPage, Int) -> Boolean
     ): Int {
         if (maxVisits == 0) return 0
         val fromToken = fromValue?.let(::queryToken)
@@ -694,7 +712,7 @@ class DiskIndexPostingMap(
                     val comparison = compareStoredToQuery(page, index, toValue, toToken!!, toRecordId)
                     if (comparison > 0 || comparison == 0 && !includeTo) return visits
                 }
-                val continueVisiting = visitor(page.recordIds[index++])
+                val continueVisiting = visitor(page, index++)
                 visits++
                 if (!continueVisiting || visits >= maxVisits) return visits
             }

@@ -56,6 +56,23 @@ interface IndexPostingMap {
         "${this::class.java.name} does not support physically bounded posting traversal"
     )
 
+    /**
+     * Visit indexed values and record IDs in ascending tuple order without materializing the
+     * range. Stop physical traversal when [visitor] returns false. Values allow callers to
+     * recognize tied sort keys without reading entity records.
+     */
+    fun visitPostingsInRange(
+        fromValue: Any?,
+        fromRecordId: Long,
+        includeFrom: Boolean,
+        toValue: Any?,
+        toRecordId: Long,
+        includeTo: Boolean,
+        visitor: (Any, Long) -> Boolean
+    ): Int = throw UnsupportedOperationException(
+        "${this::class.java.name} does not support ordered posting traversal"
+    )
+
     /** Visit each distinct indexed value once, in index order. */
     fun forEachDistinctValue(action: (Any) -> Unit)
 

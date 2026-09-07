@@ -157,16 +157,9 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
             QueryCriteriaOperator.NOT_LIKE -> !(first.toString()).equals(second.toString(), true)
             QueryCriteriaOperator.MATCHES -> (first.toString()).matches(Regex(second.toString()))
             QueryCriteriaOperator.NOT_MATCHES -> !(first.toString()).matches(Regex(second.toString()))
-            QueryCriteriaOperator.IN -> {
-                val values = second.asComparisonValues()
-                    ?: throw InvalidDataTypeForOperator(InvalidDataTypeForOperator.INVALID_DATA_TYPE_FOR_OPERATOR)
-                return values.any { first.compare(it, QueryCriteriaOperator.EQUAL) }
-            }
-
-            QueryCriteriaOperator.NOT_IN -> {
-                val values = second.asComparisonValues()
-                    ?: throw InvalidDataTypeForOperator(InvalidDataTypeForOperator.INVALID_DATA_TYPE_FOR_OPERATOR)
-                return values.none { first.compare(it, QueryCriteriaOperator.EQUAL) }
+            QueryCriteriaOperator.IN, QueryCriteriaOperator.NOT_IN -> {
+                val matches = second.anyComparisonValue { first.compare(it, QueryCriteriaOperator.EQUAL) }
+                return if (operator == QueryCriteriaOperator.IN) matches else !matches
             }
 
             QueryCriteriaOperator.SEARCH -> throw InvalidDataTypeForOperator(
@@ -189,12 +182,18 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
     }
 }
 
-private fun Any?.asComparisonValues(): List<Any?>? = when {
-    this is Iterable<*> -> toList()
-    this != null && javaClass.isArray -> List(ReflectArray.getLength(this)) { index ->
-        ReflectArray.get(this, index)
+/** Visit membership operands without copying collections or materializing primitive arrays. */
+internal inline fun Any?.anyComparisonValue(predicate: (Any?) -> Boolean): Boolean {
+    when {
+        this is Iterable<*> -> for (value in this) {
+            if (predicate(value)) return true
+        }
+        this != null && javaClass.isArray -> for (index in 0 until ReflectArray.getLength(this)) {
+            if (predicate(ReflectArray.get(this, index))) return true
+        }
+        else -> throw InvalidDataTypeForOperator(InvalidDataTypeForOperator.INVALID_DATA_TYPE_FOR_OPERATOR)
     }
-    else -> null
+    return false
 }
 
 private fun Any?.asRangeEndpoints(): Pair<Any?, Any?>? = when (this) {

@@ -16,8 +16,19 @@ import java.util.HashSet
  */
 class CachedResults(references: MutableSet<Reference>? = null) {
 
-    var references: MutableSet<Reference>? = references
-        set(value) = synchronized(this) { field = value}
+    @Volatile
+    private var cachedReferences: MutableSet<Reference>? =
+        references?.let { CachedReferenceSet(it, this) }
+
+    /** A live set with ordered snapshot iterators; null means it has not been populated. */
+    var references: MutableSet<Reference>?
+        get() = cachedReferences
+        set(value) = replaceReferences(value)
+
+    internal fun replaceReferences(values: Collection<Reference>?) {
+        val replacement = values?.let { CachedReferenceSet(it, this) }
+        synchronized(this) { cachedReferences = replacement }
+    }
 
     val listeners = HashSet<QueryListener<Any>>()
 

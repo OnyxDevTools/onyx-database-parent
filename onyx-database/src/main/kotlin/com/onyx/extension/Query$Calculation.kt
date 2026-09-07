@@ -11,6 +11,7 @@ import com.onyx.extension.common.compare
 import com.onyx.extension.common.get
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.query.QueryCriteriaOperator
+import com.onyx.persistence.query.compareCriterion
 import com.onyx.persistence.query.resolveVectorSearchQuery
 import com.onyx.persistence.query.relationship
 import com.onyx.vector.VectorEntityEncoder
@@ -126,7 +127,7 @@ fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, con
                 }
                 if (it.operator == QueryCriteriaOperator.NOT_LIKE && queryTerms.isNotEmpty()) !matches else matches
             } else {
-                comparisonValue.compare(comparableAttribute, it.operator!!)
+                compareCriterion(it, comparableAttribute, comparisonValue)
             }
         }
         it.meetsCriteria = subCriteria
@@ -199,7 +200,7 @@ private fun Query.calculateCriteriaMet(criteria: QueryCriteria): Boolean {
  * to do a quick reference to see if newly saved entities meet the criteria
  */
 @Throws(OnyxException::class)
-private fun relationshipMeetsCriteria(entity: IManagedEntity?, entityReference: Reference, criteria: QueryCriteria, context: SchemaContext): Boolean {
+private fun Query.relationshipMeetsCriteria(entity: IManagedEntity?, entityReference: Reference, criteria: QueryCriteria, context: SchemaContext): Boolean {
     var meetsCriteria = false
     val operator = criteria.operator
 
@@ -218,7 +219,7 @@ private fun relationshipMeetsCriteria(entity: IManagedEntity?, entityReference: 
                 relationshipEntity?.identifier(context)
             }
 
-            meetsCriteria = criteria.value.compare(comparisonValue.normalizeForComparison(operator, context), operator!!)
+            meetsCriteria = compareCriterion(criteria, comparisonValue.normalizeForComparison(operator, context))
             if (meetsCriteria)
                 break
         }
@@ -244,14 +245,14 @@ private fun relationshipMeetsCriteria(entity: IManagedEntity?, entityReference: 
  *
  */
 @Throws(OnyxException::class)
-private fun graphMeetsCriteria(entity: IManagedEntity?, criteria: QueryCriteria): Boolean {
+private fun Query.graphMeetsCriteria(entity: IManagedEntity?, criteria: QueryCriteria): Boolean {
     val value = entity.get<Any?>(criteria.attribute!!)
     if (value is List<*>) {
         return value.any {
-            criteria.value.compare(it.normalizeForComparison(criteria.operator, null), criteria.operator!!)
+            compareCriterion(criteria, it.normalizeForComparison(criteria.operator, null))
         }
     }
-    return criteria.value.compare(value.normalizeForComparison(criteria.operator, null), criteria.operator!!)
+    return compareCriterion(criteria, value.normalizeForComparison(criteria.operator, null))
 }
 
 private fun Any?.normalizeForComparison(operator: QueryCriteriaOperator?, context: SchemaContext?): Any? {

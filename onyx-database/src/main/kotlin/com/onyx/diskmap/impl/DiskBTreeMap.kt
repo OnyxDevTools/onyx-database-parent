@@ -89,6 +89,39 @@ open class DiskBTreeMap<K, V>(
     override fun visitReferencesWhile(visitor: (Long, V) -> Boolean): Int =
         mapReadWriteLock.readLock { super.visitReferencesWhile(visitor) }
 
+    /**
+     * Visits a page of stable entry IDs in ascending key order without decoding skipped rows.
+     * The count callback and traversal share the read lock, allowing callers to enforce a
+     * cardinality limit before loading values and to read the page against the same count.
+     */
+    internal fun visitAscendingReferencePage(
+        firstRow: Int,
+        maxResults: Int,
+        onCount: (Long) -> Unit,
+        visitor: (Long) -> Unit,
+    ) = mapReadWriteLock.readLock {
+        require(firstRow >= 0 && maxResults > 0)
+        val count = longSize()
+        onCount(count)
+        if (firstRow.toLong() >= count) return@readLock
+
+        var remainingOffset = firstRow
+        var remainingRows = maxResults
+        var page = leftMostLeaf()
+        while (true) {
+            if (remainingOffset >= page.keyCount) {
+                remainingOffset -= page.keyCount
+            } else {
+                for (index in remainingOffset until page.keyCount) {
+                    visitor(entryIdAt(page, index))
+                    if (--remainingRows == 0) return@readLock
+                }
+                remainingOffset = 0
+            }
+            page = findPageAtPositionOrNull(page.nextLeaf) ?: return@readLock
+        }
+    }
+
     override fun forEachMutableReference(
         action: (Long, MutableMap.MutableEntry<K, V>) -> Unit
     ) = mapReadWriteLock.writeLock {

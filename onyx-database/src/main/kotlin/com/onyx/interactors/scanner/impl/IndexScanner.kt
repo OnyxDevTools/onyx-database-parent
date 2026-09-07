@@ -7,6 +7,7 @@ import com.onyx.exception.OnyxException
 import com.onyx.extension.toManagedEntity
 import com.onyx.interactors.scanner.TableScanner
 import com.onyx.interactors.index.IndexInteractor
+import com.onyx.interactors.query.impl.collectors.IndexedEntityQueryCollector
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
@@ -53,7 +54,7 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
             (criteria.value as List<*>).forEach { it ->
                 find(it).forEach {
                     if(!includesExisting)
-                        collector?.collect(it, it.toManagedEntity(context, descriptor))
+                        collectReference(it)
                     if (matching.size > maxCardinality)
                         throw MaxCardinalityExceededException(context.maxCardinality)
                     if(collector == null)
@@ -63,7 +64,7 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
         } else {
             find(criteria.value).forEach {
                 if(!includesExisting)
-                    collector?.collect(it, it.toManagedEntity(context, descriptor))
+                    collectReference(it)
                 if (matching.size > maxCardinality)
                     throw MaxCardinalityExceededException(context.maxCardinality)
                 if(collector == null)
@@ -86,10 +87,20 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
         val matching = scan(true)
         return existingValues.filterTo(HashSet()) {
             if(matching.contains(it)) {
-                collector?.collect(it, it.toManagedEntity(context, descriptor))
+                collectReference(it)
                 return@filterTo collector == null
             }
             return@filterTo false
+        }
+    }
+
+    /** Exact entity pages can collect known matches without decoding discarded records. */
+    protected fun collectReference(reference: Reference) {
+        val target = collector ?: return
+        if (target is IndexedEntityQueryCollector) {
+            target.collectReference(reference)
+        } else {
+            target.collect(reference, reference.toManagedEntity(context, descriptor))
         }
     }
 

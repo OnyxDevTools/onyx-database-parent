@@ -111,6 +111,171 @@ class DefaultTransactionInteractorReadTest {
     }
 
     @Test
+    fun replayPreservesTransactionsAfterShortAndLargeZeroGaps() {
+        val walFile = Files.createTempFile("onyx-wal-reader-zero-gaps", ".wal")
+        val gaps = listOf(1, 2, 3, 4, 64, READ_AHEAD_BUFFER_SIZE + 3)
+        val expectedRows = (0..gaps.size).toList()
+        val regularWal = concatenate(
+            ByteArray(3),
+            deleteQueryRecord(0),
+            *gaps.mapIndexed { index, gap ->
+                concatenate(ByteArray(gap), deleteQueryRecord(index + 1))
+            }.toTypedArray(),
+            ByteArray(READ_AHEAD_BUFFER_SIZE + 1),
+        )
+
+        try {
+            for (compressed in listOf(false, true)) {
+                Files.write(walFile, if (compressed) regularWal.compressLz77() else regularWal)
+
+                val actualRows = ArrayList<Int>()
+                assertTrue(interactor().applyTransactionLog(walFile.toString()) { transaction ->
+                    actualRows += assertIs<DeleteQueryTransaction>(transaction).query.firstRow
+                    false
+                })
+
+                assertEquals(expectedRows, actualRows, "compressed=$compressed")
+            }
+        } finally {
+            Files.deleteIfExists(walFile)
+        }
+    }
+
+    @Test
+    fun replayPreservesHeaderAfterPaddingAcrossARefillBoundary() {
+        val walFile = Files.createTempFile("onyx-wal-gap-boundary", ".wal")
+        val regularWal = concatenate(
+            deleteQueryRecordOfSize(3, READ_AHEAD_BUFFER_SIZE - 4),
+            ByteArray(2),
+            deleteQueryRecord(7),
+        )
+
+        try {
+            for (compressed in listOf(false, true)) {
+                Files.write(walFile, if (compressed) regularWal.compressLz77() else regularWal)
+
+                val actualRows = ArrayList<Int>()
+                assertTrue(interactor().applyTransactionLog(walFile.toString()) { transaction ->
+                    actualRows += assertIs<DeleteQueryTransaction>(transaction).query.firstRow
+                    false
+                })
+
+                assertEquals(listOf(3, 7), actualRows, "compressed=$compressed")
+            }
+        } finally {
+            Files.deleteIfExists(walFile)
+        }
+    }
+
+    @Test
+    fun replayRejectsMalformedHeadersAfterPaddingWithoutSkippingToLaterTransactions() {
+        val walFile = Files.createTempFile("onyx-wal-gap-invalid-header", ".wal")
+        val invalidHeaders = listOf(
+            byteArrayOf(99, 0, 0, 0, 1),
+            ByteBuffer.allocate(WAL_HEADER_SIZE).put(DELETE_QUERY).putInt(0).array(),
+            ByteBuffer.allocate(WAL_HEADER_SIZE).put(DELETE_QUERY).putInt(Int.MAX_VALUE).array(),
+        )
+
+        try {
+            for (invalidHeader in invalidHeaders) {
+                val regularWal = concatenate(
+                    deleteQueryRecord(3),
+                    ByteArray(READ_AHEAD_BUFFER_SIZE + 1),
+                    invalidHeader,
+                    deleteQueryRecord(7),
+                )
+                for (compressed in listOf(false, true)) {
+                    Files.write(walFile, if (compressed) regularWal.compressLz77() else regularWal)
+                    for (skipFailedTransactions in listOf(false, true)) {
+                        val actualRows = ArrayList<Int>()
+                        val failure = assertFailsWith<TransactionException> {
+                            interactor().applyTransactionLog(walFile.toString(), skipFailedTransactions) { transaction ->
+                                actualRows += assertIs<DeleteQueryTransaction>(transaction).query.firstRow
+                                false
+                            }
+                        }
+
+                        assertEquals(listOf(3), actualRows)
+                        assertIs<IllegalStateException>(failure.cause)
+                    }
+                }
+            }
+        } finally {
+            Files.deleteIfExists(walFile)
+        }
+    }
+
+    @Test
+    fun replayRejectsIncompleteHeaderAfterPadding() {
+        val walFile = Files.createTempFile("onyx-wal-gap-partial-header", ".wal")
+        val regularWal = concatenate(deleteQueryRecord(3), ByteArray(4), byteArrayOf(DELETE_QUERY, 0))
+
+        try {
+            for (compressed in listOf(false, true)) {
+                Files.write(walFile, if (compressed) regularWal.compressLz77() else regularWal)
+
+                val failure = assertFailsWith<TransactionException> {
+                    interactor().applyTransactionLog(walFile.toString()) { false }
+                }
+                assertEquals("WAL transaction header is incomplete", failure.cause?.message)
+            }
+        } finally {
+            Files.deleteIfExists(walFile)
+        }
+    }
+
+    @Test
+    fun replayReportsFailureAtRecordOffsetAfterPaddingInStrictAndLenientModes() {
+        val walFile = Files.createTempFile("onyx-wal-gap-failure-offset", ".wal")
+        val firstRecord = deleteQueryRecord(3)
+        val gapSize = READ_AHEAD_BUFFER_SIZE + 3
+        val expectedOffset = firstRecord.size.toLong() + gapSize
+        val failures = ArrayList<ReplayFailure>()
+        val interactor = object : DefaultTransactionInteractor(UNUSED_TRANSACTION_STORE, noOpPersistenceManager()) {
+            override fun onTransactionReplayFailure(
+                walTransactionFile: String,
+                transactionOffset: Long,
+                transaction: Transaction?,
+                cause: Exception,
+            ) {
+                failures += ReplayFailure(walTransactionFile, transactionOffset, transaction, cause)
+            }
+        }
+        val regularWal = concatenate(firstRecord, ByteArray(gapSize), deleteQueryRecord(7), deleteQueryRecord(11))
+
+        try {
+            for (compressed in listOf(false, true)) {
+                Files.write(walFile, if (compressed) regularWal.compressLz77() else regularWal)
+                for (skipFailedTransactions in listOf(false, true)) {
+                    failures.clear()
+                    val attemptedRows = ArrayList<Int>()
+                    val replay = {
+                        interactor.applyTransactionLog(walFile.toString(), skipFailedTransactions) { transaction ->
+                            val row = assertIs<DeleteQueryTransaction>(transaction).query.firstRow
+                            attemptedRows += row
+                            if (row == 7) throw IllegalStateException("cannot apply row 7")
+                            false
+                        }
+                    }
+
+                    if (skipFailedTransactions) {
+                        assertTrue(replay())
+                        assertEquals(listOf(3, 7, 11), attemptedRows)
+                        assertEquals(expectedOffset, failures.single().offset)
+                    } else {
+                        val failure = assertFailsWith<TransactionException> { replay() }
+                        assertEquals(listOf(3, 7), attemptedRows)
+                        assertTrue(failure.message.orEmpty().contains("at byte $expectedOffset"))
+                        assertEquals("cannot apply row 7", failure.cause?.message)
+                    }
+                }
+            }
+        } finally {
+            Files.deleteIfExists(walFile)
+        }
+    }
+
+    @Test
     fun transactionApplicationFailureIsReportedAndLaterRecordsStillReplay() {
         val walFile = Files.createTempFile("onyx-partial-wal-recovery", ".wal")
         val attemptedRows = ArrayList<Int>()

@@ -15,7 +15,6 @@ import com.onyx.interactors.query.QueryCollectorFactory
 import com.onyx.interactors.record.data.Reference
 import com.onyx.lang.map.OptimisticLockingMap
 import java.lang.ref.WeakReference
-import java.util.concurrent.CopyOnWriteArraySet
 
 /**
  * Created by Tim Osborn on 3/27/17.
@@ -53,7 +52,7 @@ open class DefaultQueryCacheInteractor(context: SchemaContext) : QueryCacheInter
      */
     override fun setCachedQueryResults(query: Query, results: MutableList<Reference>): CachedResults {
         val queryCachedResultsMap = cachedQueriesByClass.getOrPut(query.entityType!!) { CachedQueryMap(100) }
-        val cachedResults = CachedResults(CopyOnWriteArraySet(results))
+        val cachedResults = CachedResults().apply { replaceReferences(results) }
 
         // Set a strong reference if this is a query listener.  In that
         // case we do not want it to get cleaned up.
@@ -148,12 +147,13 @@ open class DefaultQueryCacheInteractor(context: SchemaContext) : QueryCacheInter
 
             // Check for cached query results.
             cachedResults = getCachedQueryResults(query)
+            val cachedReferences = cachedResults?.references
             val results: QueryCollector<E>
 
             // The query has already been cached.  Return the results from the cache
-            if (cachedResults?.references != null) {
+            if (cachedReferences != null) {
                 results = QueryCollectorFactory.create(context, context.getBaseDescriptorForEntity(query.entityType!!)!!, query)
-                results.setReferenceSet(cachedResults.references!!)
+                results.setReferenceSet(cachedReferences)
             } else {
                 // There were no cached results, load them from the store
                 results = body.invoke()
@@ -163,7 +163,7 @@ open class DefaultQueryCacheInteractor(context: SchemaContext) : QueryCacheInter
                     if (cachedResults == null)
                         cachedResults = setCachedQueryResults(query, results.references)
                     else
-                        cachedResults.references = results.references.toHashSet()
+                        cachedResults.replaceReferences(results.references)
                 }
             }
 
@@ -178,4 +178,3 @@ open class DefaultQueryCacheInteractor(context: SchemaContext) : QueryCacheInter
         }
     }
 }
-
