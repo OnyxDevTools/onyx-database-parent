@@ -34,7 +34,7 @@ data class HnswRemovalWork(
 )
 
 /**
- * Persistent, deterministic HNSW graph over normalized signed-int8 vectors.
+ * Persistent, deterministic HNSW graph over signed-int8 vectors scored with cosine similarity.
  *
  * Nodes and per-calibration entry points live in ordinary Onyx DiskMaps, so opening an index is
  * constant-time and a query never rebuilds or materializes the graph. Every mutation and search
@@ -324,10 +324,11 @@ internal class PersistentHnswIndex(
     fun search(
         query: HnswSearchQuery,
         allowedRecordIds: Set<Long>? = null,
+        queryVector: QuantizedCosineVector = query.quantizedVector,
     ): PersistentHnswSearchResult = graphLock.read {
         val concurrent = activeSearches.incrementAndGet()
         try {
-            searchUnsafe(query, allowedRecordIds, concurrent)
+            searchUnsafe(query, allowedRecordIds, concurrent, queryVector)
         } finally {
             activeSearches.decrementAndGet()
         }
@@ -337,12 +338,12 @@ internal class PersistentHnswIndex(
         query: HnswSearchQuery,
         allowedRecordIds: Set<Long>?,
         concurrentSearchesObserved: Int,
+        queryVector: QuantizedCosineVector,
     ): PersistentHnswSearchResult {
         val graph = loadMetadata(query.calibrationId)
             ?: return PersistentHnswSearchResult(
                 LinkedHashMap(), 0, 0, false, concurrentSearchesObserved
             )
-        val queryVector = query.quantizedVector
         require(graph.dimensions == queryVector.dimensions) {
             "HNSW calibration ${query.calibrationId} has ${graph.dimensions} dimensions; query has ${queryVector.dimensions}"
         }

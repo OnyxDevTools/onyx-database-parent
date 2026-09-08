@@ -5,6 +5,7 @@ import com.onyx.descriptor.IndexDescriptor
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.IndexPostingMap
 import com.onyx.exception.OnyxException
+import com.onyx.entity.SystemEntity
 import com.onyx.interactors.index.IndexInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.VectorManagedEntity
@@ -19,8 +20,12 @@ import com.onyx.persistence.query.VectorSearchQuery
 import com.onyx.persistence.query.HnswSearchQuery
 import com.onyx.persistence.query.BoundedLexicalSearchQuery
 import com.onyx.persistence.query.resolveVectorSearchQuery
+import com.onyx.persistence.query.eq
+import com.onyx.persistence.query.from
 import com.onyx.vector.FeatureFingerprint
 import com.onyx.vector.PreparedVectorRepresentation
+import com.onyx.vector.QuantizedCosineVector
+import com.onyx.vector.SearchVectorConfiguration
 import com.onyx.vector.SemanticVectorSignature
 import com.onyx.vector.VectorEntityEncoder
 import com.onyx.vector.VectorManagedConfiguration
@@ -37,7 +42,7 @@ import java.util.LinkedHashMap
  * Persistent sparse-feature and semantic-fingerprint index.
  *
  * The index contains ordinary `(routingKey, recordId)` posting trees plus an optional persistent
- * HNSW graph over normalized signed-int8 vectors. It never stores full-precision embeddings.
+ * HNSW graph over cosine-scored signed-int8 vectors. It never stores full-precision embeddings.
  * Multiword structured fingerprints are verified against the record representation so a
  * routing-key collision can add work but can never decide predicate truth.
  */
@@ -178,7 +183,16 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
         allowedRecordIds: Set<Long>? = null,
     ): Map<Long, Float> {
         context.reportQueryExecution(QueryExecutionEvent.HNSW_SEARCH)
-        val result = hnswIndex.search(query, allowedRecordIds)
+        val resolverConfiguration = SearchVectorConfiguration.forClass(descriptor.entityClass)
+            ?.takeIf { it.calibrationId == query.calibrationId }
+        val queryVector = if (resolverConfiguration != null) {
+            val vector = query.vector
+            resolverConfiguration.validate(vector)
+            QuantizedCosineVector.fromDenseMaxAbsolute(vector)
+        } else {
+            query.quantizedVector
+        }
+        val result = hnswIndex.search(query, allowedRecordIds, queryVector)
         context.reportHnswSearchWork(
             HnswSearchWork(
                 efSearch = query.efSearch,
@@ -319,6 +333,7 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
 
     /** Lock order is record interactor -> graph -> record B-tree, matching normal saves. */
     private fun rebuildWhileRecordWritesAreExcluded() {
+        val removedSearchVectorConfigurations = removedSearchVectorConfigurationIds()
         hnswIndex.beginRebuild()
         var rebuildComplete = false
         try {
@@ -330,6 +345,10 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
             records.forEachMutableReference record@ { recordId, entry ->
                 val entity = entry.value as? VectorManagedEntity ?: return@record
                 if (recordId <= 0L) return@record
+                if (removedSearchVectorConfigurations.isNotEmpty() &&
+                    entity.vectorRepresentation()?.configurationId in removedSearchVectorConfigurations) {
+                    entity.clearAutomaticHnswVector()
+                }
                 entity.prepareVectorRepresentation(descriptor)
                 entry.setValue(entity)
                 val representation =
@@ -343,6 +362,26 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
         } finally {
             if (!rebuildComplete) hnswIndex.abortRebuild()
         }
+    }
+
+    /**
+     * Removing a configured getter removes its generated HNSW bytes. Keeping them would make
+     * the now-unconfigured index compare max-absolute records with legacy-normalized queries.
+     * Read schema history before the record traversal, since deserialization uses the same store.
+     * Matching each row's prior configuration also makes an interrupted rebuild safe to resume
+     * without clearing later manual assignments made under the unconfigured schema.
+     */
+    private fun removedSearchVectorConfigurationIds(): Set<Long> {
+        if (SearchVectorConfiguration.forClass(descriptor.entityClass) != null) return emptySet()
+        return context.serializedPersistenceManager.from<SystemEntity>()
+            .where("name" eq descriptor.entityClass.canonicalName)
+            .list<SystemEntity>()
+            .flatMap { it.indexes }
+            .filter {
+                it.name == indexDescriptor.name &&
+                    it.configurationSignature.contains("|onyx-search-vector-v1|COSINE|")
+            }
+            .mapTo(HashSet()) { it.configurationId }
     }
 
     @Synchronized

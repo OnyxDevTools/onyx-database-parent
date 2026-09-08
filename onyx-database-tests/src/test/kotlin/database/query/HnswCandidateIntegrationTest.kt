@@ -32,6 +32,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 import kotlin.test.assertEquals
+import kotlin.test.assertContentEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -56,6 +57,28 @@ class HnswCandidateIntegrationTest {
         } finally {
             if (::databaseDirectory.isInitialized) databaseDirectory.toFile().deleteRecursively()
         }
+    }
+
+    @Test
+    fun legacyBytesAndStrictSimilarityRemainStableAcrossReopenAndUpdate() {
+        val vector = floatArrayOf(1f, 0.5f)
+        val row = save("legacy-self", vector)
+        assertContentEquals(byteArrayOf(114, 57), row.vectorRepresentation()!!.hnswVector)
+        fun assertSelfMatch() {
+            val matches = manager.from<VectorSearchEntity>()
+                .hnswCandidates(HnswSearchQuery(CALIBRATION_ONE, vector, 5, 16, minScore = 0.999999f))
+                .list<VectorSearchEntity>()
+            assertEquals(listOf("legacy-self"), matches.map { it.title })
+            assertContentEquals(byteArrayOf(114, 57), matches.single().vectorRepresentation()!!.hnswVector)
+        }
+        assertSelfMatch()
+        closeDatabase()
+        openDatabase()
+        assertSelfMatch()
+        val loaded = manager.findById<VectorSearchEntity>(row.id)!!
+        loaded.hnswVector(vector, CALIBRATION_ONE)
+        manager.saveEntity<IManagedEntity>(loaded)
+        assertSelfMatch()
     }
 
     @Test

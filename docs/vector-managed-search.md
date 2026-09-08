@@ -5,10 +5,10 @@
 ```text
 persisted attributes ── automatic type encoding ── structured/text fingerprints ─┐
 dense embedding ── frozen calibration ── product cells + semantic SimHash ───────┼─ internal vector index
-                └── normalize + signed-int8 quantize ── persistent HNSW graph ────┘
+                └── normalize + int8 quantize ── persistent HNSW graph ──────────┘
 ```
 
-The source full-precision embedding is never stored. HNSW-enabled records retain one normalized
+The source full-precision embedding is never stored. HNSW-enabled records retain one
 signed-int8 value per dimension, while signature-only records retain no dense-vector payload.
 Applications persist their normal fields; Onyx creates and maintains the hidden representation
 and persistent graph.
@@ -81,6 +81,124 @@ class OptionQuote : VectorManagedEntity() {
 Every persisted identifier, partition, and `@Attribute` is included automatically in `AUTO` mode.
 That default emits only null/presence and categorical equality routes. Relationships are persisted
 normally but are not flattened into the record's vector representation.
+
+## Computed numeric search vectors
+
+Extend `SearchVectorManagedEntity`, override `searchVector`, and declare its dimensions and
+version with `@SearchVector`. This sends
+numeric features directly into the existing cosine HNSW index, without an embedding provider.
+
+```kotlin
+import com.onyx.persistence.SearchVectorManagedEntity
+import com.onyx.persistence.annotations.SearchVector
+import com.onyx.vector.SearchVectorConfiguration
+import com.onyx.persistence.query.from
+import com.onyx.persistence.query.hnswCandidates
+
+@Entity(searchSupport = SearchSupport.SEMANTIC)
+@SearchVector(dimensions = 688, version = "bar-scenarios-v1")
+class BarScenario : SearchVectorManagedEntity() {
+    @Identifier var id: String = ""
+    @Attribute var normalizedIndicators: FloatArray? = null
+
+    override val searchVector: FloatArray?
+        get() {
+            val values = normalizedIndicators ?: return null
+            require(values.size == 344)
+            return FloatArray(values.size * 2).also { result ->
+                values.forEachIndexed { i, x ->
+                    require(x.isFinite() && x in -1f..1f)
+                    val angle = Math.PI * x / 2.0
+                    result[2 * i] = kotlin.math.cos(angle).toFloat()
+                    result[2 * i + 1] = kotlin.math.sin(angle).toFloat()
+                }
+            }
+        }
+}
+
+val source: BarScenario = /* current features */
+val request = source.searchVectorConfiguration!!.query(
+    vector = source.searchVector!!,
+    maxCandidates = 100,
+    efSearch = 1_000,
+)
+val neighbors = manager.from<BarScenario>()
+    .hnswCandidates(request)
+    .list<BarScenario>()
+```
+
+The getter runs once in the normal pre-write path after pre-persist callbacks, and during
+index rebuilds. Its representation is persisted with the entity in that single record write.
+A null result removes a previously indexed vector. Post-persist callbacks retain their normal
+behavior and do not cause the getter to be reevaluated or the record to be written again.
+Resolver getters must be deterministic and free of writes.
+Changes to other rows do not automatically refresh every dependent vector: explicitly rebuild
+the vector index or re-save the affected rows after historical corrections.
+
+Dimensions must be between 1 and 16,384. A non-null vector must have the declared length, finite
+values, and a nonzero norm. Configured getters take precedence over automatic text embeddings
+and per-write manual HNSW assignments. Change the version whenever feature order, normalization,
+weights, or resolver behavior changes. The annotation contributes to the index configuration,
+so a version or dimension change causes schema migration to rebuild the vector index.
+
+`SearchVectorConfiguration(dimensions, version).calibrationId` identifies the query vector
+space. Its wire representation is a signed decimal string, avoiding JSON integer rounding.
+The ID is the first eight bytes, as a signed big-endian long, of SHA-256 over the UTF-8 string
+`onyx-search-vector-v1|COSINE|<dimensions>|<version>`; zero is replaced by one. Queries and records
+must use the same version, dimensions, and transform. The optional annotation `resolver` field
+preserves a cloud schema's source name; native entity code still overrides `searchVector`.
+
+Raw cosine ignores overall vector magnitude. The bounded pair transform above gives each scalar
+a constant-norm representation and compares scalar differences through the cosine of their
+angle difference. For fixed per-feature weights, multiply both members of a pair by the square
+root of that feature's weight. This is a chordal distance on the transformed features, not exact
+Euclidean distance on the originals. Standardize features consistently before this transform;
+raw volume and raw price differences should not share a scale with bounded oscillators.
+
+Native HNSW retains signed-int8 vectors and returns approximate candidates. Use retained original
+features to rerank that bounded set if exact distances matter. The getter configures HNSW;
+optional LSH routing still uses the existing frozen `VectorCalibration` and `semanticVector`
+APIs. Feed the same transformed vector into LSH calibration and query encoding, and refresh
+those signatures explicitly when their source features change.
+
+### Int8 precision and migration
+
+Configured getter vectors use `round(127 * component / max(abs(vector)))`, calculated in Double.
+The largest absolute component therefore uses the full signed-byte range. Scoring divides each
+byte vector by its own magnitude, so that positive per-vector scale cancels in cosine similarity.
+Storage remains one byte per dimension, and already persisted bytes remain readable.
+
+The previous encoder multiplied unit-normalized components by 127. For 344 constant-norm pairs,
+that left approximately seven integer levels per component and erased many near-neutral feature
+differences. The new encoder avoids that dimension-dependent precision loss. It still introduces
+rounding and Float score ties; neither a byte encoding nor HNSW promises exact nearest neighbors.
+
+The target index selects the query encoder from its configured getter and calibration ID.
+Existing `VectorManagedEntity` tables, manual vectors, semantic vectors, and text embeddings
+retain their original unit-normalized encoder, configuration IDs, and query scores. They do not
+require reindexing. The new getters live only on the opt-in `SearchVectorManagedEntity` base,
+so existing schemas can retain attributes or resolvers named `searchVector`.
+
+Configured `@SearchVector` entities include a quantizer revision in their index configuration.
+An older experimental computed-vector index is rebuilt from its getter when that revision
+changes. Ordinary reopens use the persisted graph without reevaluating the getter.
+Removing the getter configuration clears its generated HNSW vectors during migration. Existing
+manual vector spaces are preserved; new manual assignments use the original encoder.
+
+`QuantizedCosineRecallTest` compares exhaustive original-vector cosine with exhaustive old/new
+quantized cosine over two fixed synthetic datasets: seed 20260907, 10,000 records, 32 queries,
+344 correlated scalar features and top 50 neighbors. Both quantized paths use production Float
+scoring and deterministic record-order ties; the reference accumulates original float components
+in Double. This is a representation regression, not an ANN or market-prediction benchmark:
+
+| Synthetic distribution | Previous encoder overlap | Max-absolute encoder overlap |
+| --- | ---: | ---: |
+| Broad correlated features | 97.0625% | 99.8750% |
+| Features concentrated near neutral | 8.8750% | 96.7500% |
+
+Run it with `./gradlew :onyx-database:test --tests com.onyx.vector.QuantizedCosineRecallTest`.
+Measure ANN recall, filtered sample counts, population time, and predictive behavior separately
+on representative historical data before choosing production budgets.
 
 ## Entropy
 
@@ -373,7 +491,7 @@ manager.saveEntity(quote)
 ```
 
 `semanticVector` reads the entity's resolved entropy, produces a semantic signature with the same
-width as its structured features, and retains a normalized int8 copy for HNSW. Saving regenerates
+width as its structured features, and retains a unit-normalized int8 copy for HNSW. Saving regenerates
 the structured portion while preserving compatible semantic and HNSW metadata. Call
 `semanticSignature(...)` when only fingerprint routing is wanted, or call
 `hnswVector(embedding, calibrationId)` when the application owns an independent embedding-space
@@ -396,7 +514,7 @@ val candidates = manager.from<OptionQuote>()
 The compact LSH representation contains product-cell coordinates, a SimHash, four bands, boundary
 confidence, and a stable calibration ID. It does not contain the full-precision embedding.
 Candidate lookup can use matching cells, the product bucket and nearby buckets, and matching
-SimHash bands. The independent HNSW representation uses one signed byte per normalized embedding
+SimHash bands. The independent HNSW representation uses one signed byte per scaled embedding
 dimension and its own calibration ID.
 
 Semantic routing is approximate. Applications that require exact embedding similarity can temporarily re-embed returned content, rerank the bounded candidate set, and discard those temporary vectors.
@@ -505,6 +623,7 @@ Plan these changes as index migrations:
 * changing a field mode or selected family rebuilds the index;
 * changing `searchSupport` rebuilds the index so disabled lexical routes or semantic vectors are
   removed rather than remaining queryable;
+* a quantizer revision rebuilds configured numeric getter indexes from their source features;
 * a representation from a different configuration is rejected rather than mixed into the index;
 * a newly fitted calibration has a different calibration ID, so document and query signatures or HNSW vectors must use the same frozen vector-space ID.
 

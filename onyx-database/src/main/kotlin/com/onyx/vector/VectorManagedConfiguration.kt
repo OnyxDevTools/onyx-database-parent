@@ -63,6 +63,10 @@ data class VectorManagedConfiguration @JvmOverloads constructor(
             }
             val entropy = VectorEntropy(entity.entropy)
             val searchSupport = entity.searchSupport
+            val searchVector = SearchVectorConfiguration.forClass(entityClass)
+            require(searchVector == null || searchSupport.supportsSemantic) {
+                "${entityClass.name} declares a search vector but disables semantic search"
+            }
 
             val declaredDefinitions = hierarchyFields(entityClass)
                 .filter { field ->
@@ -108,6 +112,12 @@ data class VectorManagedConfiguration @JvmOverloads constructor(
                     // Effective semantic-only families omit TEXT_TERM, so retain its source-field
                     // declaration in the signature to make input changes trigger migration.
                     append("|searchText:").append(searchableTextAttributes.joinToString(","))
+                }
+                searchVector?.let {
+                    append('|').append(it.signature)
+                    // Only computed getters can recover lost precision from original features
+                    // during migration. Opaque legacy vectors remain readable as stored.
+                    append("|hnswQuantization:").append(QuantizedCosineVector.QUANTIZATION_VERSION)
                 }
                 definitions.forEach { append('|').append(it.signature) }
             }

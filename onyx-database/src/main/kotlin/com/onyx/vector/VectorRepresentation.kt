@@ -4,7 +4,7 @@ package com.onyx.vector
  * Compact, persistence-safe routing representation for one entity.
  *
  * Full-precision dense embeddings are deliberately absent. [semanticFingerprint] and product-cell
- * coordinates support LSH routing; [hnswVector] optionally retains a normalized one-byte-per-
+ * coordinates support LSH routing; [hnswVector] optionally retains a cosine-scored one-byte-per-
  * dimension embedding for native HNSW candidate traversal. [featureWords] contains sparse
  * interval/categorical/text feature fingerprints in row-major order.
  */

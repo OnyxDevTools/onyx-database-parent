@@ -13,6 +13,8 @@ import kotlin.math.abs
  * [calibrationId] identifies an embedding model/vector space. The database never joins graph
  * edges across calibration IDs, even when dimensions happen to match. [efSearch] is a hard
  * bound on level-zero distance evaluations, not merely a tuning hint.
+ * The target index selects the encoding used for its vector space. Existing spaces retain
+ * unit-normalized int8 encoding; resolver-configured spaces use max-absolute int8 encoding.
  */
 class HnswSearchQuery @JvmOverloads constructor(
     val calibrationId: Long,
@@ -32,7 +34,7 @@ class HnswSearchQuery @JvmOverloads constructor(
 
     init {
         // Validate eagerly while keeping the derived helper out of Java serialization.
-        QuantizedCosineVector.fromDense(vectorContent)
+        QuantizedCosineVector.validateDense(vectorContent)
         require(formatVersion == HNSW_QUERY_FORMAT_VERSION) {
             "Unsupported HNSW query formatVersion $formatVersion; expected $HNSW_QUERY_FORMAT_VERSION"
         }

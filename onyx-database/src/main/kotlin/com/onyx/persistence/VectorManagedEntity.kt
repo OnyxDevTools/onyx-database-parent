@@ -6,6 +6,7 @@ import com.onyx.persistence.annotations.Index
 import com.onyx.persistence.annotations.values.IndexType
 import com.onyx.vector.PreparedVectorRepresentation
 import com.onyx.vector.SemanticVectorSignature
+import com.onyx.vector.QuantizedCosineVector
 import com.onyx.vector.VectorCalibration
 import com.onyx.vector.VectorEntityEncoder
 import com.onyx.vector.VectorManagedConfiguration
@@ -16,7 +17,7 @@ import com.onyx.vector.VectorRepresentationCodec
  * Base entity for managed sparse-vector search.
  *
  * Only compact routing data is persisted. Full-precision dense embeddings supplied during
- * ingestion are discarded; native HNSW optionally retains a normalized signed-int8 copy.
+ * ingestion are discarded; native HNSW optionally retains a unit-normalized signed-int8 copy.
  */
 abstract class VectorManagedEntity : ManagedEntity() {
 
@@ -58,7 +59,7 @@ abstract class VectorManagedEntity : ManagedEntity() {
     /**
      * Installs a compact HNSW vector independently of semantic fingerprint calibration.
      *
-     * The full-precision input is normalized, scalar-quantized to signed int8, and discarded.
+     * The full-precision input is normalized, quantized to signed int8, and discarded.
      * [calibrationId] identifies an embedding model/vector space; HNSW never connects vectors
      * carrying different identifiers.
      */
@@ -73,13 +74,17 @@ abstract class VectorManagedEntity : ManagedEntity() {
     }
 
     private fun installHnswVector(embedding: FloatArray, calibrationId: Long) {
+        installQuantizedHnswVector(QuantizedCosineVector.fromDense(embedding), calibrationId)
+    }
+
+    private fun installQuantizedHnswVector(vector: QuantizedCosineVector, calibrationId: Long) {
         require(calibrationId != VectorRepresentation.NO_CALIBRATION) {
             "HNSW calibrationId must be non-zero"
         }
         preparedVectorRepresentation = null
         val configuration = VectorManagedConfiguration.forClass(javaClass)
         requireSemanticSearchSupport(configuration)
-        val quantized = com.onyx.vector.QuantizedCosineVector.fromDense(embedding).toByteArray()
+        val quantized = vector.toByteArray()
         val existing = VectorRepresentationCodec.decodeOrNull(__vectorRepresentation)
             ?.takeIf {
                 it.configurationId == configuration.configurationId &&
@@ -175,10 +180,24 @@ abstract class VectorManagedEntity : ManagedEntity() {
         }
 
     internal fun prepareVectorRepresentation(descriptor: EntityDescriptor): PreparedVectorRepresentation {
+        refreshSearchVector()
         val existing = VectorRepresentationCodec.decodeOrNull(__vectorRepresentation)
         return VectorEntityEncoder.prepare(this, descriptor, existing).also { prepared ->
             __vectorRepresentation = VectorRepresentationCodec.encode(prepared.representation)
             preparedVectorRepresentation = prepared
+        }
+    }
+
+    /** Resolver vectors are authoritative, including a null result, over automatic text vectors. */
+    private fun refreshSearchVector() {
+        val source = this as? SearchVectorManagedEntity ?: return
+        val configuration = source.searchVectorConfiguration ?: return
+        val vector = source.searchVector
+        if (vector == null) {
+            removeHnswVector()
+        } else {
+            configuration.validate(vector)
+            installQuantizedHnswVector(QuantizedCosineVector.fromDenseMaxAbsolute(vector), configuration.calibrationId)
         }
     }
 

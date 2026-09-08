@@ -91,6 +91,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, conte
      */
     private fun prepareAutomaticSearchEmbedding(entity: IManagedEntity) {
         val searchable = entity as? VectorManagedEntity ?: return
+        if (com.onyx.vector.SearchVectorConfiguration.forClass(searchable.javaClass) != null) return
         if (searchable.hasExplicitHnswOverride()) return
         val provider = context.systemPersistenceManager?.searchEmbeddingProvider ?: return
         val configuration = VectorManagedConfiguration.forClass(

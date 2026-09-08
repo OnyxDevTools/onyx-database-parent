@@ -11,7 +11,7 @@ import kotlin.math.abs
  * Query-side routing metadata for vector-managed records. Text uses deterministic sparse
  * lexical features; [semantic] uses PCA cells plus SimHash bands. Candidate texts may be
  * re-embedded and reranked by the caller without persisting full-precision vectors. Native HNSW
- * uses its separate [HnswSearchQuery] contract and may retain normalized int8 vectors. A
+ * uses its separate [HnswSearchQuery] contract and may retain cosine-scored int8 vectors. A
  * lexical-only query remains exhaustive unless it is used with the dedicated
  * `SEARCH_CANDIDATES` operator.
  */
