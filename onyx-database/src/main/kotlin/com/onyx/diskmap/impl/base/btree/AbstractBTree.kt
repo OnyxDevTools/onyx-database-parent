@@ -159,8 +159,8 @@ abstract class AbstractBTree<K, V>(
                 result?.isInsert = false
                 mutationVersion++
                 if (previousValueLocation != BTreeEntry.NULL_RECORD && valueLocation != previousValueLocation) {
-                    // This slot cannot be reused until a factory commit has forced
-                    // both the new value and this updated entry pointer.
+                    // Retire only after updating the entry pointer. The next
+                    // factory commit publishes this generation for reuse.
                     records.retireObject(previousValueLocation)
                 }
                 return entryPosition

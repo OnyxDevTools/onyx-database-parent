@@ -172,7 +172,8 @@ open class DefaultDiskMapFactory : DiskMapFactory {
     }
 
     /**
-     * Force the storage to persist
+     * Complete both stores' allocation bookkeeping and publish the prepared
+     * retirement generation. Data and index files use OS writeback.
      */
     override fun commit() = synchronized(commitLock) {
         store.prepareRetiredObjects()

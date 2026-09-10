@@ -68,3 +68,22 @@ test the intended capacity and corpus size together.
 
 The current default is 32,768 entries. See the [CLOCK comparison](../docs/hnsw-clock-performance.md)
 and the [earlier LRU results and capacity tradeoffs](../docs/hnsw-save-performance.md).
+
+## Compression graph-copy benchmark
+
+With JDK 23 selected, compare reconstructing a graph from stored vectors against copying its
+existing topology and remapping every record reference:
+
+```bash
+python3 benchmarks/run-hnsw-clone.py --rows 5000 --dimensions 384 --forks 3
+# Exercise a graph larger than the default decoded-node cache.
+python3 benchmarks/run-hnsw-clone.py --rows 40000 --dimensions 384 --forks 1
+```
+
+Each fork builds an untimed source graph, then times reconstruction and copying into separate
+temporary memory-mapped stores, including a final flush. It checks one write per copied node,
+zero source neighbor lookups during copying, graph invariants, remapped query results, and
+reopening the copied graph. Results are written to `/tmp/onyx-hnsw-clone-benchmark.json` unless
+`--output` specifies another path. This measures the graph stage only; entity copying, lexical
+posting construction, embedding inference, and WAL work are excluded. The full compression
+speedup depends on how much time those remaining stages take.

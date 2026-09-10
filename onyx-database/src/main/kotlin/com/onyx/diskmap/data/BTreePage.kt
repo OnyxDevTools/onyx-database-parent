@@ -165,7 +165,8 @@ class BTreePage private constructor(
      * Writes the complete fixed-size page, including its header, active slots, and zero-filled
      * unused space.
      *
-     * Newly created pages are not durable until this method is called.
+     * Newly created pages reach the backing store when this method is called.
+     * The operating system controls when data and index writes reach the device.
      *
      * @throws IllegalArgumentException if [keyCount] is outside the persistable range
      */

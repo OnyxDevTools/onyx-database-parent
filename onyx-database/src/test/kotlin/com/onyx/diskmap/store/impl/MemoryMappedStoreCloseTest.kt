@@ -12,17 +12,19 @@ import kotlin.test.assertTrue
 class MemoryMappedStoreCloseTest {
 
     @Test
-    fun `failed final force still leaves the mapped store physically closed`() {
+    fun `failed final header write still leaves the mapped store physically closed`() {
         val directory = Files.createTempDirectory("onyx-mapped-close-failure")
         val path = directory.resolve("data.db")
-        val store = FailingFinalForceMemoryMappedStore()
+        val store = FailingFinalWriteMemoryMappedStore()
 
         try {
             assertTrue(store.open(path.toString()))
             store.allocate(java.lang.Long.BYTES)
-            store.failFinalForce = true
+            store.allocateSlot(16)
+            store.failFinalWrite = true
 
             assertFalse(store.close())
+            store.failFinalWrite = false
             assertFailsWith<InitializationException> {
                 store.write(ByteBuffer.wrap(byteArrayOf(1)), 0)
             }
@@ -33,14 +35,14 @@ class MemoryMappedStoreCloseTest {
         }
     }
 
-    private class FailingFinalForceMemoryMappedStore : MemoryMappedStore() {
-        var failFinalForce = false
+    private class FailingFinalWriteMemoryMappedStore : MemoryMappedStore() {
+        var failFinalWrite = false
 
-        override fun forceWrites() {
-            if (failFinalForce) {
-                throw IOException("simulated final force failure")
+        override fun write(buffer: ByteBuffer, position: Long): Int {
+            if (failFinalWrite && position == 0L) {
+                throw IOException("simulated final header write failure")
             }
-            super.forceWrites()
+            return super.write(buffer, position)
         }
     }
 }

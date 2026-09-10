@@ -67,7 +67,7 @@ class BTreeMapTest {
         val secondValuePosition = BTreeEntry.get(map.fileStore, stableRecordId).record
         assertNotEquals(initialValuePosition, secondValuePosition)
 
-        // Retired frames remain unavailable until both stores reach a durable commit boundary.
+        // Retired frames remain unavailable until both stores complete their logical commits.
         map[10] = "pending".repeat(32)
         val thirdValuePosition = BTreeEntry.get(map.fileStore, stableRecordId).record
         val sizeWithThreeFrames = map.records.getFileSize()

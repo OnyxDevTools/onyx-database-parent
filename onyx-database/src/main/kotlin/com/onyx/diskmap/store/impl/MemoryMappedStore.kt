@@ -161,17 +161,16 @@ open class MemoryMappedStore : FileChannelStore {
     override fun close(): Boolean = mappingWriteLock.withLock {
         if (channel == null) return true
 
-        // Persist the exact allocated end while the mapping is live, then
+        // Write the exact allocated end while the mapping is live, then
         // unmap before truncating its physical growth reservation.
-        var strictlyForced = true
+        var preparedForTruncate = true
         if (!deleteOnClose && channel?.isOpen == true) {
             try {
                 finishAllocationReservations()
-                wholeFileMapping?.force()
             } catch (_: Throwable) {
                 // Still unmap and close, but do not truncate after a failed
-                // strict durability barrier.
-                strictlyForced = false
+                // allocation-header update.
+                preparedForTruncate = false
             }
         }
 
@@ -180,10 +179,10 @@ open class MemoryMappedStore : FileChannelStore {
         try {
             closingMapping?.close()
         } catch (_: Throwable) {
-            strictlyForced = false
+            preparedForTruncate = false
         }
 
-        val truncated = deleteOnClose || channel?.isOpen != true || strictlyForced && try {
+        val truncated = deleteOnClose || channel?.isOpen != true || preparedForTruncate && try {
             channel?.truncate(getFileSize())
             true
         } catch (_: IOException) {
@@ -196,29 +195,24 @@ open class MemoryMappedStore : FileChannelStore {
             } catch (_: Throwable) {
                 false
             }
-            // FileChannelStore.close() reports durability failure without
+            // FileChannelStore.close() can report finalization failure without
             // closing the channel. The store must still become unusable.
             if (channel?.isOpen == true) {
                 runCatching { channel?.close() }
             }
             channel?.isOpen != true
         }
-        return strictlyForced && truncated && closeProtocolSucceeded && physicallyClosed
+        return preparedForTruncate && truncated && closeProtocolSucceeded && physicallyClosed
     }
 
     /**
-     * Commits any changes to the store.
+     * Finishes allocation bookkeeping without forcing the mapping or channel.
      * This is a no-op if deleteOnClose is true.
      */
     override fun commit() = mappingWriteLock.withLock {
         if (!deleteOnClose) {
             super.commit()
         }
-    }
-
-    override fun forceWrites() = mappingWriteLock.withLock {
-        wholeFileMapping?.force()
-        super.forceWrites()
     }
 
     /**

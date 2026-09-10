@@ -185,7 +185,6 @@ open class FileChannelStore() : Store {
             if (this !is MemoryMappedStore && this !is InMemoryStore) {
                 channel?.truncate(logicalSizeCounter.get())
             }
-            forceWrites()
         }
         this.channel!!.close()
         async {
@@ -199,20 +198,13 @@ open class FileChannelStore() : Store {
     }
 
     /**
-     * Commit all file writes
+     * Finish allocation bookkeeping. Data and index writes use OS writeback;
+     * this is not a storage-device durability barrier.
      */
     override fun commit() {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
         finishAllocationReservations()
-        forceWrites()
-    }
-
-    /** Flush data written by this store. Memory-mapped stores also force their mapping. */
-    protected open fun forceWrites() {
-        if (this.channel?.isOpen == true) {
-            this.channel?.force(true)
-        }
     }
 
     /**
@@ -365,7 +357,7 @@ open class FileChannelStore() : Store {
         Unit
     }
 
-    /** Freeze the current retirement generation before either store is forced. */
+    /** Freeze the current retirement generation before both stores finish their commit bookkeeping. */
     override fun prepareRetiredObjects() = synchronized(allocationLock) {
         if (pendingRetiredObjects.isNotEmpty()) {
             preparedRetiredObjects.addAll(pendingRetiredObjects)
@@ -373,7 +365,7 @@ open class FileChannelStore() : Store {
         }
     }
 
-    /** Publish only the generation prepared before both durability barriers. */
+    /** Publish only the generation prepared before both stores completed their logical commits. */
     override fun publishRetiredObjects() = synchronized(allocationLock) {
         while (preparedRetiredObjects.isNotEmpty()) {
             // Consume first so a partial failure can never enqueue this slot a

@@ -81,6 +81,44 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
     private val records: DiskMap<Any, IManagedEntity>
         get() = dataFile.getHashMap(descriptor.identifier!!.type, descriptor.entityClass.name)
 
+    private var cloningHnsw = false
+
+    /**
+     * Clones a complete, offline partition into an empty destination. The caller copies unchanged
+     * records with their stored vector representations and returns source-to-destination references
+     * for exactly those records with an HNSW vector. Posting routes are built by ordinary saves;
+     * the existing HNSW topology is remapped once instead of reconstructed for every saved row.
+     * A failed clone must be discarded by the caller, including any already copied records.
+     * Returns false without invoking the callback when existing rows or relationship cascades
+     * require the caller's ordinary merge path.
+     */
+    fun cloneWithHnswGraph(source: FingerprintIndexInteractor, copyRecords: () -> Map<Long, Long>): Boolean {
+        require(source !== this) { "Cannot clone a vector index onto itself" }
+        require(indexDescriptor.configurationSignature == source.indexDescriptor.configurationSignature &&
+            indexDescriptor.encodingVersion == source.indexDescriptor.encodingVersion) {
+            "Vector index cloning requires identical source and destination configurations"
+        }
+        synchronized(context.getRecordInteractor(descriptor)) {
+            synchronized(this) {
+                if (descriptor.hasRelationships || records.longSize() != 0L) return false
+                check(!cloningHnsw) { "An HNSW clone is already in progress" }
+                hnswIndex.beginRebuild()
+                cloningHnsw = true
+                var complete = false
+                try {
+                    val recordIds = copyRecords()
+                    hnswIndex.copyDuringRebuild(source.hnswIndex, recordIds)
+                    hnswIndex.completeRebuild()
+                    complete = true
+                } finally {
+                    cloningHnsw = false
+                    if (!complete) hnswIndex.abortRebuild()
+                }
+            }
+        }
+        return true
+    }
+
     @Synchronized
     override fun save(indexValue: Any?, oldReferenceId: Long, newReferenceId: Long) {
         require(oldReferenceId <= 0L) {
@@ -674,7 +712,7 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
                 bandPostings.add(bandRoute(signature.calibrationId, signature.bitCount, index, band), recordId)
             }
         }
-        if (representation.hasHnswVector) {
+        if (representation.hasHnswVector && !cloningHnsw) {
             if (rebuildingHnsw) {
                 hnswIndex.upsertDuringRebuild(
                     recordId,

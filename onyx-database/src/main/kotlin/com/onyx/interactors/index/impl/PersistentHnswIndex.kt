@@ -429,6 +429,72 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
         mutateGraph { upsertUnsafe(recordId, calibrationId, vectorBytes) }
     }
 
+    /**
+     * Streams an offline source graph once, retaining vectors, levels and topology.
+     * The mapping contains exactly the source records with HNSW vectors. No nearest-neighbor
+     * construction or cache admission is needed; each destination node is written once. The
+     * destination must be an unpublished, empty graph owned by the current rebuild scope.
+     */
+    fun copyDuringRebuild(source: PersistentHnswIndex, recordIds: Map<Long, Long>) {
+        check(rebuildOwner === Thread.currentThread()) { "HNSW rebuild is not owned by this thread" }
+        require(source !== this) { "Cannot copy an HNSW graph onto itself" }
+        check(nodes.entries.isEmpty() && metadata.entries.isEmpty()) { "HNSW graph copy requires an empty destination" }
+        require(recordIds.keys.all { it > 0L } && recordIds.values.all { it > 0L }) {
+            "HNSW clone record references must be positive"
+        }
+        require(recordIds.values.toSet().size == recordIds.size) {
+            "HNSW clone record references must be one-to-one"
+        }
+        fun remap(id: Long): Long = requireNotNull(recordIds[id]) {
+            "HNSW clone is missing source record $id"
+        }
+        source.graphLock.read {
+            val graphs = source.metadata.entries.associate { (id, bytes) ->
+                id to HnswMetadataCodec.decode(bytes).also {
+                    require(it.calibrationId == id) { "HNSW metadata calibration does not match its key" }
+                }
+            }
+            val counts = HashMap<Long, Long>()
+            val entryPoints = HashSet<Long>()
+            var copied = 0L
+            try {
+                source.nodes.forEach { (id, bytes) ->
+                    val node = HnswNodeCodec.decode(id, bytes)
+                    val graph = requireNotNull(graphs[node.calibrationId]) { "HNSW node $id has no graph metadata" }
+                    require(node.vectorBytes.size == graph.dimensions && node.level <= graph.maxLevel) {
+                        "HNSW node $id is incompatible with its graph metadata"
+                    }
+                    if (id == graph.entryPoint) {
+                        require(node.level == graph.maxLevel) { "HNSW entry point $id has the wrong level" }
+                        entryPoints += node.calibrationId
+                    }
+                    val newId = remap(id)
+                    val neighbors = Array(node.neighbors.size) { layer ->
+                        node.neighbors[layer].map(::remap).toLongArray()
+                    }
+                    nodes[newId] = HnswNodeCodec.encode(node.copy(id = newId, neighbors = neighbors))
+                    counts[node.calibrationId] = (counts[node.calibrationId] ?: 0L) + 1L
+                    copied++
+                }
+                require(copied == recordIds.size.toLong()) {
+                    "HNSW clone found $copied nodes for ${recordIds.size} vector records"
+                }
+                graphs.forEach { (id, graph) ->
+                    require(counts[id] == graph.size && id in entryPoints) {
+                        "HNSW clone metadata does not match the nodes for calibration $id"
+                    }
+                }
+                // Publish entry points only after every node and reference has been copied.
+                graphs.forEach { (id, graph) ->
+                    metadata[id] = HnswMetadataCodec.encode(graph.copy(entryPoint = remap(graph.entryPoint)))
+                }
+            } catch (failure: Throwable) {
+                clearGraphUnsafe()
+                throw failure
+            }
+        }
+    }
+
     fun completeRebuild() {
         check(rebuildOwner === Thread.currentThread()) { "HNSW rebuild is not owned by this thread" }
         rebuildOwner = null

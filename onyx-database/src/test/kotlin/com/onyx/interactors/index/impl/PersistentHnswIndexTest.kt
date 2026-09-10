@@ -23,6 +23,84 @@ import kotlin.test.assertTrue
 
 class PersistentHnswIndexTest {
     @Test
+    fun `graph clone remaps live nodes once and preserves search across calibrations`() {
+        val sourceNodes = RecordingMap()
+        val sourceMetadata = RecordingMap()
+        val source = PersistentHnswIndex(sourceNodes.map, sourceMetadata.map, nodeCacheCapacity = 8)
+        val random = Random(45732)
+        val vectors = (10_000L until 10_128L).associateWith {
+            ByteArray(32) { (random.nextInt(255) - 127).toByte() }
+        }
+        vectors.forEach { (id, bytes) -> source.upsert(id, CALIBRATION + id % 2, bytes) }
+        source.remove(10_007L)
+        val mapping = sourceNodes.backing.keys.associateWith { 1_000_000L - it * 3L }
+        // Maintenance must also read the previous, variable-size node format.
+        val legacyId = mapping.keys.first()
+        sourceNodes.backing[legacyId] = asLegacyNode(sourceNodes.backing.getValue(legacyId))
+        val originalNodes = sourceNodes.backing.mapValues { it.value.copyOf() }
+        val targetNodes = RecordingMap()
+        val targetMetadata = RecordingMap()
+        val target = PersistentHnswIndex(targetNodes.map, targetMetadata.map, nodeCacheCapacity = 8)
+        var sourceLookups = 0
+        sourceNodes.beforeRead = { sourceLookups++ }
+        target.beginRebuild()
+        try {
+            target.copyDuringRebuild(source, mapping)
+        } finally {
+            target.completeRebuild()
+        }
+        assertEquals(0, sourceLookups, "Graph cloning must stream nodes without neighbor lookups")
+        assertEquals(mapping.size, targetNodes.writes.size)
+        assertTrue(targetNodes.writes.values.all { it == 1 }, "Each graph node must be written only once")
+        assertEquals(mapOf(CALIBRATION to 1, CALIBRATION + 1L to 1), targetMetadata.writes)
+        assertEquals(0, nodeCache(target).size, "Cloning must not churn the graph traversal cache")
+        for (calibration in CALIBRATION..CALIBRATION + 1) {
+            assertEquals(source.validateGraph(calibration), target.validateGraph(calibration))
+            val query = HnswSearchQuery(calibration, vectors.getValue(10_040L).map(Byte::toFloat).toFloatArray(), 10, 128)
+            val expected = source.search(query).scores.mapKeys { mapping.getValue(it.key) }
+            assertEquals(expected, target.search(query).scores)
+        }
+        originalNodes.forEach { (id, bytes) -> assertContentEquals(bytes, sourceNodes.backing[id]) }
+        // The remapped topology must remain writable after cloning.
+        target.remove(mapping.getValue(10_020L))
+        target.upsert(2_000_000L, CALIBRATION, vectors.getValue(10_020L))
+        assertEquals(source.validateGraph(CALIBRATION), target.validateGraph(CALIBRATION))
+    }
+
+    @Test
+    fun `graph clone rejects incomplete or duplicate mappings and clears a failed copy`() {
+        val sourceNodes = RecordingMap()
+        val sourceMetadata = RecordingMap()
+        val source = PersistentHnswIndex(sourceNodes.map, sourceMetadata.map)
+        source.upsert(1L, CALIBRATION, byteArrayOf(127, 0))
+        source.upsert(2L, CALIBRATION, byteArrayOf(0, 127))
+        val nodes = RecordingMap()
+        val metadata = RecordingMap()
+        val target = PersistentHnswIndex(nodes.map, metadata.map)
+        assertFailsWith<IllegalStateException> { target.copyDuringRebuild(source, mapOf(1L to 11L, 2L to 12L)) }
+        for (mapping in listOf(mapOf(1L to 11L), mapOf(1L to 11L, 2L to 11L), mapOf(1L to 11L, 2L to 12L, 3L to 13L))) {
+            target.beginRebuild()
+            try {
+                assertFailsWith<IllegalArgumentException> { target.copyDuringRebuild(source, mapping) }
+                assertTrue(nodes.backing.isEmpty())
+                assertTrue(metadata.backing.isEmpty())
+            } finally {
+                target.abortRebuild()
+            }
+        }
+        nodes.beforeWrite = { if (it == 12L) error("injected graph write failure") }
+        target.beginRebuild()
+        try {
+            assertFailsWith<IllegalStateException> { target.copyDuringRebuild(source, mapOf(1L to 11L, 2L to 12L)) }
+            assertTrue(nodes.backing.isEmpty())
+            assertTrue(metadata.backing.isEmpty())
+        } finally {
+            target.abortRebuild()
+        }
+        assertEquals(2L, source.validateGraph(CALIBRATION))
+    }
+
+    @Test
     fun `mutation working set survives cache eviction without rereading nodes`() {
         val expectedNodes = RecordingMap()
         val expectedMetadata = RecordingMap()

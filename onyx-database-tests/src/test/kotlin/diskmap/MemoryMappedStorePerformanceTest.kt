@@ -19,7 +19,7 @@ import kotlin.math.min
  * Opt-in random I/O benchmark for [MemoryMappedStore].
  *
  * By default this creates and fully initializes an exact 1 GiB file under
- * `/media/tosborn/Expansion/test`, then measures random 4 KiB reads and durable
+ * `/media/tosborn/Expansion/test`, then measures random 4 KiB reads and buffered
  * random 4 KiB writes. The scratch file is removed after the report is written.
  *
  * Enable with:
@@ -114,14 +114,14 @@ class MemoryMappedStorePerformanceTest {
                 appendLine("randomWriteBufferedElapsed=${formatDuration(writeSample.bufferedNanos)}")
                 appendLine("randomWriteBufferedOperationsPerSecond=${format(rate(operationCount, writeSample.bufferedNanos))}")
                 appendLine("randomWriteBufferedMiBPerSecond=${format(rateMiB(bytesPerPhase, writeSample.bufferedNanos))}")
-                appendLine("randomWriteFlushElapsed=${formatDuration(writeSample.flushNanos)}")
-                appendLine("randomWriteDurableElapsed=${formatDuration(writeSample.durableNanos)}")
-                appendLine("randomWriteDurableOperationsPerSecond=${format(rate(operationCount, writeSample.durableNanos))}")
-                appendLine("randomWriteDurableMiBPerSecond=${format(rateMiB(bytesPerPhase, writeSample.durableNanos))}")
+                appendLine("randomWriteCommitElapsed=${formatDuration(writeSample.commitNanos)}")
+                appendLine("randomWriteWithCommitElapsed=${formatDuration(writeSample.withCommitNanos)}")
+                appendLine("randomWriteWithCommitOperationsPerSecond=${format(rate(operationCount, writeSample.withCommitNanos))}")
+                appendLine("randomWriteWithCommitMiBPerSecond=${format(rateMiB(bytesPerPhase, writeSample.withCommitNanos))}")
                 appendLine()
                 appendLine("Random offsets are block-aligned and generated before timing begins.")
                 appendLine("The operating-system file cache is not cleared between phases.")
-                appendLine("Write durability includes MemoryMappedStore.commit().")
+                appendLine("Commit timing includes allocation bookkeeping; data writes use OS writeback without forcing.")
             }
 
             Files.writeString(
@@ -238,8 +238,8 @@ class MemoryMappedStorePerformanceTest {
             val committedAt = System.nanoTime()
             return WriteSample(
                 bufferedNanos = writesCompletedAt - startedAt,
-                flushNanos = committedAt - writesCompletedAt,
-                durableNanos = committedAt - startedAt
+                commitNanos = committedAt - writesCompletedAt,
+                withCommitNanos = committedAt - startedAt
             )
         } finally {
             store.close()
@@ -277,8 +277,8 @@ class MemoryMappedStorePerformanceTest {
 
     private data class WriteSample(
         val bufferedNanos: Long,
-        val flushNanos: Long,
-        val durableNanos: Long
+        val commitNanos: Long,
+        val withCommitNanos: Long
     )
 
     private companion object {

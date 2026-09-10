@@ -171,12 +171,14 @@ interface Store {
      */
     fun retireObject(position: Long) = Unit
 
-    /** Freeze the current retirement generation before durability barriers begin. */
+    /** Freeze the current retirement generation before logical commits begin. */
     fun prepareRetiredObjects() = Unit
 
     /**
      * Publish retired frames after every store containing references to them
-     * has crossed its durability barrier. The default performs no reclamation.
+     * has completed its allocation bookkeeping. This is a logical commit
+     * boundary; data and index stores rely on OS writeback for persistence.
+     * The default performs no reclamation.
      */
     fun publishRetiredObjects() = Unit
 
@@ -198,7 +200,8 @@ interface Store {
     fun close(): Boolean
 
     /**
-     * Commit and flush Storage
+     * Complete allocation bookkeeping. Data and index stores do not force
+     * writes to the storage device; WAL durability is managed separately.
      */
     fun commit()
 

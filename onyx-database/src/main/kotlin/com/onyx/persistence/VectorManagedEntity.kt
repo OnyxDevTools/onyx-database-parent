@@ -28,6 +28,25 @@ abstract class VectorManagedEntity : ManagedEntity() {
     @Transient
     private var preparedVectorRepresentation: PreparedVectorRepresentation? = null
 
+    @Transient
+    internal var preservesStoredVectorRepresentation: Boolean = false
+        private set
+
+    /**
+     * Copies an unchanged record to an identical schema without running its embedding provider or
+     * search-vector resolver again. Intended for offline maintenance; ordinary saves must refresh
+     * vectors from the current attributes. The scope is restored even when persistence fails.
+     */
+    fun <T> withStoredVectorRepresentation(action: () -> T): T {
+        val previous = preservesStoredVectorRepresentation
+        preservesStoredVectorRepresentation = true
+        try {
+            return action()
+        } finally {
+            preservesStoredVectorRepresentation = previous
+        }
+    }
+
     /**
      * Tracks an application-supplied HNSW override for the next write only. Persisted vectors are
      * not overrides: loading and updating an entity must still refresh its automatic embedding.
@@ -183,7 +202,15 @@ abstract class VectorManagedEntity : ManagedEntity() {
         descriptor: EntityDescriptor,
         recomputeSearchVector: Boolean = true,
     ): PreparedVectorRepresentation {
-        if (recomputeSearchVector) refreshSearchVector()
+        if (preservesStoredVectorRepresentation) {
+            val stored = VectorRepresentationCodec.decodeOrNull(__vectorRepresentation)
+            if (stored != null) {
+                return PreparedVectorRepresentation.fromRepresentation(stored).also {
+                    preparedVectorRepresentation = it
+                }
+            }
+        }
+        if (recomputeSearchVector && !preservesStoredVectorRepresentation) refreshSearchVector()
         val existing = VectorRepresentationCodec.decodeOrNull(__vectorRepresentation)
         return VectorEntityEncoder.prepare(this, descriptor, existing).also { prepared ->
             __vectorRepresentation = VectorRepresentationCodec.encode(prepared.representation)

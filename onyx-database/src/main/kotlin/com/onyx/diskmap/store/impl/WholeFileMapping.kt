@@ -12,12 +12,15 @@ import kotlin.math.max
  * The owner must serialize [ensureCapacity], [write], [force], and [close]
  * against all other operations. Reads may run concurrently while the mapping
  * is stable.
+ *
+ * Only WAL owners enable forcing. Other mappings use operating-system
+ * writeback and do not track dirty ranges.
  */
 internal class WholeFileMapping(
     private val channel: FileChannel,
     private val growthQuantum: Long,
     initialRequiredCapacity: Long,
-    private val forceMetadataAfterMapping: Boolean = false
+    private val forceEnabled: Boolean = false
 ) : AutoCloseable {
 
     private data class Mapping(
@@ -47,8 +50,8 @@ internal class WholeFileMapping(
         val previous = mapping
 
         try {
-            // Growth is rare. Establish a clear durability boundary before
-            // invalidating every view backed by the previous arena.
+            // WAL mappings establish a durability boundary before unmapping.
+            // Other mappings leave writeback to the operating system.
             force()
             previous.arena.close()
             mapping = replacement
@@ -93,9 +96,8 @@ internal class WholeFileMapping(
         val endExclusive = Math.addExact(filePosition, byteCount.toLong())
         ensureCapacity(endExclusive)
 
-        // Record the complete range before copying so a partial copy is still
-        // included in the next durability barrier.
-        markDirty(filePosition, endExclusive)
+        // WALs include even a partial copy in their next durability barrier.
+        if (forceEnabled) markDirty(filePosition, endExclusive)
         MemorySegment.copy(
             MemorySegment.ofBuffer(source),
             0L,
@@ -108,6 +110,7 @@ internal class WholeFileMapping(
     }
 
     fun force() {
+        if (!forceEnabled) return
         if (dirtyStart < dirtyEndExclusive) {
             mapping.memory
                 .asSlice(dirtyStart, dirtyEndExclusive - dirtyStart)
@@ -149,7 +152,7 @@ internal class WholeFileMapping(
                 capacity,
                 arena
             )
-            if (forceMetadataAfterMapping) {
+            if (forceEnabled) {
                 channel.force(true)
             }
             return Mapping(

@@ -8,8 +8,61 @@ import java.nio.file.StandardOpenOption
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class WholeFileMappingTest {
+
+    @Test
+    fun `data mappings write grow and close without requesting any force`() {
+        val path = Files.createTempFile("onyx-mapping-no-force", ".db")
+        try {
+            ForceTrackingFileChannel(
+                FileChannel.open(path, StandardOpenOption.READ, StandardOpenOption.WRITE),
+                rejectForce = true,
+                unmappedSegments = true
+            ).use { channel ->
+                WholeFileMapping(channel, growthQuantum = 64L, initialRequiredCapacity = 0L).use { mapping ->
+                    mapping.write(ByteBuffer.wrap(byteArrayOf(1, 2)), 16L)
+                    mapping.force()
+                    mapping.ensureCapacity(128L)
+                    mapping.write(ByteBuffer.wrap(byteArrayOf(3, 4)), 64L)
+                    mapping.force()
+                }
+                assertTrue(channel.forceRequests.isEmpty())
+            }
+        } finally {
+            Files.deleteIfExists(path)
+        }
+    }
+
+    @Test
+    fun `WAL mappings force metadata on growth and propagate mapped force failures`() {
+        val path = Files.createTempFile("onyx-mapping-wal-force", ".wal")
+        try {
+            ForceTrackingFileChannel(
+                FileChannel.open(path, StandardOpenOption.READ, StandardOpenOption.WRITE),
+                unmappedSegments = true
+            ).use { channel ->
+                val mapping = WholeFileMapping(channel, growthQuantum = 64L, initialRequiredCapacity = 0L, forceEnabled = true)
+                try {
+                    assertEquals(listOf(true), channel.forceRequests)
+                    mapping.ensureCapacity(128L)
+                    assertEquals(listOf(true, true), channel.forceRequests)
+                    mapping.write(ByteBuffer.wrap(byteArrayOf(1, 2)), 16L)
+                    assertFailsWith<UnsupportedOperationException> { mapping.force() }
+                    // A failed force must leave the write pending for retry.
+                    assertFailsWith<UnsupportedOperationException> { mapping.force() }
+                    assertFailsWith<UnsupportedOperationException> { mapping.ensureCapacity(256L) }
+                    assertEquals(128L, mapping.capacity)
+                } finally {
+                    assertFailsWith<UnsupportedOperationException> { mapping.close() }
+                }
+            }
+        } finally {
+            Files.deleteIfExists(path)
+        }
+    }
 
     @Test
     fun `force publishes updates before the mapping and channel close`() {
@@ -20,7 +73,7 @@ class WholeFileMappingTest {
                 StandardOpenOption.READ,
                 StandardOpenOption.WRITE
             ).use { writer ->
-                val mapping = WholeFileMapping(writer, growthQuantum = 64L, initialRequiredCapacity = 0L)
+                val mapping = WholeFileMapping(writer, growthQuantum = 64L, initialRequiredCapacity = 0L, forceEnabled = true)
                 try {
                     val first = byteArrayOf(1, 2, 3, 4)
                     mapping.write(ByteBuffer.wrap(first), 16L)

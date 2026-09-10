@@ -413,7 +413,7 @@ class StoreAllocationRecoveryTest {
         val latePosition = store.writeObject(ByteArray(256) { 2 })
 
         store.retireObject(originalPosition)
-        // Publishing without a prepared, durable generation is inert.
+        // Publishing without a prepared generation is inert.
         store.publishRetiredObjects()
         val pendingPosition = store.writeObject(ByteArray(16) { 3 })
         assertNotEquals(originalPosition, pendingPosition)

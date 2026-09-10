@@ -59,13 +59,14 @@ interface DiskMapFactory {
     fun getIndexMap(valueType: Class<*>, name: String): IndexPostingMap
 
     /**
-     * Close Map Builder.  Flush the file writes
+     * Close the stores after finishing their allocation bookkeeping.
      * @since 1.0.0
      */
     fun close():Boolean
 
     /**
-     * Commit Map Builder file synchronize file writes
+     * Complete allocation bookkeeping and publish retired storage for reuse.
+     * Data and index files use OS writeback; this does not force them to disk.
      * @since 1.0.0
      */
     fun commit()

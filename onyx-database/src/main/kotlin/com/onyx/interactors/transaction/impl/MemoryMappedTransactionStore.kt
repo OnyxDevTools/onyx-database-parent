@@ -284,7 +284,7 @@ private class MemoryMappedTransactionFileChannel(
         channel = channel,
         growthQuantum = growthQuantum,
         initialRequiredCapacity = logicalSize,
-        forceMetadataAfterMapping = true
+        forceEnabled = true
     )
     private var acceptsWrites = true
     private var hasUnforcedChanges = false
@@ -516,7 +516,7 @@ private class MemoryMappedTransactionFileChannel(
                 channel = channel,
                 growthQuantum = growthQuantum,
                 initialRequiredCapacity = size,
-                forceMetadataAfterMapping = true
+                forceEnabled = true
             )
         } catch (failure: Throwable) {
             runCatching { channel.close() }
