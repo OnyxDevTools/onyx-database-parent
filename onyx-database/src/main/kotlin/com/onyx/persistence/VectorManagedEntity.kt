@@ -179,8 +179,11 @@ abstract class VectorManagedEntity : ManagedEntity() {
             )
         }
 
-    internal fun prepareVectorRepresentation(descriptor: EntityDescriptor): PreparedVectorRepresentation {
-        refreshSearchVector()
+    internal fun prepareVectorRepresentation(
+        descriptor: EntityDescriptor,
+        recomputeSearchVector: Boolean = true,
+    ): PreparedVectorRepresentation {
+        if (recomputeSearchVector) refreshSearchVector()
         val existing = VectorRepresentationCodec.decodeOrNull(__vectorRepresentation)
         return VectorEntityEncoder.prepare(this, descriptor, existing).also { prepared ->
             __vectorRepresentation = VectorRepresentationCodec.encode(prepared.representation)

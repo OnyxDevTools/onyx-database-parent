@@ -1,6 +1,7 @@
 package com.onyx.diskmap.factory.impl
 
 import com.onyx.diskmap.IndexPostingMap
+import com.onyx.diskmap.ValueUpdateMode
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.impl.DiskBTreeMap
@@ -34,6 +35,8 @@ open class DefaultDiskMapFactory : DiskMapFactory {
     open protected lateinit var store: Store
     open protected lateinit var nodeStore: Store
     private val commitLock = Any()
+    private val mapCreationLock = Any()
+    private val valueUpdateModes = ConcurrentHashMap<Long, ValueUpdateMode>()
 
     // Contains all initialized maps
     open protected val maps = OptimisticLockingMap<String, Map<*, *>>(WeakHashMap())
@@ -199,6 +202,7 @@ open class DefaultDiskMapFactory : DiskMapFactory {
         maps.clear()
         indexMaps.clear()
         mapsByHeader.clear()
+        valueUpdateModes.clear()
 
         // Reset the file size
         nodeStore.reset()
@@ -230,6 +234,10 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      */
     override fun <T : Map<*, *>> getHashMap(keyType: Class<*>, name: String): T = getMapWithType(keyType, name)
 
+    override fun <T : Map<*, *>> getHashMap(
+        keyType: Class<*>, name: String, valueUpdateMode: ValueUpdateMode,
+    ): T = getNamedMap(keyType, name, valueUpdateMode)
+
     /**
      * Get Disk Map with the ability to dynamically change the load factor.  Meaning change how it scales dynamically
      *
@@ -240,18 +248,36 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      */
     override fun <T : Map<*, *>> getHashMap(keyType: Class<*>, header: Header): T {
         mapsByHeader[header.position]?.get()?.let { return it as T }
+        return synchronized(mapCreationLock) {
+            getHashMap(keyType, header, valueUpdateModes[header.position] ?: ValueUpdateMode.APPEND)
+        }
+    }
 
-        // A rehydrated Header value can lag behind a root split. On a cache miss,
-        // attach using the canonical bytes before publishing the map instance.
-        val canonicalHeader = nodeStore.read(header.position, Header.HEADER_SIZE, Header()) as? Header ?: header
-        val created = DiskBTreeMap<Any, Any>(
-            WeakReference(nodeStore), WeakReference(store), canonicalHeader, keyType
-        )
-        while (true) {
-            val existingReference = mapsByHeader.putIfAbsent(header.position, WeakReference(created))
-                ?: return created as T
-            existingReference.get()?.let { return it as T }
-            if (mapsByHeader.replace(header.position, existingReference, WeakReference(created))) return created as T
+    override fun <T : Map<*, *>> getHashMap(
+        keyType: Class<*>, header: Header, valueUpdateMode: ValueUpdateMode,
+    ): T {
+        mapsByHeader[header.position]?.get()?.let { map ->
+            require(map is DiskBTreeMap<*, *> && map.valueUpdateMode == valueUpdateMode) {
+                "Map at ${header.position} is already open with a different value-update policy"
+            }
+            return map as T
+        }
+        return synchronized(mapCreationLock) {
+            val previousMode = valueUpdateModes[header.position]
+            require(previousMode == null || previousMode == valueUpdateMode) {
+                "Map at ${header.position} already uses $previousMode; cannot open it with $valueUpdateMode"
+            }
+            mapsByHeader[header.position]?.get()?.let { return@synchronized it as T }
+
+            // A rehydrated Header can lag behind a root split. All lookup paths share the canonical
+            // live map and its lock, even if a cache flush discarded the name lookup.
+            val canonicalHeader = nodeStore.read(header.position, Header.HEADER_SIZE, Header()) as? Header ?: header
+            val created = DiskBTreeMap<Any, Any>(
+                WeakReference(nodeStore), WeakReference(store), canonicalHeader, keyType, valueUpdateMode,
+            )
+            valueUpdateModes[header.position] = valueUpdateMode
+            mapsByHeader[header.position] = WeakReference(created)
+            created as T
         }
     }
 
@@ -291,9 +317,20 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      *
      * @since 1.2.0
      */
-    open protected fun <T : Map<*, *>> getMapWithType(keyType: Class<*>, name: String): T = maps.getOrPut(name) {
-        DiskBTreeMap<Any, Any>(WeakReference(nodeStore), WeakReference(store), getOrCreateHeader(name), keyType)
-    } as T
+    open protected fun <T : Map<*, *>> getMapWithType(keyType: Class<*>, name: String): T =
+        getNamedMap(keyType, name, ValueUpdateMode.APPEND)
+
+    private fun <T : Map<*, *>> getNamedMap(
+        keyType: Class<*>, name: String, valueUpdateMode: ValueUpdateMode,
+    ): T {
+        val map = maps.getOrPut(name) {
+            getHashMap<Map<*, *>>(keyType, getOrCreateHeader(name), valueUpdateMode)
+        }
+        require(map is DiskBTreeMap<*, *> && map.valueUpdateMode == valueUpdateMode) {
+            "Map '$name' is already open with a different value-update policy"
+        }
+        return map as T
+    }
 
     private fun getOrCreateHeader(name: String): Header {
         internalMaps[name]?.let { headerReference ->
@@ -338,6 +375,7 @@ open class DefaultDiskMapFactory : DiskMapFactory {
     override fun flush() {
         maps.clear()
         indexMaps.clear()
-        mapsByHeader.clear()
+        // Weak references do not retain the maps, but live handles must keep one canonical lock.
+        mapsByHeader.entries.removeIf { it.value.get() == null }
     }
 }

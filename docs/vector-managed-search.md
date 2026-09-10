@@ -537,6 +537,33 @@ Insert, update, delete, reopen, and explicit index rebuild all maintain the grap
 are strictly reciprocal and capped at 32 edges on level zero and 16 on upper levels. Mutations are
 serialized, while independent searches share a read lock and may traverse concurrently.
 
+Graph node codec v2 reserves the full neighbor capacity for each node's levels. This keeps a
+node's serialized size stable when its edges change. The graph node and metadata maps opt into
+`ValueUpdateMode.OVERWRITE_SAME_SIZE`: a replacement with the same serialized byte length reuses
+its existing value slot; a different length follows the existing append/retirement path. Other
+B-tree maps default to `APPEND`. Each graph mutation holds its working nodes strongly and writes
+each changed node once. Between operations, decoded nodes use a bounded `ConcurrentClockCache`
+with strong keys and values, so ordinary GC does not discard recently used nodes. CLOCK
+approximates LRU using a reference bit: cache hits mark the entry without taking the cache writer
+lock or changing list order. Insertions, replacements, removals, and eviction share a writer lock.
+Eviction gives referenced entries a second chance and caps its scan at one full revolution so
+concurrent hits cannot keep a writer scanning indefinitely.
+The default limit is 32,768 nodes per index; set `-Donyx.hnsw.nodeCacheCapacity=<positive count>`
+at JVM startup to change it. Retained memory depends on vector dimensions and active index count.
+The mutation's strong working set remains available even if CLOCK evicts a node mid-operation.
+Cache eviction never changes persistence or durability.
+
+When a neighbor list fits within its degree limit, insertion retains all eligible candidates
+without running diversity-distance calculations that cannot remove a candidate. Missing and
+incompatible neighbors are still filtered; overflowing lists use the existing pruning heuristic.
+The [save/cache benchmark](../benchmarks/README.md) compares CLOCK against the previous exact LRU,
+including cache eviction, concurrent searches, and direct cache-hit throughput.
+
+Existing node codec v1 records remain readable and migrate when rewritten. This change prevents
+repeated allocation for stable-size graph updates; it does not shrink files already enlarged by
+older writes. A server that only understands node codec v1 cannot read newly written v2 nodes;
+rolling back requires rebuilding the graph with the compatible server version.
+
 Query with the dedicated sole-root operator:
 
 ```kotlin
@@ -595,6 +622,8 @@ The entity row is saved before its independent index updates. HNSW validates cal
 configuration, and vector dimensions when its own mutation runs. If validation rejects that
 mutation, or a save fails or is interrupted after writing the row, Onyx does not roll the row back
 and does not guarantee coherence between the row and graph for that attempted save.
+Same-size graph overwrites are not crash-atomic. An interrupted write can also leave a corrupt
+node, requiring the explicit rebuild below; no defragmentation or transactional rollback is added.
 
 An explicit streaming internal-index rebuild is available when the graph must be reconstructed
 from the stored rows. Rebuild clears the existing postings and graph, walks the live records, and

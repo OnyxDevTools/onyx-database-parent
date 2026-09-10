@@ -4,6 +4,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.IndexDescriptor
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.IndexPostingMap
+import com.onyx.diskmap.ValueUpdateMode
 import com.onyx.exception.OnyxException
 import com.onyx.entity.SystemEntity
 import com.onyx.interactors.index.IndexInteractor
@@ -71,9 +72,9 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
     private val universePostings: IndexPostingMap
         get() = dataFile.getIndexMap(Long::class.java, "${mapBaseName}_universe")
     private val hnswNodes: DiskMap<Long, ByteArray>
-        get() = dataFile.getHashMap(Long::class.java, "${mapBaseName}_hnsw_nodes")
+        get() = dataFile.getHashMap(Long::class.java, "${mapBaseName}_hnsw_nodes", ValueUpdateMode.OVERWRITE_SAME_SIZE)
     private val hnswMetadata: DiskMap<Long, ByteArray>
-        get() = dataFile.getHashMap(Long::class.java, "${mapBaseName}_hnsw_metadata")
+        get() = dataFile.getHashMap(Long::class.java, "${mapBaseName}_hnsw_metadata", ValueUpdateMode.OVERWRITE_SAME_SIZE)
     private val hnswIndex by lazy {
         PersistentHnswIndex(hnswNodes, hnswMetadata)
     }
@@ -324,16 +325,21 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
         return values
     }
 
-    override fun rebuild() {
+    override fun rebuild() = rebuild(recomputeSearchVectors = true)
+
+    /** Rebuild stored routes, optionally retaining only compatible persisted getter vectors. */
+    fun rebuild(recomputeSearchVectors: Boolean) {
         val recordInteractor = context.getRecordInteractor(descriptor)
         synchronized(recordInteractor) {
-            synchronized(this) { rebuildWhileRecordWritesAreExcluded() }
+            synchronized(this) { rebuildWhileRecordWritesAreExcluded(recomputeSearchVectors) }
         }
     }
 
     /** Lock order is record interactor -> graph -> record B-tree, matching normal saves. */
-    private fun rebuildWhileRecordWritesAreExcluded() {
+    private fun rebuildWhileRecordWritesAreExcluded(recomputeSearchVectors: Boolean) {
         val removedSearchVectorConfigurations = removedSearchVectorConfigurationIds()
+        val compatibleSearchVectorConfigurations = if (recomputeSearchVectors) null else
+            compatibleSearchVectorConfigurationIds()
         hnswIndex.beginRebuild()
         var rebuildComplete = false
         try {
@@ -345,11 +351,16 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
             records.forEachMutableReference record@ { recordId, entry ->
                 val entity = entry.value as? VectorManagedEntity ?: return@record
                 if (recordId <= 0L) return@record
-                if (removedSearchVectorConfigurations.isNotEmpty() &&
-                    entity.vectorRepresentation()?.configurationId in removedSearchVectorConfigurations) {
-                    entity.clearAutomaticHnswVector()
+                if (removedSearchVectorConfigurations.isNotEmpty() || compatibleSearchVectorConfigurations != null) {
+                    val stored = entity.vectorRepresentation()
+                    if (stored?.configurationId in removedSearchVectorConfigurations ||
+                        stored != null && compatibleSearchVectorConfigurations != null &&
+                        stored.configurationId !in compatibleSearchVectorConfigurations
+                    ) {
+                        entity.clearAutomaticHnswVector()
+                    }
                 }
-                entity.prepareVectorRepresentation(descriptor)
+                entity.prepareVectorRepresentation(descriptor, recomputeSearchVectors)
                 entry.setValue(entity)
                 val representation =
                     entity.consumePreparedVectorIndexValue() as PreparedVectorRepresentation
@@ -362,6 +373,27 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
         } finally {
             if (!rebuildComplete) hnswIndex.abortRebuild()
         }
+    }
+
+    /** Read history once, since unrelated sparse-field changes do not invalidate getter vectors. */
+    private fun compatibleSearchVectorConfigurationIds(): Set<Long>? {
+        val searchVector = SearchVectorConfiguration.forClass(descriptor.entityClass) ?: return null
+        val expected = "|${searchVector.signature}|hnswQuantization:${QuantizedCosineVector.QUANTIZATION_VERSION}"
+        return context.serializedPersistenceManager.from<SystemEntity>()
+            .where("name" eq descriptor.entityClass.canonicalName)
+            .list<SystemEntity>()
+            .flatMap { it.indexes }
+            .filter { index ->
+                if (index.name != indexDescriptor.name) return@filter false
+                val signature = index.configurationSignature
+                val start = signature.indexOf("|onyx-search-vector-v1|")
+                // Versions may themselves contain '|'; the final quantizer token follows
+                // the complete version rather than a matching prefix embedded within it.
+                val quantizer = signature.lastIndexOf("|hnswQuantization:")
+                val end = signature.indexOf('|', quantizer + 1).let { if (it < 0) signature.length else it }
+                start >= 0 && quantizer > start && signature.substring(start, end) == expected
+            }
+            .mapTo(hashSetOf(configuration.configurationId)) { it.configurationId }
     }
 
     /**

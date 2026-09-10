@@ -48,6 +48,7 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.*
+import com.onyx.vector.SearchVectorConfiguration
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
@@ -84,6 +85,9 @@ open class DefaultSchemaContext : SchemaContext {
     override var encryption: EncryptionInteractor? = null
     override var encryptDatabase: Boolean = false
     override var maxCardinality: Int = 1000000
+
+    /** Whether automatic schema migrations also evaluate configured search-vector getters. */
+    protected open val recomputeSearchVectorsOnSchemaChange: Boolean = true
 
     // Location where the database folder is
     final override lateinit var location: String
@@ -474,10 +478,21 @@ open class DefaultSchemaContext : SchemaContext {
                     "Index ${indexDescriptor.name} is missing from partition ${partition.value} " +
                         "of ${systemEntity.name} while rebuilding its schema"
                 }
-                getIndexInteractor(partitionIndexDescriptor).rebuild()
+                rebuildIndexForSchemaChange(partitionIndexDescriptor)
             }
         } else {
-            getIndexInteractor(indexDescriptor).rebuild()
+            rebuildIndexForSchemaChange(indexDescriptor)
+        }
+    }
+
+    private fun rebuildIndexForSchemaChange(indexDescriptor: IndexDescriptor) {
+        val interactor = getIndexInteractor(indexDescriptor)
+        if (!recomputeSearchVectorsOnSchemaChange && interactor is FingerprintIndexInteractor &&
+            SearchVectorConfiguration.forClass(indexDescriptor.entityDescriptor.entityClass) != null
+        ) {
+            interactor.rebuild(recomputeSearchVectors = false)
+        } else {
+            interactor.rebuild()
         }
     }
 

@@ -1,6 +1,7 @@
 package com.onyx.diskmap.factory
 
 import com.onyx.diskmap.IndexPostingMap
+import com.onyx.diskmap.ValueUpdateMode
 import com.onyx.diskmap.data.Header
 
 /**
@@ -28,6 +29,15 @@ interface DiskMapFactory {
     fun <T : Map<*,*>> getHashMap(keyType:Class<*>, name: String): T
 
     /**
+     * Opens a map with an explicit value-update policy. Same-size overwrites are opt-in:
+     * they reuse an existing serialized frame, but do not make writes crash-atomic.
+     */
+    fun <T : Map<*, *>> getHashMap(keyType: Class<*>, name: String, valueUpdateMode: ValueUpdateMode): T {
+        require(valueUpdateMode == ValueUpdateMode.APPEND) { "This factory does not support in-place value updates" }
+        return getHashMap(keyType, name)
+    }
+
+    /**
      * Get Disk Map with the ability to dynamically change the load factor.  Meaning change how it scales dynamically
      *
      * @param header reference within storage
@@ -36,6 +46,11 @@ interface DiskMapFactory {
      * @since 1.0.0
      */
     fun <T : Map<*,*>> getHashMap(keyType:Class<*>, header: Header): T
+
+    fun <T : Map<*, *>> getHashMap(keyType: Class<*>, header: Header, valueUpdateMode: ValueUpdateMode): T {
+        require(valueUpdateMode == ValueUpdateMode.APPEND) { "This factory does not support in-place value updates" }
+        return getHashMap(keyType, header)
+    }
 
     /**
      * Get the native posting BTree used by a regular secondary index.

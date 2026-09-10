@@ -1,6 +1,7 @@
 package com.onyx.interactors.index.impl
 
 import com.onyx.diskmap.DiskMap
+import com.onyx.lang.map.ConcurrentClockCache
 import com.onyx.persistence.query.HnswSearchQuery
 import com.onyx.vector.QuantizedCosineVector
 import java.nio.ByteBuffer
@@ -39,26 +40,33 @@ data class HnswRemovalWork(
  * Nodes and per-calibration entry points live in ordinary Onyx DiskMaps, so opening an index is
  * constant-time and a query never rebuilds or materializes the graph. Every mutation and search
  * has a dataset-size-independent distance-evaluation bound. Searches share a read lock while
- * mutations take the write lock. The small decoded-node LRU has its own mutex, so cache activity
- * never serializes complete traversals.
+ * mutations take the write lock. A bounded, strong-reference CLOCK cache retains decoded nodes
+ * across GC; hits mark a reference bit without acquiring the cache writer lock. A mutation retains its
+ * working set and persists each dirty node once, before publishing its metadata and cache entries.
  */
-internal class PersistentHnswIndex(
+internal class PersistentHnswIndex @JvmOverloads constructor(
     private val nodes: DiskMap<Long, ByteArray>,
     private val metadata: DiskMap<Long, ByteArray>,
+    nodeCacheCapacity: Int = Integer.getInteger("onyx.hnsw.nodeCacheCapacity", NODE_CACHE_CAPACITY),
 ) {
+    init {
+        require(nodeCacheCapacity > 0) { "HNSW node cache capacity must be positive" }
+    }
+
     private val graphLock = ReentrantReadWriteLock(true)
     private val activeSearches = AtomicInteger()
-    private val nodeCache = object : LinkedHashMap<Long, HnswNode>(NODE_CACHE_CAPACITY, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, HnswNode>?): Boolean =
-            size > NODE_CACHE_CAPACITY
-    }
+    private val nodeCache: MutableMap<Long, HnswNode> = ConcurrentClockCache(
+        maxCapacity = nodeCacheCapacity,
+    )
+    // Accessed only under graphLock; searches cannot observe an in-progress mutation.
+    private var mutation: GraphMutation? = null
 
     @Volatile
     private var removalWork = emptyRemovalWork(0L)
     private var rebuildOwner: Thread? = null
 
     fun upsert(recordId: Long, calibrationId: Long, vectorBytes: ByteArray) = graphLock.write {
-        upsertUnsafe(recordId, calibrationId, vectorBytes)
+        mutateGraph { upsertUnsafe(recordId, calibrationId, vectorBytes) }
     }
 
     private fun upsertUnsafe(recordId: Long, calibrationId: Long, vectorBytes: ByteArray) {
@@ -137,11 +145,9 @@ internal class PersistentHnswIndex(
 
     /** Removes a node and repairs its bounded reciprocal neighborhood. */
     fun remove(recordId: Long) = graphLock.write {
-        if (loadNode(recordId) == null) {
-            removalWork = emptyRemovalWork(recordId)
-            return@write
+        mutateGraph {
+            removalWork = removeUnsafe(recordId)
         }
-        removalWork = removeUnsafe(recordId)
     }
 
     private fun removeUnsafe(recordId: Long): HnswRemovalWork {
@@ -420,7 +426,7 @@ internal class PersistentHnswIndex(
 
     fun upsertDuringRebuild(recordId: Long, calibrationId: Long, vectorBytes: ByteArray) {
         check(rebuildOwner === Thread.currentThread()) { "HNSW rebuild is not owned by this thread" }
-        upsertUnsafe(recordId, calibrationId, vectorBytes)
+        mutateGraph { upsertUnsafe(recordId, calibrationId, vectorBytes) }
     }
 
     fun completeRebuild() {
@@ -478,9 +484,12 @@ internal class PersistentHnswIndex(
     }
 
     private fun clearGraphUnsafe() {
-        nodes.clear()
-        metadata.clear()
-        synchronized(nodeCache) { nodeCache.clear() }
+        try {
+            nodes.clear()
+            metadata.clear()
+        } finally {
+            nodeCache.clear()
+        }
     }
 
     private fun greedyClosest(
@@ -611,6 +620,19 @@ internal class PersistentHnswIndex(
     }
 
     private fun selectForNode(node: HnswNode, candidateIds: LongArray, layer: Int): LongArray {
+        if (candidateIds.size <= neighborLimit(layer)) {
+            // The diversity heuristic fills unused slots with rejected candidates, so every valid
+            // candidate survives when they all fit. Keep eligibility checks but skip all distances.
+            return candidateIds.asSequence()
+                .distinct()
+                .filter { it != node.id }
+                .filter { candidateId ->
+                    loadNode(candidateId)?.let { it.calibrationId == node.calibrationId && it.level >= layer } == true
+                }
+                .sorted()
+                .toList()
+                .toLongArray()
+        }
         val scored = candidateIds.asSequence()
             .distinct()
             .filter { it != node.id }
@@ -675,9 +697,12 @@ internal class PersistentHnswIndex(
     }
 
     private fun loadNode(recordId: Long): HnswNode? {
-        synchronized(nodeCache) { nodeCache[recordId] }?.let { return it }
-        val decoded = nodes[recordId]?.let { HnswNodeCodec.decode(recordId, it) } ?: return null
-        synchronized(nodeCache) { nodeCache[recordId] = decoded }
+        val pending = mutation
+        if (pending != null && pending.nodeValues.containsKey(recordId)) return pending.nodeValues[recordId]
+        val decoded = nodeCache[recordId] ?: nodes[recordId]?.let {
+            HnswNodeCodec.decode(recordId, it).also { node -> nodeCache[recordId] = node }
+        }
+        if (pending != null) pending.nodeValues[recordId] = decoded
         return decoded
     }
 
@@ -687,24 +712,83 @@ internal class PersistentHnswIndex(
         }
 
     private fun storeNode(node: HnswNode) {
-        nodes[node.id] = HnswNodeCodec.encode(node)
-        synchronized(nodeCache) { nodeCache[node.id] = node }
+        val pending = checkNotNull(mutation) { "HNSW node writes require a graph mutation" }
+        pending.nodeValues[node.id] = node
+        pending.dirtyNodes += node.id
     }
 
     private fun removeNode(recordId: Long) {
-        nodes.remove(recordId)
-        synchronized(nodeCache) { nodeCache.remove(recordId) }
+        val pending = checkNotNull(mutation) { "HNSW node removals require a graph mutation" }
+        pending.nodeValues[recordId] = null
+        pending.dirtyNodes += recordId
     }
 
-    private fun loadMetadata(calibrationId: Long): HnswMetadata? =
-        metadata[calibrationId]?.let(HnswMetadataCodec::decode)
+    private fun loadMetadata(calibrationId: Long): HnswMetadata? {
+        val pending = mutation
+        if (pending != null && pending.metadataValues.containsKey(calibrationId)) {
+            return pending.metadataValues[calibrationId]
+        }
+        val decoded = metadata[calibrationId]?.let(HnswMetadataCodec::decode)
+        pending?.metadataValues?.put(calibrationId, decoded)
+        return decoded
+    }
 
     private fun storeMetadata(value: HnswMetadata) {
-        metadata[value.calibrationId] = HnswMetadataCodec.encode(value)
+        val pending = checkNotNull(mutation) { "HNSW metadata writes require a graph mutation" }
+        pending.metadataValues[value.calibrationId] = value
+        pending.dirtyMetadata += value.calibrationId
     }
 
     private fun removeMetadata(calibrationId: Long) {
-        metadata.remove(calibrationId)
+        val pending = checkNotNull(mutation) { "HNSW metadata removals require a graph mutation" }
+        pending.metadataValues[calibrationId] = null
+        pending.dirtyMetadata += calibrationId
+    }
+
+    /**
+     * Coalesces changes under the existing exclusive graph lock. This is not a storage transaction:
+     * an interrupted flush can leave a partially changed graph that requires rebuilding. Publishing
+     * metadata after nodes and invalidating the cache on persistence failure avoids advertising
+     * unpersisted state. Failures while planning leave the persisted graph and its cache intact.
+     */
+    private inline fun mutateGraph(action: () -> Unit) {
+        check(mutation == null) { "An HNSW mutation is already in progress" }
+        val pending = GraphMutation()
+        val previousRemovalWork = removalWork
+        var persistenceStarted = false
+        mutation = pending
+        try {
+            action()
+            pending.dirtyNodes.forEach { id ->
+                val node = pending.nodeValues[id]
+                val bytes = node?.let(HnswNodeCodec::encode)
+                persistenceStarted = true
+                if (bytes == null) nodes.remove(id) else nodes[id] = bytes
+            }
+            pending.dirtyMetadata.forEach { id ->
+                val value = pending.metadataValues[id]
+                val bytes = value?.let(HnswMetadataCodec::encode)
+                persistenceStarted = true
+                if (bytes == null) metadata.remove(id) else metadata[id] = bytes
+            }
+            pending.dirtyNodes.forEach { id ->
+                val node = pending.nodeValues[id]
+                if (node == null) nodeCache.remove(id) else nodeCache[id] = node
+            }
+        } catch (failure: Throwable) {
+            if (persistenceStarted) nodeCache.clear()
+            removalWork = previousRemovalWork
+            throw failure
+        } finally {
+            mutation = null
+        }
+    }
+
+    private class GraphMutation {
+        val nodeValues = HashMap<Long, HnswNode?>()
+        val dirtyNodes = LinkedHashSet<Long>()
+        val metadataValues = HashMap<Long, HnswMetadata?>()
+        val dirtyMetadata = LinkedHashSet<Long>()
     }
 
     private fun deterministicLevel(recordId: Long, calibrationId: Long): Int {
@@ -785,12 +869,14 @@ internal class PersistentHnswIndex(
 
     private object HnswNodeCodec {
         private const val MAGIC = 0x4f484e44 // OHND
-        private const val VERSION: Short = 1
+        private const val LEGACY_VERSION: Short = 1
+        private const val VERSION: Short = 2
 
         fun encode(node: HnswNode): ByteArray {
             var payloadSize = 4 + 2 + 8 + 4 + node.vectorBytes.size + 4
-            node.neighbors.forEach { values ->
-                payloadSize = Math.addExact(payloadSize, Math.addExact(4, Math.multiplyExact(values.size, 8)))
+            node.neighbors.forEachIndexed { layer, values ->
+                require(values.size <= neighborLimit(layer)) { "HNSW node exceeds its degree bound" }
+                payloadSize = Math.addExact(payloadSize, Math.addExact(4, Math.multiplyExact(neighborLimit(layer), 8)))
             }
             val bytes = ByteArray(Math.addExact(payloadSize, 4))
             val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN)
@@ -800,9 +886,11 @@ internal class PersistentHnswIndex(
             buffer.putInt(node.vectorBytes.size)
             buffer.put(node.vectorBytes)
             buffer.putInt(node.neighbors.size)
-            node.neighbors.forEach { neighbors ->
+            node.neighbors.forEachIndexed { layer, neighbors ->
                 buffer.putInt(neighbors.size)
                 neighbors.forEach(buffer::putLong)
+                // Capacity depends only on vector dimensions and node level, never current degree.
+                repeat(neighborLimit(layer) - neighbors.size) { buffer.putLong(0L) }
             }
             putChecksum(buffer, bytes, payloadSize)
             return bytes
@@ -810,7 +898,9 @@ internal class PersistentHnswIndex(
 
         fun decode(recordId: Long, bytes: ByteArray): HnswNode {
             val buffer = checkedPayload(bytes, MIN_NODE_PAYLOAD_BYTES)
-            require(buffer.int == MAGIC && buffer.short == VERSION) { "Unsupported HNSW node format" }
+            require(buffer.int == MAGIC) { "Unsupported HNSW node format" }
+            val version = buffer.short
+            require(version == LEGACY_VERSION || version == VERSION) { "Unsupported HNSW node format" }
             val calibrationId = buffer.long
             require(calibrationId != 0L) { "Invalid HNSW node calibration" }
             val vectorSize = readSize(buffer, QuantizedCosineVector.MAX_DIMENSIONS)
@@ -821,10 +911,14 @@ internal class PersistentHnswIndex(
             require(levelCount > 0) { "HNSW node must contain level zero" }
             val neighbors = Array(levelCount) { layer ->
                 val size = readSize(buffer, neighborLimit(layer))
-                require(buffer.remaining() >= size * 8) { "HNSW neighbor list is truncated" }
+                val storedCapacity = if (version == LEGACY_VERSION) size else neighborLimit(layer)
+                require(buffer.remaining() >= storedCapacity * 8) { "HNSW neighbor list is truncated" }
                 LongArray(size) { buffer.long }.also { values ->
                     require(values.none { it <= 0L || it == recordId }) { "Invalid HNSW neighbor reference" }
                     require(values.toSet().size == values.size) { "Duplicate HNSW neighbor reference" }
+                    repeat(storedCapacity - size) {
+                        require(buffer.long == 0L) { "Invalid HNSW neighbor padding" }
+                    }
                 }
             }
             require(!buffer.hasRemaining()) { "Unexpected trailing HNSW node data" }
@@ -894,8 +988,8 @@ internal class PersistentHnswIndex(
         private const val MAX_LEVEL = 16
         private const val LEVEL_MASK = 0x0fL
         private const val LEVEL_SEED = -7046029254386353131L
-        private const val NODE_CACHE_CAPACITY = 4_096
         private const val INITIAL_SEARCH_CAPACITY = 4_096
+        private const val NODE_CACHE_CAPACITY = 32_768
         private const val MIN_NODE_PAYLOAD_BYTES = 4 + 2 + 8 + 4 + 1 + 4
         private fun emptyRemovalWork(recordId: Long) =
             HnswRemovalWork(recordId, 0, 0, 0, 0, 0, 0)

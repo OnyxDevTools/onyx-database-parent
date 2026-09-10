@@ -6,6 +6,8 @@ import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.descriptor.DEFAULT_DATA_FILE
 import com.onyx.diskmap.store.Store
+import com.onyx.diskmap.store.supportsSameSizeObjectWrites
+import com.onyx.diskmap.store.writePlainObject
 import com.onyx.exception.InitializationException
 import com.onyx.extension.common.async
 import com.onyx.extension.perform
@@ -75,6 +77,9 @@ open class FileChannelStore() : Store {
      * Get the size of the file
      */
     override fun getFileSize(): Long = logicalSizeCounter.get()
+
+    override fun writeObject(value: Any?, existingPosition: Long): Long =
+        if (supportsSameSizeObjectWrites) writePlainObject(value, existingPosition) else writeObject(value)
 
     /**
      * Open the data file

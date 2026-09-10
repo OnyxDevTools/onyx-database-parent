@@ -1,6 +1,7 @@
 package com.onyx.diskmap.impl
 
 import com.onyx.diskmap.SortedDiskMap
+import com.onyx.diskmap.ValueUpdateMode
 import com.onyx.diskmap.data.BTreeEntry
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.PutResult
@@ -27,11 +28,12 @@ import java.util.HashSet
  * live collection views and therefore is not a snapshot of the tree.
  */
 @Suppress("UNCHECKED_CAST")
-open class DiskBTreeMap<K, V>(
+open class DiskBTreeMap<K, V> @JvmOverloads constructor(
     fileStore: WeakReference<Store>,
     recordStore: WeakReference<Store>,
     header: Header,
-    keyType: Class<*>
+    keyType: Class<*>,
+    public override val valueUpdateMode: ValueUpdateMode = ValueUpdateMode.APPEND
 ) : AbstractIterableBTree<K, V>(fileStore, recordStore, header, keyType), SortedDiskMap<K, V> {
 
     override val size: Int

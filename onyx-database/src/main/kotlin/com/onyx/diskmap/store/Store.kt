@@ -3,6 +3,11 @@ package com.onyx.diskmap.store
 import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
+import com.onyx.diskmap.store.impl.EncryptedFileChannelStore
+import com.onyx.diskmap.store.impl.EncryptedMemoryMappedStore
+import com.onyx.diskmap.store.impl.FileChannelStore
+import com.onyx.diskmap.store.impl.InMemoryStore
+import com.onyx.diskmap.store.impl.MemoryMappedStore
 import com.onyx.persistence.context.SchemaContext
 import java.nio.ByteBuffer
 import java.util.ArrayDeque
@@ -25,6 +30,62 @@ private fun releaseSerializationStream(stream: BufferStream) {
         stream.recycle()
     }
 }
+
+/**
+ * Custom serializers and delegating Store wrappers keep their original writeObject override.
+ * In particular, Kotlin delegation of a new overload need not call a wrapper's old overload.
+ * Only these built-in store classes participate. Custom stores retain append behavior even
+ * when they override the replacement overload; supporting one requires updating this check.
+ */
+internal val Store.supportsSameSizeObjectWrites: Boolean
+    get() = javaClass == FileChannelStore::class.java ||
+        javaClass == MemoryMappedStore::class.java ||
+        javaClass == InMemoryStore::class.java ||
+        javaClass == EncryptedFileChannelStore::class.java ||
+        javaClass == EncryptedMemoryMappedStore::class.java
+
+/** Serialize completely before selecting or modifying a destination frame. */
+internal fun Store.writePlainObject(value: Any?, existingPosition: Long = -1L): Long {
+    if (value == null) {
+        val position = if (objectFrameHasSize(existingPosition, Integer.BYTES)) existingPosition
+            else allocateObject(Integer.BYTES)
+        BufferPool.withIntBuffer {
+            it.clear()
+            it.putInt(0)
+            it.flip()
+            write(it, position)
+        }
+        return position
+    }
+
+    val stream = borrowSerializationStream()
+    try {
+        stream.byteBuffer.position(Integer.BYTES)
+        stream.putObject(value, context)
+        stream.flip()
+        val frame = stream.byteBuffer
+        frame.putInt(0, frame.limit() - Integer.BYTES)
+        return writeObjectFrame(frame, existingPosition)
+    } finally {
+        releaseSerializationStream(stream)
+    }
+}
+
+/** Write an already serialized length-prefixed frame, reusing only an equal-length frame. */
+internal fun Store.writeObjectFrame(frame: ByteBuffer, existingPosition: Long = -1L): Long {
+    val position = if (objectFrameHasSize(existingPosition, frame.remaining())) existingPosition
+        else allocateObject(frame.remaining())
+    write(frame, position)
+    return position
+}
+
+private fun Store.objectFrameHasSize(position: Long, frameSize: Int): Boolean =
+    position > 0L && BufferPool.withIntBuffer {
+        it.clear()
+        read(it, position)
+        it.flip()
+        it.int == frameSize - Integer.BYTES
+    }
 
 /**
  * Created by Tim Osborn on 3/27/15.
@@ -171,33 +232,14 @@ interface Store {
      * @param value Value to append to the store
      * @since 2.0.0
      */
-    fun writeObject(value:Any?): Long {
-        if (value == null) {
-            val position = allocateObject(Integer.BYTES)
-            BufferPool.withIntBuffer {
-                it.clear()
-                it.putInt(0)
-                it.flip()
-                write(it, position)
-            }
-            return position
-        }
+    fun writeObject(value:Any?): Long = writePlainObject(value)
 
-        val stream = borrowSerializationStream()
-        try {
-            // Leave room for the payload length so allocation and data use one write.
-            stream.byteBuffer.position(Integer.BYTES)
-            stream.putObject(value, context)
-            stream.flip()
-            val valueBuffer = stream.byteBuffer
-            valueBuffer.putInt(0, valueBuffer.limit() - Integer.BYTES)
-            val position = allocateObject(valueBuffer.remaining())
-            write(valueBuffer, position)
-            return position
-        } finally {
-            releaseSerializationStream(stream)
-        }
-    }
+    /**
+     * Replace an existing frame when supported and its serialized length is unchanged.
+     * The default preserves custom serializers by calling the original append operation.
+     * The caller coordinates readers and writers and retires the old frame only if this moves.
+     */
+    fun writeObject(value: Any?, existingPosition: Long): Long = writeObject(value)
 
     fun readObject(position: Long, size: Int): BufferStream? =
             read(position, size)

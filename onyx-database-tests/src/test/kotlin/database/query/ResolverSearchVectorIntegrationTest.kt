@@ -3,6 +3,7 @@ package database.query
 import com.onyx.diskmap.store.StoreType
 import com.onyx.diskmap.DiskMap
 import com.onyx.entity.SystemEntity
+import com.onyx.interactors.index.impl.FingerprintIndexInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.VectorManagedEntity
 import com.onyx.persistence.SearchVectorManagedEntity
@@ -72,6 +73,94 @@ class ResolverSearchVectorIntegrationTest {
     @After
     fun cleanup() {
         try { factory.close() } finally { directory.toFile().deleteRecursively() }
+    }
+
+    @Test
+    fun `stored rebuild refreshes routes and retains only compatible vectors without calling getters`() {
+        StoredResolverEntity.failOnRead = false
+        val changed = manager.saveEntity(StoredResolverEntity().apply {
+            id = "changed"; title = "original"; position = 1f
+        })
+        val stable = manager.saveEntity(StoredResolverEntity().apply {
+            id = "stable"; title = "preserved"; position = -1f
+        })
+        val descriptor = manager.context.getBaseDescriptorForEntity(StoredResolverEntity::class.java)!!
+        val configuration = changed.searchVectorConfiguration!!
+        val managedConfiguration = VectorManagedConfiguration.forClass(StoredResolverEntity::class.java)
+        val stableBytes = stable.vectorRepresentation()!!.hnswVector
+        val stored = changed.vectorRepresentation()!!
+        val incompatibleConfigurationId = stored.configurationId xor 1L
+        val compatibleConfigurationId = stored.configurationId xor 2L
+        changed.title = "updated"
+        changed.position = 2f
+        // Keep the same vector-space ID and bytes, but simulate an incompatible stored encoder.
+        changed.vectorRepresentation(stored.copy(configurationId = incompatibleConfigurationId))
+        stable.vectorRepresentation(stable.vectorRepresentation()!!.copy(configurationId = compatibleConfigurationId))
+        val records: DiskMap<Any, IManagedEntity> = manager.context.getDataFile(descriptor)
+            .getHashMap(descriptor.identifier!!.type, descriptor.entityClass.name)
+        records.putAndGet(changed.id, changed)
+        records.putAndGet(stable.id, stable)
+        val system = manager.context.serializedPersistenceManager
+        val currentSchema = system.from<SystemEntity>()
+            .where("name" eq StoredResolverEntity::class.java.canonicalName)
+            .and("isLatestVersion" eq true).first<SystemEntity>()
+        fun historicalSchema(id: Long, signature: String) {
+            val history = currentSchema.copy(indexes = currentSchema.indexes.map { it.copy() }.toMutableList())
+            history.isLatestVersion = false
+            history.indexes.first { it.name == VectorManagedEntity.REPRESENTATION_FIELD }.apply {
+                configurationId = id
+                configurationSignature = signature
+            }
+            system.saveEntity(history)
+        }
+        historicalSchema(incompatibleConfigurationId, managedConfiguration.signature.replace("|hnswQuantization:2", "|hnswQuantization:20"))
+        historicalSchema(compatibleConfigurationId, managedConfiguration.signature + "|unrelated-old-attribute")
+        val index = manager.context.getIndexInteractor(
+            descriptor.indexes[VectorManagedEntity.REPRESENTATION_FIELD]!!
+        ) as FingerprintIndexInteractor
+
+        fun matches(vector: FloatArray) = manager.from<StoredResolverEntity>()
+            .hnswCandidates(configuration.query(vector, 10, 20, minScore = 0.99999f))
+            .list<StoredResolverEntity>().map { it.id }
+        fun lexical(text: String) = manager.from<StoredResolverEntity>()
+            .fullText(text).list<StoredResolverEntity>().map { it.id }
+
+        StoredResolverEntity.getterCalls = 0
+        StoredResolverEntity.failOnRead = true
+        try {
+            index.rebuild(recomputeSearchVectors = false)
+            assertEquals(0, StoredResolverEntity.getterCalls)
+            assertFalse(manager.findById<StoredResolverEntity>("changed")!!.vectorRepresentation()!!.hasHnswVector)
+            assertContentEquals(stableBytes, manager.findById<StoredResolverEntity>("stable")!!.vectorRepresentation()!!.hnswVector)
+            assertTrue(matches(floatArrayOf(1f, 1f)).isEmpty(), "Incompatible bytes must not remain queryable")
+            assertEquals(listOf("stable"), matches(floatArrayOf(-1f, 1f)))
+            assertTrue(lexical("original").isEmpty())
+            assertEquals(listOf("changed"), lexical("updated"))
+            assertEquals(listOf("stable"), lexical("preserved"))
+            assertEquals(listOf("changed"), manager.from<StoredResolverEntity>()
+                .where("title" eq "updated").list<StoredResolverEntity>().map { it.id })
+
+            val misleadingConfigurationId = stored.configurationId xor 3L
+            historicalSchema(misleadingConfigurationId, managedConfiguration.signature.replace(
+                "|hnswQuantization:2", "|hnswQuantization:2|extra|hnswQuantization:2"
+            ))
+            changed.vectorRepresentation(stored.copy(configurationId = misleadingConfigurationId))
+            records.putAndGet(changed.id, changed)
+            index.rebuild(recomputeSearchVectors = false)
+            assertEquals(0, StoredResolverEntity.getterCalls)
+            assertFalse(manager.findById<StoredResolverEntity>("changed")!!.vectorRepresentation()!!.hasHnswVector,
+                "A version containing a matching quantizer prefix is a different vector contract")
+            assertEquals(listOf("stable"), matches(floatArrayOf(-1f, 1f)))
+
+            StoredResolverEntity.failOnRead = false
+            index.rebuild()
+            assertEquals(2, StoredResolverEntity.getterCalls, "Explicit maintenance must compute the getters")
+            assertEquals(listOf("changed"), matches(floatArrayOf(2f, 1f)))
+            assertEquals(listOf("stable"), matches(floatArrayOf(-1f, 1f)))
+            assertEquals(listOf("changed"), lexical("updated"))
+        } finally {
+            StoredResolverEntity.failOnRead = false
+        }
     }
 
     @Test
@@ -339,6 +428,28 @@ class ResolverSearchVectorIntegrationTest {
     private fun nearest(position: Float): List<NumericResolverEntity> = manager.from<NumericResolverEntity>()
         .hnswCandidates(SearchVectorConfiguration(688, "bar-pairs-v1").query(pairs(position), 10, 20))
         .list<NumericResolverEntity>()
+}
+
+@Entity(searchSupport = SearchSupport.BOTH)
+@SearchVector(dimensions = 2, version = "stored-rebuild-v1")
+class StoredResolverEntity : SearchVectorManagedEntity() {
+    @Identifier var id: String = ""
+    @Attribute
+    @VectorAttribute(mode = VectorAttributeMode.SELECTED, families = [VectorFeatureFamily.TEXT_TERM, VectorFeatureFamily.CATEGORICAL])
+    var title: String = ""
+    @Attribute var position: Float = 0f
+
+    override val searchVector: FloatArray
+        get() {
+            check(!failOnRead) { "Stored-only rebuild must not compute a vector" }
+            getterCalls++
+            return floatArrayOf(position, 1f)
+        }
+
+    companion object {
+        var getterCalls = 0
+        var failOnRead = false
+    }
 }
 
 @Entity(searchSupport = SearchSupport.SEMANTIC)

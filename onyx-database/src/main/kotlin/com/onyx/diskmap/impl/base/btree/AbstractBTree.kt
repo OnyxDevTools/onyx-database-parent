@@ -1,11 +1,13 @@
 package com.onyx.diskmap.impl.base.btree
 
+import com.onyx.diskmap.ValueUpdateMode
 import com.onyx.diskmap.data.BTreeEntry
 import com.onyx.diskmap.data.BTreePage
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.PutResult
 import com.onyx.diskmap.impl.base.AbstractDiskMap
 import com.onyx.diskmap.store.Store
+import com.onyx.diskmap.store.supportsSameSizeObjectWrites
 import com.onyx.extension.common.ClassMetadata
 import com.onyx.extension.common.castTo
 import com.onyx.extension.common.forceCompare
@@ -36,6 +38,7 @@ abstract class AbstractBTree<K, V>(
     keyType: Class<*>
 ) : AbstractDiskMap<K, V>(store, recordStore, header, keyType) {
 
+    protected open val valueUpdateMode: ValueUpdateMode = ValueUpdateMode.APPEND
     protected open val pageCache = ConcurrentWeakValueMap<Long, BTreePage>()
     protected var root: BTreePage
 
@@ -138,15 +141,24 @@ abstract class AbstractBTree<K, V>(
             }
 
             val previousValueLocation = if (found) recordPointerAt(leaf, index) else BTreeEntry.NULL_RECORD
-            val valueLocation = if (value == null) BTreeEntry.NULL_RECORD else records.writeObject(value)
+            val valueLocation = when {
+                value == null -> BTreeEntry.NULL_RECORD
+                previousValueLocation != BTreeEntry.NULL_RECORD &&
+                    valueUpdateMode == ValueUpdateMode.OVERWRITE_SAME_SIZE &&
+                    records.supportsSameSizeObjectWrites ->
+                    records.writeObject(value, previousValueLocation)
+                else -> records.writeObject(value)
+            }
             if (found) {
                 val entryPosition = leaf.pointers[index]
-                BTreeEntry.writeRecord(fileStore, entryPosition, valueLocation)
-                leaf.recordPointers[index] = valueLocation
+                if (valueLocation != previousValueLocation) {
+                    BTreeEntry.writeRecord(fileStore, entryPosition, valueLocation)
+                    leaf.recordPointers[index] = valueLocation
+                }
                 result?.recordId = entryPosition
                 result?.isInsert = false
                 mutationVersion++
-                if (previousValueLocation != BTreeEntry.NULL_RECORD) {
+                if (previousValueLocation != BTreeEntry.NULL_RECORD && valueLocation != previousValueLocation) {
                     // This slot cannot be reused until a factory commit has forced
                     // both the new value and this updated entry pointer.
                     records.retireObject(previousValueLocation)

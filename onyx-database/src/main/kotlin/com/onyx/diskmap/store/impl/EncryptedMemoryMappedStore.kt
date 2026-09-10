@@ -1,6 +1,7 @@
 package com.onyx.diskmap.store.impl
 
 import com.onyx.buffer.*
+import com.onyx.diskmap.store.writeObjectFrame
 import com.onyx.persistence.context.SchemaContext
 
 /**
@@ -42,7 +43,9 @@ class EncryptedMemoryMappedStore (filePath: String, context: SchemaContext, dele
      * @return Record id of entity
      * @since 2.2.0
      */
-    override fun writeObject(value: Any?): Long {
+    override fun writeObject(value: Any?): Long = writeObject(value, -1L)
+
+    override fun writeObject(value: Any?, existingPosition: Long): Long {
         val stream = EncryptedBufferStream()
         try {
             stream.byteBuffer.position(Integer.BYTES)
@@ -50,9 +53,7 @@ class EncryptedMemoryMappedStore (filePath: String, context: SchemaContext, dele
             stream.flip()
             val valueBuffer = stream.byteBuffer
             valueBuffer.putInt(0, valueBuffer.limit() - Integer.BYTES)
-            val position = allocateObject(valueBuffer.remaining())
-            write(valueBuffer, position)
-            return position
+            return writeObjectFrame(valueBuffer, existingPosition)
         } finally {
             stream.recycle()
         }
