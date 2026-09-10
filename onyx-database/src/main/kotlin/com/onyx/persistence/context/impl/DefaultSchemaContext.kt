@@ -50,6 +50,7 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.*
 import com.onyx.vector.SearchVectorConfiguration
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.reflect.KClass
@@ -221,7 +222,10 @@ open class DefaultSchemaContext : SchemaContext {
         // Close transaction file
         catchAll { transactionStore?.close() }
         dataFiles.clear() // Clear all data files
-        descriptors.clear() // Clear all descriptors
+        synchronized(descriptors) {
+            readyDescriptors.clear()
+            descriptors.clear() // Clear all descriptors
+        }
         recordInteractors.clear() // Clear all Record Controllers
         relationshipInteractors.clear() // Clear all relationship controllers
         indexInteractors.clear() // Clear all index controllers
@@ -297,6 +301,7 @@ open class DefaultSchemaContext : SchemaContext {
             systemEntity.primaryKey = i
 
             this.descriptors[entityKClass.java.name] = descriptor
+            this.readyDescriptors[entityKClass.java.name] = descriptor
             this.defaultSystemEntities[entityKClass.java.name] = systemEntity
             this.systemEntityByIDMap[i] = systemEntity
             systemEntities.add(systemEntity)
@@ -560,6 +565,7 @@ open class DefaultSchemaContext : SchemaContext {
     private val maxCapacity = 5000
 
     protected open val descriptors = hashMapOf<String, EntityDescriptor>()
+    private val readyDescriptors = ConcurrentHashMap<String, EntityDescriptor>()
 
     /**
      * Get Descriptor For Entity. Initializes EntityDescriptor or returns one if it already exists
@@ -617,13 +623,24 @@ open class DefaultSchemaContext : SchemaContext {
         // therefore it was added to Java class to work around.
         val entityKey = Base64.concat(entityClass.name, partitionIdVar.toString())
 
-        return synchronized(descriptors) {
-            descriptors.getOrPut(entityKey) {
-                val descriptor = EntityDescriptor(entityClass)
-                descriptor.context = this
-                descriptor.partition?.partitionValue = partitionIdVar.toString()
-                descriptors[entityKey] = descriptor
+        // Entity deserialization occurs while DiskBTreeMap holds a read lock. A ready descriptor
+        // must therefore be retrievable without waiting for the initialization monitor: a
+        // partition initializer can hold that monitor while waiting for the same map's write lock.
+        readyDescriptors[entityKey]?.let { return it }
 
+        return synchronized(descriptors) {
+            readyDescriptors[entityKey]?.let { return@synchronized it }
+
+            // A descriptor is inserted here before recursively resolving related descriptors so
+            // same-thread cycles (A -> B -> A) terminate. It is not visible through the lock-free
+            // cache until every schema and partition side effect below has completed.
+            descriptors[entityKey]?.let { return@synchronized it }
+            val descriptor = EntityDescriptor(entityClass)
+            descriptor.context = this
+            descriptor.partition?.partitionValue = partitionIdVar.toString()
+            descriptors[entityKey] = descriptor
+
+            try {
                 // Get the latest System Entity
                 var systemEntity: SystemEntity? = getSystemEntityByName(descriptor.entityClass.name)
 
@@ -642,9 +659,20 @@ open class DefaultSchemaContext : SchemaContext {
 
                 // Make sure entity attributes have loaded descriptors
                 descriptor.relationships.values.forEach { getDescriptorForEntity(it.inverseClass.createNewEntity<IManagedEntity>(contextId), "") }
-                return@getOrPut descriptor
+                readyDescriptors[entityKey] = descriptor
+                descriptor
+            } catch (throwable: Throwable) {
+                if (descriptors[entityKey] === descriptor) {
+                    descriptors.remove(entityKey)
+                }
+                throw throwable
             }
         }
+    }
+
+    private fun removeDescriptor(entityKey: String) = synchronized(descriptors) {
+        readyDescriptors.remove(entityKey)
+        descriptors.remove(entityKey)
     }
 
     /**
@@ -921,9 +949,7 @@ open class DefaultSchemaContext : SchemaContext {
                     deleteDataFile(partitionDescriptor, descriptor.entityClass)
 
                     val entityKey = Base64.concat(partitionDescriptor.entityClass.name, partitionDescriptor.partition?.partitionValue ?: "")
-                    synchronized(descriptors) {
-                        descriptors.remove(entityKey)
-                    }
+                    removeDescriptor(entityKey)
                 }
 
                 // Delete all SystemPartitionEntry records for this entity class
@@ -947,9 +973,7 @@ open class DefaultSchemaContext : SchemaContext {
             relationshipInteractors.removeKeys { it.entityDescriptor.entityClass == descriptor.entityClass }
 
             val entityKey = Base64.concat(descriptor.entityClass.name, descriptor.partition?.partitionValue ?: "")
-            synchronized(descriptors) {
-                descriptors.remove(entityKey)
-            }
+            removeDescriptor(entityKey)
         }
     }
 
@@ -1000,10 +1024,11 @@ open class DefaultSchemaContext : SchemaContext {
             partitionsByValue.remove(PartitionInfo(descriptor.entityClass, partition.value))
             partitionsById.remove(partitionId)
 
-            val entityKey = Base64.concat(descriptor.entityClass.name, descriptor.partition?.partitionValue ?: "")
-            synchronized(descriptors) {
-                descriptors.remove(entityKey)
-            }
+            val entityKey = Base64.concat(
+                partitionDescriptor.entityClass.name,
+                partitionDescriptor.partition?.partitionValue ?: ""
+            )
+            removeDescriptor(entityKey)
         }
     }
 
