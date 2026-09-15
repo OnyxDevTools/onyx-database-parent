@@ -402,19 +402,15 @@ class IndexPostingPage private constructor(
             page.nextLeaf = next
             if (!leaf) page.children[0] = firstChild
 
-            val slotsLength = page.capacity * page.slotSize
+            if (count == 0) return page
+            val slotsLength = count * page.slotSize
             val slots = getPageBuffer(slotsLength)
             store.read(slots, position + HEADER_SIZE)
             slots.flip()
-            repeat(page.capacity) { index ->
-                val valueToken = page.readValueToken(slots)
-                val recordId = page.readRecordId(slots)
-                val rightChild = if (leaf) 0L else page.readChild(slots)
-                if (index < count) {
-                    page.valueTokens[index] = valueToken
-                    page.recordIds[index] = recordId
-                    if (!leaf) page.children[index + 1] = rightChild
-                }
+            repeat(count) { index ->
+                page.valueTokens[index] = page.readValueToken(slots)
+                page.recordIds[index] = page.readRecordId(slots)
+                if (!leaf) page.children[index + 1] = page.readChild(slots)
             }
             return page
         }

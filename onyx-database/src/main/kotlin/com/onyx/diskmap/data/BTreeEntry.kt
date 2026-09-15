@@ -1,7 +1,6 @@
 package com.onyx.diskmap.data
 
 import com.onyx.diskmap.store.Store
-import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
 
 /**
@@ -12,8 +11,6 @@ import java.nio.ByteBuffer
  * value rewrites that pointer in place, so moving its key during a page split or merge does not
  * invalidate existing record IDs.
  *
- * A value read through this object is held weakly and may be decoded again after collection.
- *
  * @property position byte offset of this entry in the tree's page store; this is the stable ID
  * exposed by the owning map
  * @property record byte offset of the serialized value in the record store, or [NULL_RECORD] for
@@ -23,14 +20,10 @@ data class BTreeEntry(
     var position: Long = 0L,
     var record: Long = 0L
 ) {
-
-    private var recordValue: WeakReference<Any?>? = null
-
     /**
      * Redirects this stable entry to [record] and persists the new 48-bit pointer in place.
      *
-     * The weakly cached value is discarded when the pointer changes. Assigning the current pointer
-     * is a no-op and performs no store write.
+     * Assigning the current pointer is a no-op and performs no store write.
      *
      * @param store page store containing this entry at [position]
      * @throws IllegalArgumentException if [record] cannot be represented as an unsigned 48-bit
@@ -39,7 +32,6 @@ data class BTreeEntry(
     fun setRecord(store: Store, record: Long) {
         if (this.record == record) return
         this.record = record
-        recordValue = null
         val buffer = getBuffer()
         buffer.putUnsignedLong48(record)
         buffer.flip()
@@ -47,8 +39,7 @@ data class BTreeEntry(
     }
 
     /**
-     * Returns the value referenced by [record], decoding it from [store] when it is not weakly
-     * cached.
+     * Returns the value referenced by [record], decoding it from [store].
      *
      * [NULL_RECORD] is returned as `null`. The caller must request the type used to serialize the
      * value; this entry does not retain runtime type information.
@@ -59,13 +50,7 @@ data class BTreeEntry(
     @Suppress("UNCHECKED_CAST")
     fun <T> getRecord(store: Store): T {
         if (record == NULL_RECORD) return null as T
-        recordValue?.get()?.let { return it as T }
-        synchronized(this) {
-            recordValue?.get()?.let { return it as T }
-            val value = store.getObject<T>(record)
-            recordValue = WeakReference(value)
-            return value
-        }
+        return store.getObject(record)
     }
 
     /**
@@ -81,8 +66,7 @@ data class BTreeEntry(
     }
 
     /**
-     * Reloads the 48-bit record pointer at [position] into this instance and clears any cached
-     * decoded value.
+     * Reloads the 48-bit record pointer at [position] into this instance.
      *
      * @return this instance
      */
@@ -91,7 +75,6 @@ data class BTreeEntry(
         store.read(buffer, position)
         buffer.flip()
         record = buffer.unsignedLong48
-        recordValue = null
         return this
     }
 

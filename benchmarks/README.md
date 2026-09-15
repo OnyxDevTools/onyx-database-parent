@@ -69,6 +69,41 @@ test the intended capacity and corpus size together.
 The current default is 32,768 entries. See the [CLOCK comparison](../docs/hnsw-clock-performance.md)
 and the [earlier LRU results and capacity tradeoffs](../docs/hnsw-save-performance.md).
 
+## Quantized cosine benchmark
+
+With `JAVA_HOME` pointing to JDK 23, compare the real cosine implementation and vector construction:
+
+```bash
+python3 benchmarks/run-quantized-cosine.py --forks 3 --dimensions 688 1536
+```
+
+Each serial JVM fork warms up and measures `QuantizedCosineVector.cosineSimilarity` and `fromBytes`
+separately, using 1,024 seeded vectors. It reports median nanoseconds and allocated bytes per operation.
+The runner alternates scalar and SIMD forks and checks exact score and construction checksums. Add
+`--baseline-classpath` with saved pre-change main classes, as above, to measure the previous implementation
+in the same harness. Results default to `/tmp/onyx-quantized-cosine-benchmark.json`.
+
+SIMD uses the optional JDK Vector API with signed bytes widened to integer lanes. Enable it in applications
+with `--add-modules=jdk.incubator.vector`. Without the module, or with preferred integer vectors narrower
+than 256 bits, scoring uses the scalar implementation. Storage encoding and score rounding are unchanged.
+Android also uses the scalar implementation, without accessing Java's module API or loading the SIMD helper.
+The JAR bundles a consumer rule for Android shrinkers to ignore only the absent optional `jdk.incubator.vector`
+classes; applications need no additional keep rules for this accelerator.
+The ordinary `:onyx-database:test` task exercises the scalar path; `:onyx-database:vectorTest` runs the vector
+and HNSW regression tests with the module enabled.
+
+To measure the combined cosine and HNSW improvements, including reuse of prepared vectors during neighbor
+updates, pass `--vector-api` to the save benchmark:
+
+```bash
+python3 benchmarks/run-hnsw-save.py --vector-api --caches production --dimensions 688 \
+  --baseline-classpath /tmp/hnsw-before-classes/kotlin/main:/tmp/hnsw-before-classes/java/main
+```
+
+The isolated cosine benchmark does not predict total query or save throughput; use the HNSW benchmark for
+that stage, and application measurements for serialization, storage durability, and request overhead.
+See the [measured results and Android validation](../docs/quantized-cosine-performance.md).
+
 ## Compression graph-copy benchmark
 
 With JDK 23 selected, compare reconstructing a graph from stored vectors against copying its

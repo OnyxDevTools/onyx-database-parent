@@ -1,6 +1,7 @@
 package context
 
 import com.onyx.descriptor.EntityDescriptor
+import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.store.StoreType
 import com.onyx.entity.SystemEntity
 import com.onyx.entity.SystemPartitionEntry
@@ -16,6 +17,7 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class SchemaContextLockingTest {
@@ -191,6 +193,118 @@ class SchemaContextLockingTest {
         }
     }
 
+    @Test
+    fun cachedDataFileLookupDoesNotRequireDataFileInitializationMonitor() {
+        val location = Files.createTempDirectory("onyx-data-file-cache-locking").toFile()
+        val context = DefaultSchemaContext("data-file-cache-locking-${System.nanoTime()}", location.path)
+        context.storeType = StoreType.IN_MEMORY
+        val manager = EmbeddedPersistenceManager(context)
+        manager.context = context
+        context.start()
+
+        val releaseMonitor = CountDownLatch(1)
+        try {
+            val descriptor = context.getBaseDescriptorForEntity(SystemEntity::class.java)!!
+            val expected = context.getDataFile(descriptor)
+            val monitorHeld = CountDownLatch(1)
+            val dataFileMonitor = context.privateMonitor("dataFilesLock")
+
+            val holder = thread(name = "data-file-initialization-monitor-holder") {
+                synchronized(dataFileMonitor) {
+                    monitorHeld.countDown()
+                    releaseMonitor.await(5, TimeUnit.SECONDS)
+                }
+            }
+
+            assertTrue(monitorHeld.await(1, TimeUnit.SECONDS), "The test did not acquire the data-file monitor")
+
+            val completed = CountDownLatch(1)
+            val result = AtomicReference<DiskMapFactory>()
+            val failure = AtomicReference<Throwable>()
+            val worker = thread(name = "cached-data-file-reader") {
+                try {
+                    result.set(context.getDataFile(descriptor))
+                } catch (throwable: Throwable) {
+                    failure.set(throwable)
+                } finally {
+                    completed.countDown()
+                }
+            }
+
+            assertTrue(
+                completed.await(1, TimeUnit.SECONDS),
+                "A cached data-file lookup must not wait for another data-file initialization"
+            )
+            failure.get()?.let { throw it }
+            assertSame(expected, result.get())
+
+            releaseMonitor.countDown()
+            holder.join(1000)
+            worker.join(1000)
+        } finally {
+            releaseMonitor.countDown()
+            context.shutdown()
+            location.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun cachedSystemEntityLookupsDoNotRequireInitializationMonitor() {
+        val location = Files.createTempDirectory("onyx-system-entity-cache-locking").toFile()
+        val context = DefaultSchemaContext("system-entity-cache-locking-${System.nanoTime()}", location.path)
+        context.storeType = StoreType.IN_MEMORY
+        val manager = EmbeddedPersistenceManager(context)
+        manager.context = context
+        context.start()
+
+        val releaseMonitor = CountDownLatch(1)
+        try {
+            val expected = context.getSystemEntityByName(SystemEntity::class.java.name)!!
+            assertSame(expected, context.getSystemEntityById(expected.primaryKey))
+            val monitorHeld = CountDownLatch(1)
+            val systemEntityMonitor = context.privateMonitor("systemEntityInitializationLock")
+
+            val holder = thread(name = "system-entity-initialization-monitor-holder") {
+                synchronized(systemEntityMonitor) {
+                    monitorHeld.countDown()
+                    releaseMonitor.await(5, TimeUnit.SECONDS)
+                }
+            }
+
+            assertTrue(
+                monitorHeld.await(1, TimeUnit.SECONDS),
+                "The test did not acquire the system-entity monitor"
+            )
+
+            val completed = CountDownLatch(1)
+            val failure = AtomicReference<Throwable>()
+            val worker = thread(name = "cached-system-entity-reader") {
+                try {
+                    assertSame(expected, context.getSystemEntityByName(expected.name))
+                    assertSame(expected, context.getSystemEntityById(expected.primaryKey))
+                } catch (throwable: Throwable) {
+                    failure.set(throwable)
+                } finally {
+                    completed.countDown()
+                }
+            }
+
+            assertTrue(
+                completed.await(1, TimeUnit.SECONDS),
+                "Cached system-entity lookups must not wait for another cache initialization"
+            )
+            failure.get()?.let { throw it }
+
+            releaseMonitor.countDown()
+            holder.join(1000)
+            worker.join(1000)
+        } finally {
+            releaseMonitor.countDown()
+            context.shutdown()
+            location.deleteRecursively()
+        }
+    }
+
     private class ObservableSchemaContext(contextId: String, location: String) :
         DefaultSchemaContext(contextId, location) {
 
@@ -220,4 +334,10 @@ class SchemaContextLockingTest {
             block()
         }
     }
+
+    private fun DefaultSchemaContext.privateMonitor(fieldName: String): Any =
+        DefaultSchemaContext::class.java.getDeclaredField(fieldName).let { field ->
+            field.isAccessible = true
+            field.get(this)
+        }
 }

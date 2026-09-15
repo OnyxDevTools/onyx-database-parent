@@ -147,7 +147,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, conte
         if (recordId > -1) {
             entity.onPreRemove(context, entityDescriptor)
             context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, Reference(entity.partitionId(context), recordId), QueryListenerEvent.DELETE)
-            this.deleteWithId(identifierValue)
+            removeRecord(identifierValue)
             entity.onPostRemove(context, entityDescriptor)
         }
     }
@@ -158,7 +158,9 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, conte
      * @param primaryKey Identifier of an entity
      */
     @Synchronized
-    override fun deleteWithId(primaryKey: Any) = records.remove(primaryKey)
+    override fun deleteWithId(primaryKey: Any) = removeRecord(primaryKey)
+
+    private fun removeRecord(primaryKey: Any): IManagedEntity? = records.remove(primaryKey)
 
     /**
      * Get an entity by the entity with populated primary key

@@ -44,6 +44,8 @@ class QueryCriteria : BufferStreamable {
     var isAnd = false
     var isOr = false
     var flip = false
+
+    /** Retained for serialized-query compatibility; runtime evaluation keeps results locally. */
     var meetsCriteria = false
 
     var attribute: String? = null
@@ -55,14 +57,15 @@ class QueryCriteria : BufferStreamable {
     var parentCriteria: QueryCriteria? = null
 
     @Transient
+    @Volatile
     var attributeDescriptor: AttributeDescriptor? = null
 
     @Transient
+    @Volatile
     var isRelationship:Boolean? = null
         get() {
-            if(field == null)
-                field = attribute?.contains(".") == true
-            return field
+            field?.let { return it }
+            return (attribute?.contains(".") == true).also { field = it }
         }
 
     /**

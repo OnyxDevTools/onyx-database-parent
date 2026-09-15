@@ -91,7 +91,7 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
 
         val graph = loadMetadata(calibrationId)
         if (graph == null) {
-            storeNode(HnswNode(recordId, calibrationId, vectorBytes.copyOf(), deterministicLevel(recordId, calibrationId)))
+            storeNode(HnswNode(recordId, calibrationId, vector.toByteArray(), deterministicLevel(recordId, calibrationId), vector))
             storeMetadata(
                 HnswMetadata(
                     calibrationId = calibrationId,
@@ -104,7 +104,7 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
             return
         }
         val newLevel = deterministicLevel(recordId, calibrationId)
-        val newNode = HnswNode(recordId, calibrationId, vectorBytes.copyOf(), newLevel)
+        val newNode = HnswNode(recordId, calibrationId, vector.toByteArray(), newLevel, vector)
         storeNode(newNode)
         var entryPoint = requireNode(graph.entryPoint, calibrationId)
         val upperBudget = DistanceBudget(MAX_INSERT_UPPER_DISTANCE_EVALUATIONS)
@@ -124,7 +124,7 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
                 .asSequence()
                 .filter { it.id != recordId }
                 .toList()
-            val selected = selectNeighborIds(vector, candidates, neighborLimit(layer))
+            val selected = selectNeighborIds(candidates, neighborLimit(layer))
             selected.forEach { neighborId -> connectBidirectional(recordId, neighborId, layer) }
             if (loadNode(recordId)?.neighborsAt(layer)?.isEmpty() != false && candidates.isNotEmpty()) {
                 // Strict reciprocity can reject a new edge when the peer prunes it. Retain one
@@ -711,7 +711,7 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
             }
             .sortedWith(BEST_FIRST_COMPARATOR)
             .toList()
-        return selectNeighborIds(node.vector, scored, neighborLimit(layer))
+        return selectNeighborIds(scored, neighborLimit(layer))
     }
 
     private fun forceNeighbor(values: LongArray, neighborId: Long, limit: Int): LongArray {
@@ -734,7 +734,6 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
      * layers retain connectivity. Candidate sets are capped by construction/search bounds.
      */
     private fun selectNeighborIds(
-        base: QuantizedCosineVector,
         candidates: List<ScoredNode>,
         limit: Int,
     ): LongArray {
@@ -747,12 +746,13 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
                 return@forEach
             }
             val candidateNode = loadNode(candidate.id) ?: return@forEach
-            val baseScore = base.cosineSimilarity(candidateNode.vector)
+            // Both callers have already scored each candidate against the base vector.
+            val baseScore = candidate.score
             val diverse = selected.all { chosen ->
                 val chosenNode = loadNode(chosen.id) ?: return@all true
                 candidateNode.vector.cosineSimilarity(chosenNode.vector) <= baseScore
             }
-            if (diverse) selected += candidate.copy(score = baseScore) else rejected += candidate.copy(score = baseScore)
+            if (diverse) selected += candidate else rejected += candidate
         }
         if (selected.size < limit) {
             rejected.sortedWith(BEST_FIRST_COMPARATOR)
@@ -877,10 +877,10 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
         val calibrationId: Long,
         val vectorBytes: ByteArray,
         val level: Int,
+        // Neighbor-only copies retain the immutable vector and its already computed magnitude.
+        val vector: QuantizedCosineVector,
         val neighbors: Array<LongArray> = Array(level + 1) { longArrayOf() },
     ) {
-        val vector: QuantizedCosineVector by lazy { QuantizedCosineVector.fromBytes(vectorBytes) }
-
         fun neighborsAt(layer: Int): LongArray = neighbors.getOrNull(layer)?.copyOf() ?: longArrayOf()
 
         fun withNeighbors(layer: Int, values: LongArray): HnswNode {
@@ -972,7 +972,7 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
             val vectorSize = readSize(buffer, QuantizedCosineVector.MAX_DIMENSIONS)
             require(buffer.remaining() >= vectorSize + 4) { "HNSW node vector is truncated" }
             val vector = ByteArray(vectorSize).also(buffer::get)
-            QuantizedCosineVector.fromBytes(vector)
+            val quantizedVector = QuantizedCosineVector.fromBytes(vector)
             val levelCount = readSize(buffer, MAX_LEVEL + 1)
             require(levelCount > 0) { "HNSW node must contain level zero" }
             val neighbors = Array(levelCount) { layer ->
@@ -988,7 +988,7 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
                 }
             }
             require(!buffer.hasRemaining()) { "Unexpected trailing HNSW node data" }
-            return HnswNode(recordId, calibrationId, vector, levelCount - 1, neighbors)
+            return HnswNode(recordId, calibrationId, vector, levelCount - 1, quantizedVector, neighbors)
         }
     }
 

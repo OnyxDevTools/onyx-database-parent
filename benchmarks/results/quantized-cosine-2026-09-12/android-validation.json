@@ -1,0 +1,168 @@
+{
+  "date": "2026-09-12",
+  "scope": "Production QuantizedCosineVector, its Companion, VectorizedByteDotProduct, and a small Java scoring probe; Kotlin stdlib and annotations provided as library dependencies.",
+  "tools": {
+    "r8": "9.4.17",
+    "d8": "9.4.17",
+    "android_compile_api": 35,
+    "android_min_api": 26,
+    "jdk": "Eclipse Temurin 23.0.2+7",
+    "kotlin_stdlib": "2.2.10",
+    "jetbrains_annotations": "13.0"
+  },
+  "production_source_sha256": {
+    "onyx-database/src/main/kotlin/com/onyx/vector/QuantizedCosineVector.kt": "74bba879b55d71ccde23d8ac5541d54eb208dd8a803f892093f5c86cb8ac963e",
+    "onyx-database/src/main/kotlin/com/onyx/vector/VectorizedByteDotProduct.kt": "b0b89aa7b23f49228340121251e4f582eac56afc6581c746e2709ab8c0038bbf",
+    "onyx-database/src/main/resources/META-INF/proguard/onyx-vector.pro": "43cad37cab52cf54c75a47423ba54843ea1a6f1fbf92fc647c144c17ee20146b"
+  },
+  "tested_class_sha256": {
+    "com/onyx/vector/QuantizedCosineVector.class": "b6d7fe59a4bda1e32e45476b099364702604df41eccb12ecf75ddc4613f654b2",
+    "com/onyx/vector/QuantizedCosineVector$Companion.class": "2874e702959673bd207f58407adfe2374bfd52d45da2583e5db8882d982f78e1",
+    "com/onyx/vector/VectorizedByteDotProduct.class": "fdfdd4812cfc91f06340d2eac07cca4d6124eb9c0645918ba8a402f4b1b7e285"
+  },
+  "checks": [
+    {
+      "check": "D8 release dexing against Android API 35",
+      "result": "pass",
+      "min_api": 26
+    },
+    {
+      "check": "R8 release shrinking against Android API 35 with embedded consumer rules",
+      "result": "pass",
+      "min_api": 26
+    },
+    {
+      "check": "R8 release shrinking with minification, access modification and repackaging",
+      "result": "pass",
+      "options": [
+        "-allowaccessmodification",
+        "-repackageclasses"
+      ]
+    },
+    {
+      "check": "Embedded consumer-rule negative control",
+      "result": "pass",
+      "expected": "Removing META-INF/proguard/onyx-vector.pro causes R8 compilation to fail on eight missing jdk.incubator.vector classes.",
+      "observed": "Expected missing-class compilation failure."
+    },
+    {
+      "check": "DEX helper isolation",
+      "result": "pass",
+      "details": "Field descriptors, method descriptors, and instruction type/member references were parsed from D8 and both R8 DEX outputs. No JDK Vector API type references were present in QuantizedCosineVector, its Companion, or the probe. All remained in VectorizedByteDotProduct.",
+      "extra_helper_keep_rules": false
+    },
+    {
+      "check": "R8 optimized JVM classfile fallback without Vector API module",
+      "result": "pass",
+      "library": "java.base only, plus Kotlin stdlib and JetBrains annotations",
+      "score_comparison": "Exact Float.floatToIntBits equality with legacy scalar cosine",
+      "dimensions": [
+        1,
+        31,
+        32,
+        33,
+        63,
+        64,
+        65,
+        688,
+        1536,
+        16384
+      ]
+    }
+  ],
+  "dex_type_reference_counts": {
+    "d8_release": {
+      "LCosineAndroidProbe;": {
+        "vector_field_types": 0,
+        "vector_method_types": 0,
+        "vector_code_types": 0
+      },
+      "Lcom/onyx/vector/QuantizedCosineVector$Companion;": {
+        "vector_field_types": 0,
+        "vector_method_types": 0,
+        "vector_code_types": 0
+      },
+      "Lcom/onyx/vector/QuantizedCosineVector;": {
+        "vector_field_types": 0,
+        "vector_method_types": 0,
+        "vector_code_types": 0
+      },
+      "Lcom/onyx/vector/VectorizedByteDotProduct;": {
+        "vector_field_types": 1,
+        "vector_method_types": 1,
+        "vector_code_types": 8
+      }
+    },
+    "r8_release": {
+      "LCosineAndroidProbe;": {
+        "vector_field_types": 0,
+        "vector_method_types": 0,
+        "vector_code_types": 0
+      },
+      "Lcom/onyx/vector/QuantizedCosineVector$Companion;": {
+        "vector_field_types": 0,
+        "vector_method_types": 0,
+        "vector_code_types": 0
+      },
+      "Lcom/onyx/vector/QuantizedCosineVector;": {
+        "vector_field_types": 0,
+        "vector_method_types": 0,
+        "vector_code_types": 0
+      },
+      "Lcom/onyx/vector/VectorizedByteDotProduct;": {
+        "vector_field_types": 1,
+        "vector_method_types": 1,
+        "vector_code_types": 8
+      }
+    },
+    "r8_minified": {
+      "LCosineAndroidProbe;": {
+        "vector_field_types": 0,
+        "vector_method_types": 0,
+        "vector_code_types": 0
+      },
+      "La;": {
+        "vector_field_types": 0,
+        "vector_method_types": 0,
+        "vector_code_types": 0
+      },
+      "Lb;": {
+        "vector_field_types": 0,
+        "vector_method_types": 0,
+        "vector_code_types": 0
+      },
+      "Lc;": {
+        "vector_field_types": 1,
+        "vector_method_types": 1,
+        "vector_code_types": 8
+      }
+    }
+  },
+  "minified_class_mapping": {
+    "com.onyx.vector.QuantizedCosineVector": "b",
+    "com.onyx.vector.QuantizedCosineVector$Companion": "a",
+    "com.onyx.vector.VectorizedByteDotProduct": "c"
+  },
+  "provenance": {
+    "r8_download": "https://dl.google.com/dl/android/maven2/com/android/tools/r8/9.4.17/r8-9.4.17.jar",
+    "r8_sha256": "2100511344497f041644a4d63fb7be8a516ce9bace30b7d17ab27cc93a0e58d4",
+    "android_platform_download": "https://dl.google.com/android/repository/platform-35_r02.zip",
+    "android_jar_archive_entry": "android-35/android.jar",
+    "android_jar_sha256": "4566663c3876e022b4fa4ced8c8697c4ab1688267f090114fd92d027b32e619b",
+    "r8_usage_documentation": "https://r8.googlesource.com/r8/+/refs/heads/main/README.md",
+    "consumer_rule_packaging_documentation": "https://developer.android.com/topic/performance/app-optimization/library-optimization",
+    "missing_class_behavior_documentation": "https://developer.android.com/build/releases/agp-8-0-0-release-notes"
+  },
+  "command_templates": {
+    "d8": "java -XX:ActiveProcessorCount=1 -Xmx512m -cp r8.jar com.android.tools.r8.D8 --release --thread-count 1 --output d8-dex.jar --lib android.jar --lib kotlin-stdlib-2.2.10.jar --min-api 26 input.jar",
+    "r8": "java -XX:ActiveProcessorCount=1 -Xmx512m -cp r8.jar com.android.tools.r8.R8 --release --thread-count 1 --output r8-dex.jar --lib android.jar --lib kotlin-stdlib-2.2.10.jar --lib annotations-13.0.jar --pg-conf keep.pro --no-minification --min-api 26 input.jar",
+    "r8_minified": "java -XX:ActiveProcessorCount=1 -Xmx512m -cp r8.jar com.android.tools.r8.R8 --release --thread-count 1 --output r8-minified-dex.jar --lib android.jar --lib kotlin-stdlib-2.2.10.jar --lib annotations-13.0.jar --pg-conf minified.pro --min-api 26 input.jar",
+    "keep.pro": "-keep class CosineAndroidProbe { public static void main(java.lang.String[]); }",
+    "minified.pro": "-keep class CosineAndroidProbe { public static void main(java.lang.String[]); }\n-allowaccessmodification\n-repackageclasses",
+    "input_jar": "QuantizedCosineVector.class, QuantizedCosineVector$Companion.class, VectorizedByteDotProduct.class, CosineAndroidProbe.class, META-INF/proguard/onyx-vector.pro"
+  },
+  "limitations": [
+    "No Android device, emulator, or ART execution was performed.",
+    "Validation covers the isolated vector implementation and its D8/R8 packaging, not Android compatibility of the complete database or every Android/R8 version."
+  ]
+}

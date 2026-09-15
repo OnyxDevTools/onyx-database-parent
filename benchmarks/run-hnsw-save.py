@@ -23,6 +23,7 @@ def main():
     parser.add_argument("--capacity", type=int, help="Override onyx.hnsw.nodeCacheCapacity in benchmark children only")
     parser.add_argument("--caches", nargs="+", choices=["lru", "weak", "production"], default=["lru", "production"])
     parser.add_argument("--baseline-classpath", help="Optional pre-change main classes, prepended in separate baseline forks")
+    parser.add_argument("--vector-api", action="store_true", help="Enable the optional JVM SIMD module in benchmark forks")
     parser.add_argument("--output", type=Path, default=Path("/tmp/onyx-hnsw-save-benchmark.json"))
     args = parser.parse_args()
     if args.forks < 1 or not 0 < args.measured < args.rows or args.rows < 256:
@@ -59,12 +60,16 @@ def main():
         "java": java_version,
         "jvm_args": ["-Xms512m", "-Xmx2g", "-XX:-UseCompressedOops", "-XX:ActiveProcessorCount=8"],
         "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "vector_source_sha256": {name: hashlib.sha256((root / "onyx-database/src/main/kotlin/com/onyx/vector" / name).read_bytes()).hexdigest()
+                                 for name in ["QuantizedCosineVector.kt", "VectorizedByteDotProduct.kt"]},
         "clock_source_sha256": hashlib.sha256((root / "onyx-database/src/main/kotlin/com/onyx/lang/map/ConcurrentClockCache.kt").read_bytes()).hexdigest(),
         "parameters": {key: str(value) if isinstance(value, Path) else value for key, value in vars(args).items()},
         "runs": [],
     }
     if args.capacity is not None:
         report["jvm_args"].append(f"-Donyx.hnsw.nodeCacheCapacity={args.capacity}")
+    if args.vector_api:
+        report["jvm_args"].append("--add-modules=jdk.incubator.vector")
     variants = args.caches.copy()
     if args.baseline_classpath:
         variants.insert(0, "baseline")

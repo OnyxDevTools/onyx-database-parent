@@ -1,7 +1,6 @@
 package com.onyx.persistence.context.impl
 
 import com.onyx.descriptor.EntityDescriptor
-import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.store.StoreType
 
@@ -30,7 +29,8 @@ class CacheSchemaContext(contextId: String, location: String) : DefaultSchemaCon
      */
     override fun getDataFile(descriptor: EntityDescriptor): DiskMapFactory {
         val path = descriptor.fileName + if (descriptor.partition == null) "" else descriptor.partition!!.partitionValue
-        return dataFiles.getOrPut(path) { DefaultDiskMapFactory("$location/$path", StoreType.IN_MEMORY, this@CacheSchemaContext) }
+        dataFiles[path]?.let { return it }
+        return getOrCreateDataFile(path, StoreType.IN_MEMORY) { "$location/$path" }
     }
 
 }

@@ -18,6 +18,8 @@ import com.onyx.vector.VectorEntityEncoder
 import com.onyx.vector.VectorSearchEvaluator
 import com.onyx.vector.VectorValueCodec
 import java.util.Date
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 
 /**
  * Entity meets the query criteria.  This method is used to determine whether the entity meets all the
@@ -34,148 +36,201 @@ import java.util.Date
  * @since 1.3.0 Simplified query criteria management
  */
 @Throws(OnyxException::class)
-fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, context: SchemaContext, descriptor: EntityDescriptor): Boolean = synchronized(this) {
-
-    var subCriteria: Boolean
-    var evaluatedVectorSearch = false
-    var evaluatedVectorSearchScore: Float? = null
-
-    // Iterate through
-    for(it in this.getAllCriteria()) {
-        if(it.flip)
-            continue
-        else if (it.isRelationship!!) {
-            subCriteria = if(descriptor.relationships.contains(it.relationship)) {
-                relationshipMeetsCriteria(entity, entityReference, it, context)
-            } else {
-                graphMeetsCriteria(entity, it)
-            }
-        }
-        else if (it.operator == QueryCriteriaOperator.CANDIDATES) {
-            // Composed approximate-index queries pre-admit this bounded set once. The
-            // remaining predicate tree is then evaluated only for those references.
-            subCriteria = approximateIndexCandidateMatches?.contains(entityReference) == true
-        }
-        else if (it.attribute == Query.FULL_TEXT_ATTRIBUTE) {
-            val isHighLevelAdmission = it.operator == QueryCriteriaOperator.SEARCH
-            val evaluatedScore = if (entity is VectorManagedEntity && !isHighLevelAdmission) {
-                evaluatedVectorSearch = true
-                resolveVectorSearchQuery(it.value)?.let { searchQuery ->
-                    VectorSearchEvaluator.evaluate(entity, descriptor, searchQuery)
-                }
-            } else {
-                null
-            }
-            if (evaluatedScore != null) {
-                evaluatedVectorSearchScore = maxOf(evaluatedVectorSearchScore ?: evaluatedScore, evaluatedScore)
-            }
-            val matches = if (isHighLevelAdmission) {
-                vectorSearchMatches?.get(it)?.contains(entityReference) == true
-            } else if (entity is VectorManagedEntity) {
-                evaluatedScore != null
-            } else {
-                vectorSearchMatches?.get(it)?.contains(entityReference)
-                    ?: (fullTextScores?.containsKey(entityReference) == true)
-            }
-            subCriteria = when (it.operator) {
-                QueryCriteriaOperator.NOT_MATCHES,
-                QueryCriteriaOperator.NOT_LIKE,
-                QueryCriteriaOperator.NOT_CONTAINS,
-                QueryCriteriaOperator.NOT_CONTAINS_IGNORE_CASE,
-                QueryCriteriaOperator.NOT_STARTS_WITH,
-                QueryCriteriaOperator.NOT_EQUAL,
-                QueryCriteriaOperator.NOT_IN,
-                QueryCriteriaOperator.NOT_BETWEEN,
-                QueryCriteriaOperator.NOT_NULL -> !matches
-                else -> matches
-            }
-        } else {
-            // Compare operator for attribute value
-            if (it.attributeDescriptor == null)
-                it.attributeDescriptor = descriptor.attributes[it.attribute!!]
-
-            val attribute = if (it.attributeDescriptor != null) {
-                entity?.get<Any?>(context = context, descriptor = descriptor, name = it.attribute!!)
-            } else {
-                entity?.get<Any?>(it.attribute!!) // Use Kotlin property accessors
-            }
-
-            val usesStableVectorDateText = entity is VectorManagedEntity &&
-                attribute is Date &&
-                it.operator in VECTOR_TEXT_OPERATORS
-            val comparableAttribute = if (usesStableVectorDateText) {
-                VectorValueCodec.predicateText(attribute)
-            } else {
-                attribute.normalizeForComparison(it.operator, context)
-            }
-            val comparisonValue = if (usesStableVectorDateText && it.value is Date) {
-                VectorValueCodec.predicateText(it.value as Date)
-            } else {
-                it.value
-            }
-            subCriteria = if (
-                entity is VectorManagedEntity &&
-                it.operator in setOf(QueryCriteriaOperator.LIKE, QueryCriteriaOperator.NOT_LIKE) &&
-                attribute is CharSequence
-            ) {
-                val queryTerms = VectorEntityEncoder.tokens(comparisonValue?.toString() ?: "null").distinct()
-                val matches = if (queryTerms.isEmpty()) {
-                    comparisonValue.compare(comparableAttribute, it.operator!!)
-                } else {
-                    val attributeTerms = VectorEntityEncoder.tokens(comparableAttribute.toString()).toSet()
-                    queryTerms.all(attributeTerms::contains)
-                }
-                if (it.operator == QueryCriteriaOperator.NOT_LIKE && queryTerms.isNotEmpty()) !matches else matches
-            } else {
-                compareCriterion(it, comparableAttribute, comparisonValue)
-            }
-        }
-        it.meetsCriteria = subCriteria
-    }
-
-    if (evaluatedVectorSearch) {
-        @Suppress("UNCHECKED_CAST")
-        val mutableScores = (fullTextScores as? MutableMap<Reference, Float>)
-            ?: fullTextScores?.toMutableMap()
-            ?: HashMap()
-        fullTextScores = mutableScores.apply {
-            if (evaluatedVectorSearchScore == null) remove(entityReference)
-            else put(entityReference, evaluatedVectorSearchScore!!)
-        }
-    }
-
-    this.criteria ?: return@synchronized true
-    return calculateCriteriaMet(this.criteria!!)
+fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, context: SchemaContext, descriptor: EntityDescriptor): Boolean {
+    val evaluation = evaluateCriteria(entity, entityReference, context, descriptor)
+    recordVectorSearchScore(entityReference, evaluation)
+    return evaluation.matches
 }
 
 /**
- * Calculates the result of the parent criteria and correlates
- * its set of children criteria.  A pre-requisite to invoking this method
- * is that all of the criteria have the meet criteria field set and
- * it does NOT take into account the not modifier in the pre-requisite.
- *
- *
- * @param criteria Root criteria to check.  This maintains the order of operations
- * @return Whether all the criteria are met taking into account the order of operations
- * and the not() modifier
- *
- * @since 1.3.0 Added to enhance insertion based criteria checking
+ * Installs the score accumulator used by workers before a parallel scan starts. Predicate
+ * evaluation can then publish a score before its collector consumes the row without taking the
+ * query monitor. Existing scores are retained when a preceding scanner supplied candidates.
  */
-private fun Query.calculateCriteriaMet(criteria: QueryCriteria): Boolean {
-    var meetsCriteria = criteria.meetsCriteria
+internal fun Query.prepareConcurrentScoreCollection(descriptor: EntityDescriptor) {
+    if (!VectorManagedEntity::class.java.isAssignableFrom(descriptor.entityClass)) return
+    if (criteria?.evaluatesVectorSearchScore() != true) return
 
-    if (criteria.subCriteria.size > 0) {
-        criteria.subCriteria.forEach {
-            if(it.flip)
-                return@forEach
-            meetsCriteria = if (it.isOr) { calculateCriteriaMet(it) || meetsCriteria } else { calculateCriteriaMet(it) && meetsCriteria }
+    val existingScores = fullTextScores
+    if (existingScores is ConcurrentMap<*, *>) return
+    fullTextScores = ConcurrentHashMap<Reference, Float>().apply {
+        if (existingScores != null) putAll(existingScores)
+    }
+}
+
+private fun Query.evaluateCriteria(
+    entity: IManagedEntity?,
+    entityReference: Reference,
+    context: SchemaContext,
+    descriptor: EntityDescriptor,
+): CriteriaEvaluation {
+    val evaluation = CriteriaEvaluation()
+
+    fun evaluate(criteria: QueryCriteria): Boolean {
+        var matches = if (criteria.flip) {
+            false
+        } else {
+            evaluateCriterion(
+                entity,
+                entityReference,
+                criteria,
+                context,
+                descriptor,
+                evaluation,
+            )
         }
+
+        criteria.subCriteria.forEach { child ->
+            val childMatches = evaluate(child)
+            if (!child.flip) {
+                matches = if (child.isOr) childMatches || matches else childMatches && matches
+            }
+        }
+        return if (criteria.isNot) !matches else matches
     }
 
-    if (criteria.isNot)
-        meetsCriteria = !meetsCriteria
-    return meetsCriteria
+    val rootCriteria = criteria
+    evaluation.matches = rootCriteria == null || evaluate(rootCriteria)
+    return evaluation
 }
+
+private fun Query.evaluateCriterion(
+    entity: IManagedEntity?,
+    entityReference: Reference,
+    criterion: QueryCriteria,
+    context: SchemaContext,
+    descriptor: EntityDescriptor,
+    evaluation: CriteriaEvaluation,
+): Boolean {
+    return if (criterion.isRelationship == true) {
+        if (descriptor.relationships.contains(criterion.relationship)) {
+            relationshipMeetsCriteria(entity, entityReference, criterion, context)
+        } else {
+            graphMeetsCriteria(entity, criterion)
+        }
+    }
+    else if (criterion.operator == QueryCriteriaOperator.CANDIDATES) {
+        // Composed approximate-index queries pre-admit this bounded set once. The
+        // remaining predicate tree is then evaluated only for those references.
+        approximateIndexCandidateMatches?.contains(entityReference) == true
+    }
+    else if (criterion.attribute == Query.FULL_TEXT_ATTRIBUTE) {
+        val isHighLevelAdmission = criterion.operator == QueryCriteriaOperator.SEARCH
+        val evaluatedScore = if (entity is VectorManagedEntity && !isHighLevelAdmission) {
+            evaluation.evaluatedVectorSearch = true
+            resolveVectorSearchQuery(criterion.value)?.let { searchQuery ->
+                VectorSearchEvaluator.evaluate(entity, descriptor, searchQuery)
+            }
+        } else {
+            null
+        }
+        if (evaluatedScore != null) {
+            evaluation.vectorSearchScore = maxOf(evaluation.vectorSearchScore ?: evaluatedScore, evaluatedScore)
+        }
+        val matches = if (isHighLevelAdmission) {
+            vectorSearchMatches?.get(criterion)?.contains(entityReference) == true
+        } else if (entity is VectorManagedEntity) {
+            evaluatedScore != null
+        } else {
+            vectorSearchMatches?.get(criterion)?.contains(entityReference)
+                ?: (fullTextScores?.containsKey(entityReference) == true)
+        }
+        when (criterion.operator) {
+            QueryCriteriaOperator.NOT_MATCHES,
+            QueryCriteriaOperator.NOT_LIKE,
+            QueryCriteriaOperator.NOT_CONTAINS,
+            QueryCriteriaOperator.NOT_CONTAINS_IGNORE_CASE,
+            QueryCriteriaOperator.NOT_STARTS_WITH,
+            QueryCriteriaOperator.NOT_EQUAL,
+            QueryCriteriaOperator.NOT_IN,
+            QueryCriteriaOperator.NOT_BETWEEN,
+            QueryCriteriaOperator.NOT_NULL -> !matches
+            else -> matches
+        }
+    } else {
+        val attributeDescriptor = criterion.attributeDescriptor
+            ?: descriptor.attributes[criterion.attribute!!]?.also { criterion.attributeDescriptor = it }
+        val attribute = if (attributeDescriptor != null) {
+            entity?.get<Any?>(context = context, descriptor = descriptor, name = criterion.attribute!!)
+        } else {
+            entity?.get<Any?>(criterion.attribute!!) // Use Kotlin property accessors
+        }
+
+        val usesStableVectorDateText = entity is VectorManagedEntity &&
+            attribute is Date &&
+            criterion.operator in VECTOR_TEXT_OPERATORS
+        val comparableAttribute = if (usesStableVectorDateText) {
+            VectorValueCodec.predicateText(attribute)
+        } else {
+            attribute.normalizeForComparison(criterion.operator, context)
+        }
+        val comparisonValue = if (usesStableVectorDateText && criterion.value is Date) {
+            VectorValueCodec.predicateText(criterion.value as Date)
+        } else {
+            criterion.value
+        }
+        if (
+            entity is VectorManagedEntity &&
+            criterion.operator in setOf(QueryCriteriaOperator.LIKE, QueryCriteriaOperator.NOT_LIKE) &&
+            attribute is CharSequence
+        ) {
+            val queryTerms = VectorEntityEncoder.tokens(comparisonValue?.toString() ?: "null").distinct()
+            val matches = if (queryTerms.isEmpty()) {
+                comparisonValue.compare(comparableAttribute, criterion.operator!!)
+            } else {
+                val attributeTerms = VectorEntityEncoder.tokens(comparableAttribute.toString()).toSet()
+                queryTerms.all(attributeTerms::contains)
+            }
+            if (criterion.operator == QueryCriteriaOperator.NOT_LIKE && queryTerms.isNotEmpty()) !matches else matches
+        } else {
+            compareCriterion(criterion, comparableAttribute, comparisonValue)
+        }
+    }
+}
+
+private fun Query.recordVectorSearchScore(reference: Reference, evaluation: CriteriaEvaluation) {
+    if (!evaluation.evaluatedVectorSearch) return
+
+    val currentScores = fullTextScores
+    if (currentScores is ConcurrentMap<*, *>) {
+        @Suppress("UNCHECKED_CAST")
+        evaluation.recordScore(reference, currentScores as MutableMap<Reference, Float>)
+        return
+    }
+
+    // Direct criteria evaluation and non-partitioned scans lazily install the same concurrent
+    // accumulator. Only that first installation is serialized; all predicate work remains local.
+    synchronized(this) {
+        val latestScores = fullTextScores
+        if (latestScores is ConcurrentMap<*, *>) {
+            @Suppress("UNCHECKED_CAST")
+            evaluation.recordScore(reference, latestScores as MutableMap<Reference, Float>)
+        } else {
+            val concurrentScores = ConcurrentHashMap<Reference, Float>().apply {
+                if (latestScores != null) putAll(latestScores)
+            }
+            evaluation.recordScore(reference, concurrentScores)
+            fullTextScores = concurrentScores
+        }
+    }
+}
+
+private class CriteriaEvaluation {
+    var matches = false
+    var evaluatedVectorSearch = false
+    var vectorSearchScore: Float? = null
+
+    fun recordScore(reference: Reference, scores: MutableMap<Reference, Float>) {
+        val score = vectorSearchScore
+        if (score == null) scores.remove(reference)
+        else scores[reference] = score
+    }
+}
+
+private fun QueryCriteria.evaluatesVectorSearchScore(): Boolean =
+    (!flip && attribute == Query.FULL_TEXT_ATTRIBUTE &&
+        operator != QueryCriteriaOperator.CANDIDATES && operator != QueryCriteriaOperator.SEARCH) ||
+        subCriteria.any { it.evaluatesVectorSearchScore() }
 
 /**
  * Relationship meets criteria.  This method will hydrate a relationship for an entity and

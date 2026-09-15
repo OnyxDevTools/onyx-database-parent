@@ -11,12 +11,9 @@ import kotlin.math.sqrt
  * component avoids retaining full dense embeddings in every database record, and callers can
  * still rerank the bounded result set with their original embedding representation.
  */
-internal class QuantizedCosineVector private constructor(values: ByteArray) {
-    private val content = values.copyOf()
-    private val magnitude = sqrt(content.sumOf { value ->
-        val integer = value.toInt()
-        integer.toDouble() * integer.toDouble()
-    })
+internal class QuantizedCosineVector private constructor(private val content: ByteArray) {
+    // Factories transfer an owned array. Only fromBytes must copy caller-owned storage.
+    private val magnitude = sqrt(dotProduct(content, content).toDouble())
 
     val dimensions: Int
         get() = content.size
@@ -27,16 +24,43 @@ internal class QuantizedCosineVector private constructor(values: ByteArray) {
         require(dimensions == other.dimensions) {
             "HNSW vector has ${other.dimensions} dimensions; expected $dimensions"
         }
-        var dot = 0L
-        for (index in content.indices) {
-            dot += content[index].toLong() * other.content[index].toLong()
+        val dot = if (vectorApiAvailable && content.size >= 32) {
+            VectorizedByteDotProduct.dotProduct(content, other.content).toLong()
+        } else {
+            // Retain the original loop here: sharing the constructor's norm helper changes
+            // HotSpot's optimization of this hot comparison on JVMs without the Vector API.
+            var result = 0L
+            for (index in content.indices) result += content[index].toLong() * other.content[index].toLong()
+            result
         }
+        // Keep the original normalization order to preserve score bits and graph tie-breaking.
         return (dot.toDouble() / (magnitude * other.magnitude))
             .coerceIn(-1.0, 1.0)
             .toFloat()
     }
 
     companion object {
+        // Keep Vector API types in a separate class so ordinary JVMs need no extra module flags.
+        private val vectorApiAvailable = try {
+            // Class.forName is also available on Android, which has no java.lang.ModuleLayer.
+            Class.forName("jdk.incubator.vector.IntVector", false, QuantizedCosineVector::class.java.classLoader)
+            VectorizedByteDotProduct.isSupported
+        } catch (_: ClassNotFoundException) {
+            false
+        } catch (_: LinkageError) {
+            false
+        } catch (_: SecurityException) {
+            false
+        }
+
+        private fun dotProduct(left: ByteArray, right: ByteArray): Long {
+            if (vectorApiAvailable && left.size >= 32) return VectorizedByteDotProduct.dotProduct(left, right).toLong()
+            // HotSpot optimizes the long reduction better than a scalar int reduction on JDK 23.
+            var result = 0L
+            for (index in left.indices) result += left[index].toLong() * right[index].toLong()
+            return result
+        }
+
         const val MAX_DIMENSIONS: Int = 16_384
         /** Included in computed-vector index configuration so getters rebuild older encodings. */
         const val QUANTIZATION_VERSION: Int = 2
@@ -108,7 +132,7 @@ internal class QuantizedCosineVector private constructor(values: ByteArray) {
                 "HNSW vector dimensions must be between 1 and $MAX_DIMENSIONS"
             }
             require(vector.any { it.toInt() != 0 }) { "HNSW vector must not be all zero" }
-            return QuantizedCosineVector(vector)
+            return QuantizedCosineVector(vector.copyOf())
         }
 
         private const val QUANTIZATION_SCALE: Int = Byte.MAX_VALUE.toInt()

@@ -124,11 +124,20 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
         require(oldReferenceId <= 0L) {
             "The previous fingerprint representation is required for an update"
         }
-        save(null, indexValue, oldReferenceId, newReferenceId)
+        saveIndexValue(null, indexValue, oldReferenceId, newReferenceId)
     }
 
     @Synchronized
     override fun save(oldIndexValue: Any?, indexValue: Any?, oldReferenceId: Long, newReferenceId: Long) {
+        saveIndexValue(oldIndexValue, indexValue, oldReferenceId, newReferenceId)
+    }
+
+    private fun saveIndexValue(
+        oldIndexValue: Any?,
+        indexValue: Any?,
+        oldReferenceId: Long,
+        newReferenceId: Long
+    ) {
         val oldRepresentation = prepare(oldIndexValue)
         val representation = prepare(indexValue)
         representation?.representation?.validateConfiguration()

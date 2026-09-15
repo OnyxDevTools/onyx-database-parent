@@ -707,15 +707,27 @@ class DiskIndexPostingMap(
         }
 
         while (page != null) {
-            while (index < page.keyCount) {
-                if (toValue != null) {
-                    val comparison = compareStoredToQuery(page, index, toValue, toToken!!, toRecordId)
-                    if (comparison > 0 || comparison == 0 && !includeTo) return visits
+            // Most range pages qualify in their entirety. Compare the last key once, then
+            // search only the final page instead of decoding/comparing every posting value.
+            var endIndex = page.keyCount
+            var lastPage = false
+            if (toValue != null && index < endIndex) {
+                val comparison = compareStoredToQuery(page, endIndex - 1, toValue, toToken!!, toRecordId)
+                if (comparison >= 0) {
+                    lastPage = true
+                    endIndex = if (includeTo) {
+                        upperBound(page, toValue, toToken, toRecordId)
+                    } else {
+                        lowerBound(page, toValue, toToken, toRecordId)
+                    }
                 }
+            }
+            while (index < endIndex) {
                 val continueVisiting = visitor(page, index++)
                 visits++
                 if (!continueVisiting || visits >= maxVisits) return visits
             }
+            if (lastPage) return visits
             page = findPageOrNull(page.nextLeaf)
             index = 0
         }
@@ -816,7 +828,8 @@ class DiskIndexPostingMap(
             return cached
         }
 
-        val decoded = dataStore.getObject<Any>(token)
+        val loaded = dataStore.getObject<Any>(token)
+        val decoded = objectValuesByToken.putIfAbsent(token, loaded) ?: loaded
         page.setDecodedValue(index, decoded)
         return decoded
     }

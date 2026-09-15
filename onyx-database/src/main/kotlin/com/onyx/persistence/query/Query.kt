@@ -163,6 +163,7 @@ class Query : BufferStreamable {
 
     /** Search scores keyed by record reference. */
     @Transient
+    @Volatile
     var fullTextScores: Map<Reference, Float>? = null
 
     /**

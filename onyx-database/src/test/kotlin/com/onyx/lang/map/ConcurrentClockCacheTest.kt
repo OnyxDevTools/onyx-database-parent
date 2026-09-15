@@ -91,6 +91,34 @@ class ConcurrentClockCacheTest {
     }
 
     @Test
+    fun `readers may look up entries concurrently`() {
+        val readersEntered = CountDownLatch(2)
+        val releaseReaders = CountDownLatch(1)
+        val cache = ConcurrentClockCache<HashKey, String>(2)
+        for (id in 1..2) cache[HashKey(id)] = "value-$id"
+        val executor = Executors.newFixedThreadPool(2)
+        try {
+            val readers = (1..2).map { id ->
+                executor.submit<String?> {
+                    cache[HashKey(id) {
+                        readersEntered.countDown()
+                        check(releaseReaders.await(10, TimeUnit.SECONDS))
+                    }]
+                }
+            }
+            assertTrue(readersEntered.await(5, TimeUnit.SECONDS), "Readers should share access to the table")
+            releaseReaders.countDown()
+            readers.forEachIndexed { index, reader ->
+                assertEquals("value-${index + 1}", reader.get(5, TimeUnit.SECONDS))
+            }
+        } finally {
+            releaseReaders.countDown()
+            executor.shutdownNow()
+            executor.awaitTermination(5, TimeUnit.SECONDS)
+        }
+    }
+
+    @Test
     fun `hits and misses complete while a writer is paused inside the cache lock`() {
         val enteredWriter = CountDownLatch(1)
         val releaseWriter = CountDownLatch(1)
@@ -111,7 +139,7 @@ class ConcurrentClockCacheTest {
                     assertNull(cache[HashKey(3)])
                 }
             }
-            reads.get(5, TimeUnit.SECONDS) // The writer is still paused and holds its lock.
+            reads.get(5, TimeUnit.SECONDS)
             releaseWriter.countDown()
             writer.get(5, TimeUnit.SECONDS)
             assertEquals("inserted", cache[HashKey(2)])
@@ -123,9 +151,9 @@ class ConcurrentClockCacheTest {
     }
 
     @Test
-    fun `concurrent reads writes removals and clears stay bounded and make progress`() {
+    fun `concurrent reads writes removals clears and iteration stay bounded and make progress`() {
         val cache = ConcurrentClockCache<Int, Pair<Int, Int>>(64)
-        val executor = Executors.newFixedThreadPool(9)
+        val executor = Executors.newFixedThreadPool(10)
         val start = CountDownLatch(1)
         try {
             val writers = List(4) { worker -> executor.submit {
@@ -149,8 +177,19 @@ class ConcurrentClockCacheTest {
                 start.await()
                 repeat(100) { cache.clear(); Thread.yield() }
             }
+            val iterations = executor.submit {
+                start.await()
+                repeat(2_000) {
+                    val iterator = cache.entries.iterator()
+                    while (iterator.hasNext()) {
+                        val entry = iterator.next()
+                        assertEquals(entry.key, entry.value.first)
+                        if (entry.key % 7 == 0) iterator.remove()
+                    }
+                }
+            }
             start.countDown()
-            (writers + readers + clears).forEach { it.get(30, TimeUnit.SECONDS) }
+            (writers + readers + clears + iterations).forEach { it.get(30, TimeUnit.SECONDS) }
             cache.clear()
             for (id in 1..256) cache[id] = id to id
             assertEquals((193..256).toSet(), cache.keys)

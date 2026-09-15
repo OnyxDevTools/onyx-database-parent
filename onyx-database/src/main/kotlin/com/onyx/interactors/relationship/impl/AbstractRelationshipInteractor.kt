@@ -63,13 +63,13 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
     }
 
     /**
-     * Save the inverse relationship, this will handle both to many relationships and to one relationships
+     * Save the inverse relationship for either relationship cardinality.
+     * The caller must hold this interactor's monitor.
      *
      * @param parentIdentifier Parent entity identifier
      * @param childIdentifier Child entity identifier
      */
     @Throws(OnyxException::class)
-    @Synchronized
     protected fun saveInverseRelationship(parentEntity: IManagedEntity, childEntity: IManagedEntity, parentIdentifier: RelationshipReference, childIdentifier: RelationshipReference) {
         val inverseRelationshipDescriptor = parentEntity.inverseRelationshipDescriptor(context, relationshipDescriptor.name) ?: return
         val relationshipMap = childEntity.relationshipReferenceMap(context, inverseRelationshipDescriptor.name)
@@ -87,13 +87,13 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
     }
 
     /**
-     * Save the inverse relationship, this will handle both to many relationships and to one relationships
+     * Delete an inverse relationship reference for either relationship cardinality.
+     * The caller must hold this interactor's monitor.
      *
      * @param parentIdentifier Parent entity identifier
      * @param childIdentifier Child entity identifier
      */
     @Throws(OnyxException::class)
-    @Synchronized
     protected fun deleteInverseRelationshipReference(parentEntity: IManagedEntity, parentIdentifier: RelationshipReference, childIdentifier: RelationshipReference) {
         val inverseRelationshipDescriptor = parentEntity.inverseRelationshipDescriptor(context, relationshipDescriptor.name) ?: return
         val relationshipMap = childIdentifier.toManagedEntity(context, inverseRelationshipDescriptor.entityDescriptor.entityClass, inverseRelationshipDescriptor.entityDescriptor)?.relationshipReferenceMap(context, inverseRelationshipDescriptor.name) ?: return

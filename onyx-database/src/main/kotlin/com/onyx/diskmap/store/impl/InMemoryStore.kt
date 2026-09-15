@@ -57,7 +57,9 @@ class InMemoryStore(context: SchemaContext?, storeId: String) : FileChannelStore
     override fun write(buffer: ByteBuffer, position: Long): Int {
         var current = position
         while (buffer.hasRemaining()) {
-            val destination = sliceForPosition(current)
+            // Each operation needs independent cursor state. ByteBuffer duplicates share the
+            // stored bytes while keeping position, limit, and mark local to this writer.
+            val destination = sliceForPosition(current).duplicate()
             destination.position(offsetInSlice(current))
             current += copy(buffer, destination)
         }
@@ -72,7 +74,10 @@ class InMemoryStore(context: SchemaContext?, storeId: String) : FileChannelStore
     override fun read(buffer: ByteBuffer, position: Long) {
         var current = position
         while (buffer.hasRemaining()) {
-            val source = sliceForPosition(current)
+            // Concurrent positional reads must not mutate the canonical slice's cursor. The
+            // B-tree permits parallel readers, so sharing position/limit here corrupts either
+            // reader when copy temporarily narrows the source limit.
+            val source = sliceForPosition(current).duplicate()
             source.position(offsetInSlice(current))
             current += copy(source, buffer)
         }

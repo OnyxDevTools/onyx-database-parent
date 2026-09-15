@@ -25,6 +25,8 @@ final class IndexedAndTrackingSchemaContext extends DefaultSchemaContext impleme
     private final AtomicInteger pointProbes = new AtomicInteger();
     boolean streamingSupported = true;
     boolean pointProbesSupported = true;
+    int unsupportedAfterPointProbes;
+    Object nullIndexValueAlias;
     Runnable afterStreaming;
 
     IndexedAndTrackingSchemaContext(String contextId, String location) {
@@ -46,12 +48,17 @@ final class IndexedAndTrackingSchemaContext extends DefaultSchemaContext impleme
                     if (!streamingSupported) throw new UnsupportedOperationException("Streaming is unavailable");
                 }
                 if (tracking && method.getName().equals("containsExactPosting")) {
-                    pointProbes.incrementAndGet();
-                    if (!pointProbesSupported) throw new UnsupportedOperationException("Posting probes are unavailable");
+                    int probes = pointProbes.incrementAndGet();
+                    if (!pointProbesSupported ||
+                            (unsupportedAfterPointProbes > 0 && probes > unsupportedAfterPointProbes) ||
+                            (nullIndexValueAlias != null && arguments[0] == null)) {
+                        throw new UnsupportedOperationException("Posting probes are unavailable");
+                    }
                 }
                 Object result;
                 try {
-                    result = method.invoke(delegate, arguments);
+                    result = nullIndexValueAlias != null && method.getName().equals("findAll") && arguments[0] == null
+                        ? delegate.findAll(nullIndexValueAlias) : method.invoke(delegate, arguments);
                 } catch (InvocationTargetException exception) {
                     throw exception.getCause();
                 }

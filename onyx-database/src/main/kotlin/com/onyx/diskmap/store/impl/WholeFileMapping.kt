@@ -9,9 +9,11 @@ import kotlin.math.max
 /**
  * A single JDK 22 memory mapping that grows with the file.
  *
- * The owner must serialize [ensureCapacity], [write], [force], and [close]
- * against all other operations. Reads may run concurrently while the mapping
- * is stable.
+ * The owner must serialize [write], [ensureCapacity], [force], and [close]
+ * against all other operations because [write] may grow the mapping. Reads and
+ * [writeWithinCapacity] calls may run concurrently while the mapping is stable.
+ * Writes on force-enabled mappings must remain serialized because they update
+ * dirty-range bookkeeping.
  *
  * Only WAL owners enable forcing. Other mappings use operating-system
  * writeback and do not track dirty ranges.
@@ -31,7 +33,7 @@ internal class WholeFileMapping(
 
     private var mapping = createMapping(capacityFor(0L, initialRequiredCapacity))
 
-    /* Writes are serialized by the owning store. */
+    /* Force-enabled writes are serialized by their owning WAL store. */
     private var dirtyStart = Long.MAX_VALUE
     private var dirtyEndExclusive = 0L
 
@@ -86,6 +88,24 @@ internal class WholeFileMapping(
     }
 
     fun write(source: ByteBuffer, filePosition: Long): Int {
+        val byteCount = source.remaining()
+        if (byteCount == 0) {
+            require(filePosition >= 0L) {
+                "File position cannot be negative: $filePosition"
+            }
+            return 0
+        }
+
+        val endExclusive = writeEndExclusive(filePosition, byteCount)
+        ensureCapacity(endExclusive)
+        return writeWithinCapacity(source, filePosition)
+    }
+
+    /**
+     * Writes without changing the mapping. The owner must keep the mapping
+     * stable and verify that the write fits before calling this method.
+     */
+    fun writeWithinCapacity(source: ByteBuffer, filePosition: Long): Int {
         require(filePosition >= 0L) {
             "File position cannot be negative: $filePosition"
         }
@@ -93,15 +113,18 @@ internal class WholeFileMapping(
         val byteCount = source.remaining()
         if (byteCount == 0) return 0
 
-        val endExclusive = Math.addExact(filePosition, byteCount.toLong())
-        ensureCapacity(endExclusive)
+        val endExclusive = writeEndExclusive(filePosition, byteCount)
+        val current = mapping
+        require(endExclusive <= current.capacity) {
+            "Write ending at $endExclusive exceeds mapped capacity ${current.capacity}"
+        }
 
         // WALs include even a partial copy in their next durability barrier.
         if (forceEnabled) markDirty(filePosition, endExclusive)
         MemorySegment.copy(
             MemorySegment.ofBuffer(source),
             0L,
-            mapping.memory,
+            current.memory,
             filePosition,
             byteCount.toLong()
         )
@@ -141,6 +164,13 @@ internal class WholeFileMapping(
     private fun markDirty(start: Long, endExclusive: Long) {
         if (start < dirtyStart) dirtyStart = start
         if (endExclusive > dirtyEndExclusive) dirtyEndExclusive = endExclusive
+    }
+
+    private fun writeEndExclusive(filePosition: Long, byteCount: Int): Long {
+        require(filePosition >= 0L) {
+            "File position cannot be negative: $filePosition"
+        }
+        return Math.addExact(filePosition, byteCount.toLong())
     }
 
     private fun createMapping(capacity: Long): Mapping {
