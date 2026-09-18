@@ -92,14 +92,12 @@ class DiskIndexPostingMap(
         toRecordId: Long,
         includeTo: Boolean,
         action: (Long) -> Unit
-    ) = lock.readLock {
-        val from = fromValue?.let(::normalize)
-        val to = toValue?.let(::normalize)
-        visitPostings(from, fromRecordId, includeFrom, to, toRecordId, includeTo, Int.MAX_VALUE) { page, index ->
-            action(page.recordIds[index])
+    ) {
+        visitPostingBatches(fromValue, fromRecordId, includeFrom, toValue, toRecordId, includeTo,
+            Int.MAX_VALUE.toLong(), includeValues = false) { _, recordId ->
+            action(recordId)
             true
         }
-        Unit
     }
 
     override fun visitRecordIdsInRange(
@@ -111,15 +109,12 @@ class DiskIndexPostingMap(
         includeTo: Boolean,
         maxVisits: Int,
         visitor: (Long) -> Boolean
-    ): Int = lock.readLock {
-        require(maxVisits >= 0) { "maxVisits must be non-negative" }
-        if (maxVisits == 0) return@readLock 0
-        val from = fromValue?.let(::normalize)
-        val to = toValue?.let(::normalize)
-        visitPostings(from, fromRecordId, includeFrom, to, toRecordId, includeTo, maxVisits) { page, index ->
-            visitor(page.recordIds[index])
-        }
-    }
+    ): Int = visitPostingBatches(
+        fromValue, fromRecordId, includeFrom, toValue, toRecordId, includeTo, maxVisits.toLong(),
+        includeValues = false
+    ) { _, recordId ->
+        visitor(recordId)
+    }.toInt()
 
     override fun visitPostingsInRange(
         fromValue: Any?,
@@ -129,41 +124,95 @@ class DiskIndexPostingMap(
         toRecordId: Long,
         includeTo: Boolean,
         visitor: (Any, Long) -> Boolean
-    ): Int = lock.readLock {
-        val from = fromValue?.let(::normalize)
-        val to = toValue?.let(::normalize)
-        visitPostings(from, fromRecordId, includeFrom, to, toRecordId, includeTo, Int.MAX_VALUE) { page, index ->
-            visitor(valueAt(page, index), page.recordIds[index])
-        }
-    }
+    ): Int = visitPostingBatches(
+        fromValue, fromRecordId, includeFrom, toValue, toRecordId, includeTo, Int.MAX_VALUE.toLong(),
+        includeValues = true
+    ) { value, recordId ->
+        visitor(requireNotNull(value), recordId)
+    }.toInt()
 
-    override fun forEachDistinctValue(action: (Any) -> Unit) = lock.readLock {
-        var page: IndexPostingPage? = leftMostLeaf()
-        var hasPrevious = false
-        var previousToken = 0L
+    override fun forEachDistinctValue(action: (Any) -> Unit) {
         var previousValue: Any? = null
-
-        while (page != null) {
-            for (index in 0 until page.keyCount) {
-                val token = page.valueTokens[index]
-                val isNewValue = when {
-                    !hasPrevious -> true
-                    valueKind != ValueKind.OBJECT -> compareInlineTokens(previousToken, token) != 0
-                    previousToken == token -> false
-                    else -> compareValues(requireNotNull(previousValue), valueAt(page, index)) != 0
-                }
-
-                if (isNewValue) {
-                    val value = valueAt(page, index)
-                    action(value)
-                    previousValue = value
-                    previousToken = token
-                    hasPrevious = true
-                }
+        visitPostingBatches(null, 0L, false, null, 0L, false, Long.MAX_VALUE,
+            includeValues = true) { copiedValue, _ ->
+            val value = requireNotNull(copiedValue)
+            if (previousValue == null || compareValues(requireNotNull(previousValue), value) != 0) {
+                // Keep the continuation independent of mutable Date values passed to callers.
+                previousValue = traversalKey(value)
+                action(value)
             }
-            page = findPageOrNull(page.nextLeaf)
+            true
         }
     }
+
+    /**
+     * Copy a bounded batch under the tree lock, then run callers without holding it. Re-seeking
+     * after the last copied tuple keeps concurrent leaf splits and merges out of the cursor.
+     * Traversal is weakly consistent: copied postings may subsequently be removed, and new
+     * postings ahead of the continuation tuple may be visited in a later batch.
+     */
+    private fun visitPostingBatches(
+        fromValue: Any?,
+        fromRecordId: Long,
+        includeFrom: Boolean,
+        toValue: Any?,
+        toRecordId: Long,
+        includeTo: Boolean,
+        maxVisits: Long,
+        includeValues: Boolean,
+        visitor: (Any?, Long) -> Boolean
+    ): Long {
+        require(maxVisits >= 0) { "maxVisits must be non-negative" }
+        if (maxVisits == 0L) return 0L
+        var from = fromValue?.let(::normalize)?.let(::traversalKey)
+        var fromId = fromRecordId
+        var inclusive = includeFrom
+        val to = toValue?.let(::normalize)?.let(::traversalKey)
+        var visits = 0L
+        while (visits < maxVisits) {
+            val capacity = minOf(POSTING_SCAN_BATCH_SIZE.toLong(), maxVisits - visits).toInt()
+            val batch = lock.readLock {
+                val ids = LongArray(capacity)
+                val values = if (includeValues) arrayOfNulls<Any>(capacity) else null
+                var count = 0
+                var lastPage: IndexPostingPage? = null
+                var lastIndex = 0
+                visitPostings(from, fromId, inclusive, to, toRecordId, includeTo, capacity) { page, index ->
+                    ids[count] = page.recordIds[index]
+                    values?.set(count, valueAt(page, index))
+                    count++
+                    lastPage = page
+                    lastIndex = index
+                    true
+                }
+                val cursor = lastPage?.let {
+                    PostingCursor(traversalKey(valueAt(it, lastIndex)), ids[count - 1])
+                }
+                PostingBatch(ids, values, count, cursor)
+            }
+            for (index in 0 until batch.count) {
+                visits++
+                if (!visitor(batch.values?.get(index), batch.recordIds[index])) return visits
+            }
+            if (batch.count < capacity) return visits
+            val cursor = requireNotNull(batch.cursor)
+            from = cursor.value
+            fromId = cursor.recordId
+            inclusive = false
+        }
+        return visits
+    }
+
+    private fun traversalKey(value: Any): Any = if (value is Date) Date(value.time) else value
+
+    private class PostingCursor(val value: Any, val recordId: Long)
+
+    private class PostingBatch(
+        val recordIds: LongArray,
+        val values: Array<Any?>?,
+        val count: Int,
+        val cursor: PostingCursor?
+    )
 
     override fun longSize(): Long = reference.recordCount.get()
 
@@ -976,6 +1025,7 @@ class DiskIndexPostingMap(
     }
 
     private companion object {
+        const val POSTING_SCAN_BATCH_SIZE = 1_024
         const val HEADER_RECORD_COUNT_OFFSET = 5L
         const val EDGE_KEYS_TO_RETAIN = 15
         const val MAX_HEIGHT = 16

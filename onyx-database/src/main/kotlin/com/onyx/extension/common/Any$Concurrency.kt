@@ -33,7 +33,7 @@ inline fun runJob(interval:Long, unit:TimeUnit, crossinline block: () -> Unit): 
  * @param block Block expression to execute
  * @since 2.0.0
  */
-inline fun <T> async(crossinline block: () -> T): Future<T> = defaultPool.submit<T> { block.invoke() }
+inline fun <T> async(crossinline block: () -> T): Future<T> = async(defaultPool) { block() }
 
 /**
  * Run a block in background on the default pool.  The default pool should be implemented as a ForkJoinPool
@@ -41,7 +41,10 @@ inline fun <T> async(crossinline block: () -> T): Future<T> = defaultPool.submit
  * @param block Block expression to execute
  * @since 2.0.0
  */
-inline fun <T> async(executor: ExecutorService, crossinline block: () -> T): Future<T> = executor.submit<T> { block() }
+inline fun <T> async(executor: ExecutorService, crossinline block: () -> T): Future<T> {
+    val context = AsyncExecutionContext.capture()
+    return executor.submit<T> { context.run { block() } }
+}
 
 
 /*

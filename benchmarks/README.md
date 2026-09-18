@@ -1,4 +1,74 @@
-# HNSW save/cache benchmark
+# Database benchmarks
+
+## Large database: memory-mapped versus FILE
+
+With JDK 23 installed, run from the repository root:
+
+```bash
+./gradlew :onyx-database-tests:largeStoreBenchmark --console=plain
+```
+
+This opt-in test inserts ordinary `entities.PerformanceEntity` rows until their stored
+data reaches **100 GB: 100,000,000,000 bytes per database**. It uses the existing
+numeric, Boolean, date, and short-string fields, with an 11-character symbol and the
+existing `idValue` secondary index. There is no blob, padding, or record-size setting.
+Increasing `dataGB` inserts more distinct primary keys; it never changes the record schema.
+The actual number of rows and average data-file bytes per inserted row are reported after seeding.
+
+The seed is built once through `saveEntity` using memory-mapped storage, closed, flushed,
+and copied to an independent database for `StoreType.FILE`. Seeding and copying are outside
+the comparison. Each arm checks that its data and index files use the requested store
+implementation, verifies the database row count, and reads samples throughout the seeded
+file. The minimum counts bytes added to the data store, including record frames and
+serialized index values, excluding the initial system metadata, the separate index file,
+and unused mapping reservations. After closing, the test verifies the
+actual data-file size against its logical allocation header.
+
+Four rounds each measure 50,000 random `findById` calls and 50,000 `saveEntity` updates,
+with 5,000 warmup operations per phase. Both engines receive identical random keys and
+values; their order alternates each round. Every updated record is checked after reopening,
+and the actual row count must remain equal to the seed count. Expected revisions are kept
+only for updated keys, so tracking memory scales with the workload rather than the corpus.
+
+`results.csv` records throughput, p50/p95/p99 latency, checksums, GC, and separate write
+finalization time. `storage.csv` records actual row counts and data/index/database sizes
+in bytes after seeding and each round. `report.txt` contains settings and median throughput.
+Reports are retained under a unique directory in `build/benchmarks/large-store/`.
+Successful runs remove their scratch databases by default; failed runs retain them for
+diagnosis. Normal `test` and `check` runs skip this benchmark.
+
+These are single-threaded database operations, including serialization, primary and
+secondary indexes, validation, allocation, and GC. Updates allocate replacement records,
+so file size may grow while the live row count stays fixed. WAL journaling is disabled.
+Finalization includes close/commit and `FileChannel.force(true)`; there is no fsync per
+operation. The OS page cache is not cleared, and both engines share one JVM. Interpret
+these as database-operation timings, not raw device IOPS or controlled cold-cache results.
+
+A full run needs space for **two 100 GB data files plus both sets of indexes**. It checks
+available space before starting, projects index overhead during seeding, and reserves
+another 10 GB. Seeding hundreds of millions of small rows can take substantial time;
+progress reports include the actual record count and data bytes written. The test
+JVM uses a 2 GiB maximum heap.
+
+```bash
+# Small correctness check with the same schema; explicitly below the 100 GB minimum.
+./gradlew :onyx-database-tests:largeStoreBenchmark -PlargeStoreBenchmark.smoke=true
+
+# Select a filesystem and retain the completed databases.
+./gradlew :onyx-database-tests:largeStoreBenchmark \
+  -PlargeStoreBenchmark.dataGB=100 \
+  -PlargeStoreBenchmark.directory=/path/to/benchmark-disk \
+  -PlargeStoreBenchmark.keepDatabases=true
+```
+
+Other properties are `largeStoreBenchmark.operations`, `.warmupOperations`, `.rounds`,
+and `.seed`. `dataGB` uses decimal gigabytes and must be at least 100 for normal runs.
+Environment equivalents include `ONYX_LARGE_STORE_BENCHMARK_DATA_GB` and
+`ONYX_LARGE_STORE_BENCHMARK_OPERATIONS`; Gradle properties take precedence. The old
+`payloadBytes` and `dataGiB` options are rejected. Repeat on a quiet machine for independent
+JVM runs; there are no timing assertions.
+
+## HNSW save/cache
 
 With `JAVA_HOME` pointing to JDK 23, run from the repository root:
 
