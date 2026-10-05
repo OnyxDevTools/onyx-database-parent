@@ -45,10 +45,9 @@ open class SequenceRecordInteractor(entityDescriptor: EntityDescriptor, context:
      * @since 2.0.0 Optimized to return the old reference value
      */
     @Throws(OnyxException::class)
-    @Synchronized
-    override fun save(entity: IManagedEntity): PutResult {
+    override fun save(entity: IManagedEntity): PutResult = withMutationLock {
         autoIncrementSequence(entity)
-        return super.save(entity)
+        super.save(entity)
     }
 
     /**
