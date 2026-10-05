@@ -315,6 +315,14 @@ relationships, and caches apply their own synchronization independently, so conc
 enter or leave a query's criteria while it executes. Update counts describe the rows selected by
 that execution; they are not compare-and-set or transaction guarantees.
 
+Record saves and deletes share a reentrant lock so contention on the record map does not pin
+virtual-thread carriers on JDK 23. Code coordinating index maintenance with these mutations must
+use `RecordInteractor.withMutationLock { ... }`, acquiring it before index locks; synchronizing on
+the interactor object no longer excludes these mutations. This preserves exclusion between record
+mutations and fingerprint-index rebuilds/clones without changing callback order or persistence.
+Other synchronization paths still exist, so JDK 24 or newer remains recommended for virtual-thread
+applications; this change addresses record-mutation pinning, not every possible lock dependency.
+
 #### Executing a Delete Query (Kotlin)
 
 ```kotlin

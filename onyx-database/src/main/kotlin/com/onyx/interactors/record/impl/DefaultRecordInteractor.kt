@@ -18,6 +18,8 @@ import com.onyx.vector.VectorEntityEncoder
 import com.onyx.vector.VectorManagedConfiguration
 import java.lang.ref.WeakReference
 import java.lang.reflect.Field
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /**
  * Created by timothy.osborn on 2/5/15.
@@ -25,6 +27,12 @@ import java.lang.reflect.Field
  * This controls the crud for a record
  */
 open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, context: SchemaContext) : RecordInteractor {
+
+    // Waiting for a map lock or callback while holding a JVM monitor pins a virtual-thread
+    // carrier on JDK 21-23. Preserve mutation exclusion and reentrancy without that monitor.
+    private val mutationLock = ReentrantLock()
+
+    final override fun <T> withMutationLock(action: () -> T): T = mutationLock.withLock(action)
 
     private val contextReference: WeakReference<SchemaContext>
     protected val context: SchemaContext
@@ -50,8 +58,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, conte
      * @since 1.2.3 Optimized to only do a put if there are not pre persist callbacks
      * @since 2.0.0 Optimized to return the old reference value
      */
-    @Synchronized
-    override fun save(entity: IManagedEntity): PutResult {
+    override fun save(entity: IManagedEntity): PutResult = withMutationLock {
         val identifierValue = entity.identifier(context)!!
         val partitionId = entity.partitionId(context)
 
@@ -82,7 +89,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, conte
         else
             entity.onPostUpdate(context, entityDescriptor)
 
-        return result
+        result
     }
 
     /**
@@ -138,9 +145,8 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, conte
      * @param entity Entity to delete
      * @throws OnyxException Error deleting an entity
      */
-    @Synchronized
     @Throws(OnyxException::class)
-    override fun delete(entity: IManagedEntity) {
+    override fun delete(entity: IManagedEntity): Unit = withMutationLock {
         val identifierValue = entity.identifier(context)
         // Update Cached queries
         val recordId = records.getRecID(identifierValue!!)
@@ -157,8 +163,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, conte
      *
      * @param primaryKey Identifier of an entity
      */
-    @Synchronized
-    override fun deleteWithId(primaryKey: Any) = removeRecord(primaryKey)
+    override fun deleteWithId(primaryKey: Any) = withMutationLock { removeRecord(primaryKey) }
 
     private fun removeRecord(primaryKey: Any): IManagedEntity? = records.remove(primaryKey)
 

@@ -13,6 +13,14 @@ import java.lang.reflect.Field
 interface RecordInteractor {
 
     /**
+     * Run maintenance while excluding save/delete operations from other threads. Implementations
+     * must use this same reentrant lock for those mutations. Acquire it before any index lock.
+     * Callers must use this method instead of synchronizing on the interactor object.
+     * The default preserves monitor coordination for existing custom implementations.
+     */
+    fun <T> withMutationLock(action: () -> T): T = synchronized(this) { action() }
+
+    /**
      * Save an entity and persist it to the data file
      * @param entity Entity to save
      * @return Pair of existing reference id and new identifier value

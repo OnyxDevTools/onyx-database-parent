@@ -416,7 +416,7 @@ class HnswCandidateIntegrationTest {
         val rebuildThread = AtomicReference<Thread>()
         val rebuildStarted = CountDownLatch(1)
         try {
-            val rebuildFuture = synchronized(recordInteractor) {
+            val rebuildFuture = recordInteractor.withMutationLock {
                 val future = executor.submit {
                     rebuildThread.set(Thread.currentThread())
                     rebuildStarted.countDown()
@@ -424,10 +424,10 @@ class HnswCandidateIntegrationTest {
                 }
                 assertTrue(rebuildStarted.await(10, TimeUnit.SECONDS))
                 val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
-                while (rebuildThread.get().state != Thread.State.BLOCKED && System.nanoTime() < deadline) {
+                while (rebuildThread.get().state != Thread.State.WAITING && System.nanoTime() < deadline) {
                     Thread.yield()
                 }
-                assertEquals(Thread.State.BLOCKED, rebuildThread.get().state)
+                assertEquals(Thread.State.WAITING, rebuildThread.get().state)
                 val saveFuture = executor.submit {
                     save("maintenance-concurrent", deterministicVector(50_000, 16))
                 }
