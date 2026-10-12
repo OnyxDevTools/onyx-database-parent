@@ -622,13 +622,24 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
 
             var done = false
 
-            descriptors.forEach descriptors@{ descriptor ->
+            // A populated default partition is already in the registered list.
+            // Keep its physical descriptor once, including for legacy default rows
+            // whose partition catalog entry was never created.
+            descriptors.distinctBy { it.partition?.partitionValue }.forEach descriptors@{ descriptor ->
                 if (done) return@descriptors
 
-                val partitionId = if (descriptor.hasPartition) context.getPartitionWithValue(
-                    query.entityType!!,
-                    descriptor.partition!!.partitionValue
-                )!!.index else 0L
+                val partitionId = descriptor.partition?.let { partition ->
+                    context.getPartitionWithValue(query.entityType!!, partition.partitionValue)?.index
+                        ?: run {
+                            // Default descriptors exist before any row is saved. As
+                            // in the ordinary table scanner, their reference index is
+                            // zero until a default partition entry exists.
+                            check(partition.partitionValue == nullPartition) {
+                                "A named stream partition has no registered identity."
+                            }
+                            0L
+                        }
+                } ?: 0L
                 context.getRecordInteractor(descriptor).forEach<T> record@{ it ->
                     val entry = it as? DiskMapEntry<Any?, IManagedEntity?>
 
