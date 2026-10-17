@@ -52,7 +52,7 @@ Kotlin/JVM client SDK for **Onyx Cloud Database** — a typed, builder-pattern A
 
 ```kotlin
 dependencies {
-    implementation("dev.onyx:onyx-cloud-client:4.2.1")
+    implementation("dev.onyx:onyx-cloud-client:4.2.9")
 }
 ```
 
@@ -60,7 +60,7 @@ dependencies {
 
 ```groovy
 dependencies {
-    implementation 'dev.onyx:onyx-cloud-client:4.2.1'
+    implementation 'dev.onyx:onyx-cloud-client:4.2.9'
 }
 ```
 
@@ -70,7 +70,7 @@ dependencies {
 <dependency>
     <groupId>dev.onyx</groupId>
     <artifactId>onyx-cloud-client</artifactId>
-    <version>4.2.1</version>
+    <version>4.2.9</version>
 </dependency>
 ```
 
@@ -849,3 +849,16 @@ MIT © Onyx Dev Tools. See [LICENSE](../LICENSE).
 ---
 
 > **Keywords:** Onyx Database Kotlin SDK, Onyx Cloud Database, Onyx NoSQL Graph Database client, Kotlin query builder, JVM database client, streaming, real-time data, cascade operations, AI chat, schema management
+
+## Insert without overwriting
+
+`insert` uses `POST /data/{databaseId}/{table}` (Onyx 4.2.9) and returns the new entity on `201 Created`. An identifier already present in the same partition returns HTTP `409` with the database exception message; the existing row is preserved. `save` continues to insert or update. Writes are not retried automatically.
+
+```kotlin
+import com.onyx.cloud.api.insert
+
+val inserted = db.insert(Account(id = "acct_new", name = "Primary", balance = 0.0))
+// Explicit table: db.insert(Account::class, account)
+```
+
+Arrays, where supported by the client, run sequentially and can partially complete before an error. Cascade children use save semantics. Inspect uncertain outcomes before retrying; never fall back to save to bypass a conflict.

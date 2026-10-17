@@ -232,10 +232,14 @@ class OnyxClient(
      * @return Parsed server response when available, otherwise best-effort echo of input.
      */
     fun <T> save(table: KClass<*>, entityOrEntities: T, options: Map<String, Any?>): Any? {
+        return writeEntities(HttpMethod.Put, table, entityOrEntities, options)
+    }
+
+    private fun <T> writeEntities(method: HttpMethod, table: KClass<*>, entityOrEntities: T, options: Map<String, Any?>): Any? {
         val queryString = buildQueryString(options)
         val path = "/data/${encode(databaseId)}/${encode(table.simpleName!!)}"
         val response = makeRequest(
-            HttpMethod.Put,
+            method,
             path,
             entityOrEntities,
             queryString = queryString,
@@ -288,6 +292,12 @@ class OnyxClient(
             hashMapOf<String, List<String>?>("relationships" to options?.relationships)
         ) as T
     }
+
+    /** Inserts new root entities; duplicate identifiers in the same partition return HTTP 409. */
+    @Suppress("UNCHECKED_CAST")
+    override fun <T> insert(table: KClass<*>, entityOrEntities: T, options: SaveOptions?): T =
+        writeEntities(HttpMethod.Post, table, entityOrEntities,
+            mapOf("relationships" to options?.relationships)) as T
 
     /**
      * Finds an entity by primary key.

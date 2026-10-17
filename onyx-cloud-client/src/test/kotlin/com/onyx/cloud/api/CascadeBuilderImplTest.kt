@@ -24,6 +24,9 @@ class CascadeBuilderImplTest {
 
             // Use default cascade() from the interface (not overridden).
 
+            override fun <T> insert(table: KClass<*>, entityOrEntities: T, options: SaveOptions?): T =
+                throw UnsupportedOperationException()
+
             override fun <T> save(
                 table: KClass<*>,
                 entityOrEntities: T,
@@ -98,6 +101,9 @@ class CascadeBuilderImplTest {
             }
 
             // Use default cascade() from the interface (not overridden).
+
+            override fun <T> insert(table: KClass<*>, entityOrEntities: T, options: SaveOptions?): T =
+                throw UnsupportedOperationException()
 
             override fun <T> save(
                 table: KClass<*>,
