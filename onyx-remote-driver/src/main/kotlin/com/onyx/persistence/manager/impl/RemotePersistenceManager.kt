@@ -85,6 +85,13 @@ open class RemotePersistenceManager : PersistenceManager {
         return entity
     }
 
+    @Throws(OnyxException::class)
+    override fun <E : IManagedEntity> insertEntity(entity: E): E {
+        val results = proxy.insertEntity<IManagedEntity>(entity)
+        entity.copy(results, context)
+        return entity
+    }
+
     /**
      * Batch saves a list of entities.
      *

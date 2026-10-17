@@ -6,6 +6,7 @@ import com.onyx.diskmap.SortedDiskMap
 import com.onyx.diskmap.data.PutResult
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.exception.AttributeTypeMismatchException
+import com.onyx.exception.EntityAlreadyExistsException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
 import com.onyx.interactors.record.data.Reference
@@ -58,7 +59,11 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, conte
      * @since 1.2.3 Optimized to only do a put if there are not pre persist callbacks
      * @since 2.0.0 Optimized to return the old reference value
      */
-    override fun save(entity: IManagedEntity): PutResult = withMutationLock {
+    override fun save(entity: IManagedEntity): PutResult = persist(entity, insertOnly = false)
+
+    override fun insert(entity: IManagedEntity): PutResult = persist(entity, insertOnly = true)
+
+    private fun persist(entity: IManagedEntity, insertOnly: Boolean): PutResult = withMutationLock {
         val identifierValue = entity.identifier(context)!!
         val partitionId = entity.partitionId(context)
 
@@ -67,6 +72,11 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, conte
             entity,
             {
                 if (it > 0L) {
+                    if (insertOnly) {
+                        throw EntityAlreadyExistsException(
+                            "Entity ${entityDescriptor.entityClass.name} with identifier $identifierValue already exists in partition ${entityDescriptor.partition?.partitionValue}"
+                        )
+                    }
                     context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, Reference(partitionId, it), QueryListenerEvent.PRE_UPDATE)
                     entity.onPreUpdate(context, entityDescriptor)
                 } else {

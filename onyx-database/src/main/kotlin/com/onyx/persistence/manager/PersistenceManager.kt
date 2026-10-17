@@ -1,5 +1,6 @@
 package com.onyx.persistence.manager
 
+import com.onyx.exception.EntityAlreadyExistsException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.get
 import com.onyx.interactors.record.data.Reference
@@ -86,6 +87,26 @@ interface PersistenceManager {
      */
     @Throws(OnyxException::class)
     fun <E : IManagedEntity> save(entity: E): E = saveEntity(entity)
+
+    /**
+     * Persists a new entity, including generated identifiers, indexes and relationship cascades.
+     * An existing identifier in the same partition is rejected without updating that entity.
+     * Related entities follow the same cascade policies as [saveEntity].
+     *
+     * @return The inserted entity
+     * @throws EntityAlreadyExistsException The identifier already exists in the entity's partition
+     * @throws OnyxException Exception occurred while persisting the entity
+     */
+    @Throws(OnyxException::class)
+    fun <E : IManagedEntity> insertEntity(entity: E): E
+
+    /**
+     * Inserts a new entity. See [insertEntity].
+     * @throws EntityAlreadyExistsException The identifier already exists in the entity's partition
+     * @throws OnyxException Exception occurred while persisting the entity
+     */
+    @Throws(OnyxException::class)
+    fun <E : IManagedEntity> insert(entity: E): E = insertEntity(entity)
 
     /**
      * Batch saves a list of entities.

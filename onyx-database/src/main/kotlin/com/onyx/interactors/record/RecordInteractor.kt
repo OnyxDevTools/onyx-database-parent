@@ -30,6 +30,10 @@ interface RecordInteractor {
     @Throws(OnyxException::class)
     fun save(entity: IManagedEntity): PutResult
 
+    /** Inserts a new record, rejecting an existing identifier before running persistence callbacks. */
+    @Throws(OnyxException::class)
+    fun insert(entity: IManagedEntity): PutResult
+
     /**
      * Delete
      *

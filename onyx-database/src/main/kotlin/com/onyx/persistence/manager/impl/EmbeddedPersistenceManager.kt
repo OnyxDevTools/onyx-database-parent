@@ -68,7 +68,12 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
      * @since 1.0.0
      */
     @Throws(OnyxException::class)
-    override fun <E : IManagedEntity> saveEntity(entity: E): E {
+    override fun <E : IManagedEntity> saveEntity(entity: E): E = persistEntity(entity, insertOnly = false)
+
+    @Throws(OnyxException::class)
+    override fun <E : IManagedEntity> insertEntity(entity: E): E = persistEntity(entity, insertOnly = true)
+
+    private fun <E : IManagedEntity> persistEntity(entity: E, insertOnly: Boolean): E {
         context.checkForKillSwitch()
 
         if (entity.isValid(context)) {
@@ -77,7 +82,11 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                 context.ensureDefaultPartition(descriptor)
             }
 
-            val putResult = entity.save(context, descriptor)
+            val putResult = if (insertOnly) {
+                entity.recordInteractor(context, descriptor).insert(entity)
+            } else {
+                entity.save(context, descriptor)
+            }
 
             journal {
                 context.transactionInteractor.writeSave(entity)

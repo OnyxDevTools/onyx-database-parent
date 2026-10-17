@@ -50,6 +50,11 @@ open class SequenceRecordInteractor(entityDescriptor: EntityDescriptor, context:
         super.save(entity)
     }
 
+    override fun insert(entity: IManagedEntity): PutResult = withMutationLock {
+        autoIncrementSequence(entity)
+        super.insert(entity)
+    }
+
     /**
      * Automatically increment the identifier value if it is undefined.  If it is, ensure the maximum sequence value
      * is less than or equal to the id value so it skips unused sequences and does not mess up with the counting.
