@@ -6,6 +6,8 @@ package com.onyx.diskmap
  * The logical key is `(indexValue, recordId)`, but the two components remain
  * separate at the API boundary so callers never need to allocate a tuple
  * wrapper. Implementations store the record ID directly in BTree leaf slots.
+ * Traversal callbacks run outside tree locks. Concurrent mutations may be observed between
+ * bounded batches; a traversal is not a transaction snapshot.
  */
 interface IndexPostingMap {
 
@@ -58,8 +60,8 @@ interface IndexPostingMap {
 
     /**
      * Visit indexed values and record IDs in ascending tuple order without materializing the
-     * range. Stop physical traversal when [visitor] returns false. Values allow callers to
-     * recognize tied sort keys without reading entity records.
+     * range. Stop when [visitor] returns false, without loading further batches. Values allow
+     * callers to recognize tied sort keys without reading entity records.
      */
     fun visitPostingsInRange(
         fromValue: Any?,

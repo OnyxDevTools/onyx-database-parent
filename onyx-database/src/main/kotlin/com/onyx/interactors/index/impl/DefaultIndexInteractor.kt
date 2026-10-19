@@ -95,7 +95,6 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(
 
     /** Legacy insert-only API cannot identify a posting for deletion without its indexed value. */
     @Throws(OnyxException::class)
-    @Synchronized
     override fun delete(reference: Long) {
         throw IllegalArgumentException(
             "The index value is required when deleting an index entry without a reverse mapping"

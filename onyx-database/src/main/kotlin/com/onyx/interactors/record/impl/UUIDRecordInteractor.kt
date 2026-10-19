@@ -11,11 +11,20 @@ import com.onyx.persistence.context.SchemaContext
 open class UUIDRecordInteractor(entityDescriptor: EntityDescriptor, context: SchemaContext) : DefaultRecordInteractor(entityDescriptor, context) {
 
     override fun save(entity: IManagedEntity): PutResult {
+        assignIdentifier(entity)
+        return super.save(entity)
+    }
+
+    override fun insert(entity: IManagedEntity): PutResult {
+        assignIdentifier(entity)
+        return super.insert(entity)
+    }
+
+    private fun assignIdentifier(entity: IManagedEntity) {
         val identifierValue = entity.identifier(context)
 
         if ((identifierValue as? String).isNullOrEmpty()) {
             entity[context, entityDescriptor, entityDescriptor.identifier!!.name] = uuid()
         }
-        return super.save(entity)
     }
 }

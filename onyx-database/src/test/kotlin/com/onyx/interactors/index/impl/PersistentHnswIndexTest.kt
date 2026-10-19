@@ -18,10 +18,50 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertNotSame
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class PersistentHnswIndexTest {
+    @Test
+    fun `neighbor rewrites retain immutable vectors while vector updates replace them`() {
+        val nodes = RecordingMap()
+        val metadata = RecordingMap()
+        val index = PersistentHnswIndex(nodes.map, metadata.map)
+        val original = byteArrayOf(127, 0, 0)
+        val input = original.copyOf()
+        index.upsert(1L, CALIBRATION, input)
+        val firstNode = nodeCache(index).getValue(1L)
+        val firstVector = nodeVector(firstNode)
+        input.fill(0)
+        firstVector.toByteArray().fill(0)
+
+        index.upsert(2L, CALIBRATION, byteArrayOf(0, 127, 0))
+        val rewrittenNode = nodeCache(index).getValue(1L)
+        assertNotSame(firstNode, rewrittenNode, "Adding a neighbor must replace the cached node snapshot")
+        assertSame(firstVector, nodeVector(rewrittenNode), "Neighbor changes must retain the prepared vector")
+        assertContentEquals(original, firstVector.toByteArray(), "Caller arrays must not change stored vectors")
+        val originalQuery = HnswSearchQuery(CALIBRATION, floatArrayOf(127f, 0f, 0f), 2, 2)
+        assertEquals(linkedMapOf(1L to 1f, 2L to 0f), index.search(originalQuery).scores)
+
+        index.upsert(1L, CALIBRATION, byteArrayOf(0, 0, 127))
+        val replacementVector = nodeVector(nodeCache(index).getValue(1L))
+        assertNotSame(firstVector, replacementVector, "A vector update must replace the prepared vector")
+        assertContentEquals(byteArrayOf(0, 0, 127), replacementVector.toByteArray())
+        assertContentEquals(original, firstVector.toByteArray(), "Existing vector snapshots must remain immutable")
+        val replacementQuery = HnswSearchQuery(CALIBRATION, floatArrayOf(0f, 0f, 127f), 2, 2)
+        val scores = index.search(replacementQuery).scores
+        assertEquals(linkedMapOf(1L to 1f, 2L to 0f), scores)
+
+        val reopened = PersistentHnswIndex(nodes.map, metadata.map)
+        assertEquals(scores, reopened.search(replacementQuery).scores)
+        val decodedVector = nodeVector(nodeCache(reopened).getValue(1L))
+        reopened.upsert(3L, CALIBRATION, original)
+        assertSame(decodedVector, nodeVector(nodeCache(reopened).getValue(1L)), "Decoded vectors must also survive neighbor changes")
+        assertEquals(3L, reopened.validateGraph(CALIBRATION))
+    }
+
     @Test
     fun `graph clone remaps live nodes once and preserves search across calibrations`() {
         val sourceNodes = RecordingMap()
@@ -501,6 +541,10 @@ class PersistentHnswIndexTest {
         assertTrue(cache is ConcurrentClockCache<*, *>, "The node cache must use bounded CLOCK eviction")
         return cache as ConcurrentClockCache<Long, Any>
     }
+
+    private fun nodeVector(node: Any): QuantizedCosineVector =
+        node.javaClass.getDeclaredMethod("getVector").apply { isAccessible = true }
+            .invoke(node) as QuantizedCosineVector
 
     private fun asLegacyNode(bytes: ByteArray): ByteArray {
         val buffer = ByteBuffer.wrap(bytes)

@@ -18,7 +18,7 @@ import kotlin.concurrent.withLock
  * get-then-put are not atomic. Keys and values must be non-null. The number of mapped entries
  * never exceeds [maxCapacity].
  */
-internal class ConcurrentClockCache<K : Any, V : Any>(private val maxCapacity: Int) : AbstractMutableMap<K, V>() {
+class ConcurrentClockCache<K : Any, V : Any>(private val maxCapacity: Int) : AbstractMutableMap<K, V>() {
     init {
         require(maxCapacity > 0) { "Cache capacity must be positive" }
     }

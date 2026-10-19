@@ -26,6 +26,32 @@ tasks.getByName<Test>("test") {
     maxHeapSize = "4096m"
 }
 
+// Deliberately separate from check/test: a normal run writes two 100+ GB databases plus indexes.
+tasks.register<Test>("largeStoreBenchmark") {
+    description = "Compare MEMORY_MAPPED_FILE and FILE with 100+ GB of small PerformanceEntity records."
+    group = "benchmark"
+    useJUnit()
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    filter { includeTestsMatching("database.store.LargeStoreBenchmarkTest") }
+    workingDir(rootProject.projectDir)
+    minHeapSize = "512m"
+    maxHeapSize = "2g"
+    maxParallelForks = 1
+    systemProperty("onyx.benchmark.largeStore.enabled", "true")
+    listOf(
+        "smoke", "dataGB", "dataGiB", "payloadBytes", "operations", "warmupOperations", "rounds", "seed",
+        "directory", "keepDatabases"
+    ).forEach { name ->
+        providers.gradleProperty("largeStoreBenchmark.$name").orNull?.let {
+            systemProperty("onyx.benchmark.largeStore.$name", it)
+        }
+    }
+    outputs.upToDateWhen { false }
+    outputs.doNotCacheIf("Benchmark timings must be measured on every invocation") { true }
+    testLogging.showStandardStreams = true
+}
+
 project.tasks.publish.configure {
     this.enabled = false
 }

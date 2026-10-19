@@ -68,7 +68,12 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
      * @since 1.0.0
      */
     @Throws(OnyxException::class)
-    override fun <E : IManagedEntity> saveEntity(entity: E): E {
+    override fun <E : IManagedEntity> saveEntity(entity: E): E = persistEntity(entity, insertOnly = false)
+
+    @Throws(OnyxException::class)
+    override fun <E : IManagedEntity> insertEntity(entity: E): E = persistEntity(entity, insertOnly = true)
+
+    private fun <E : IManagedEntity> persistEntity(entity: E, insertOnly: Boolean): E {
         context.checkForKillSwitch()
 
         if (entity.isValid(context)) {
@@ -77,7 +82,11 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                 context.ensureDefaultPartition(descriptor)
             }
 
-            val putResult = entity.save(context, descriptor)
+            val putResult = if (insertOnly) {
+                entity.recordInteractor(context, descriptor).insert(entity)
+            } else {
+                entity.save(context, descriptor)
+            }
 
             journal {
                 context.transactionInteractor.writeSave(entity)
@@ -622,13 +631,24 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
 
             var done = false
 
-            descriptors.forEach descriptors@{ descriptor ->
+            // A populated default partition is already in the registered list.
+            // Keep its physical descriptor once, including for legacy default rows
+            // whose partition catalog entry was never created.
+            descriptors.distinctBy { it.partition?.partitionValue }.forEach descriptors@{ descriptor ->
                 if (done) return@descriptors
 
-                val partitionId = if (descriptor.hasPartition) context.getPartitionWithValue(
-                    query.entityType!!,
-                    descriptor.partition!!.partitionValue
-                )!!.index else 0L
+                val partitionId = descriptor.partition?.let { partition ->
+                    context.getPartitionWithValue(query.entityType!!, partition.partitionValue)?.index
+                        ?: run {
+                            // Default descriptors exist before any row is saved. As
+                            // in the ordinary table scanner, their reference index is
+                            // zero until a default partition entry exists.
+                            check(partition.partitionValue == nullPartition) {
+                                "A named stream partition has no registered identity."
+                            }
+                            0L
+                        }
+                } ?: 0L
                 context.getRecordInteractor(descriptor).forEach<T> record@{ it ->
                     val entry = it as? DiskMapEntry<Any?, IManagedEntity?>
 

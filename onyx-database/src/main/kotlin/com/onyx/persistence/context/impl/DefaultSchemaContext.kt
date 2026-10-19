@@ -262,12 +262,8 @@ open class DefaultSchemaContext : SchemaContext {
         // which would trigger re-entrant store reads and corrupt the shared thread-local
         // buffer in FileChannelStore.getObject.
         serializedPersistenceManager.from(SystemEntity::class).list<SystemEntity>().forEach { entity ->
-            entity.attributes = entity.attributes.sortedBy { it.name }.toMutableList()
-            entity.relationships.sortBy { it.name }
-            entity.indexes.sortBy { it.name }
-            synchronized(systemEntityByIDMap) {
-                systemEntityByIDMap.putIfAbsent(entity.primaryKey, entity)
-            }
+            prepareSystemEntityForPublication(entity)
+            cacheSystemEntityByIdIfAbsent(entity)
         }
 
         // Added criteria for greater than 7 so that we do not disturb the system entities
@@ -299,16 +295,12 @@ open class DefaultSchemaContext : SchemaContext {
             descriptor.context = this
             val systemEntity = SystemEntity(descriptor)
             systemEntity.primaryKey = i
+            prepareSystemEntityForPublication(systemEntity)
 
             this.descriptors[entityKClass.java.name] = descriptor
             this.readyDescriptors[entityKClass.java.name] = descriptor
-            this.defaultSystemEntities[entityKClass.java.name] = systemEntity
-            this.systemEntityByIDMap[i] = systemEntity
+            cacheLatestSystemEntity(systemEntity)
             systemEntities.add(systemEntity)
-
-            systemEntity.attributes = systemEntity.attributes.sortedBy { it.name }.toMutableList()
-            systemEntity.relationships.sortBy { it.name }
-            systemEntity.indexes.sortBy { it.name }
 
             i++
         }
@@ -357,8 +349,8 @@ open class DefaultSchemaContext : SchemaContext {
             systemEntity = newSystemEntity
         }
 
-        defaultSystemEntities[systemEntity.name] = systemEntity
-        systemEntityByIDMap[systemEntity.primaryKey] = systemEntity
+        prepareSystemEntityForPublication(systemEntity)
+        cacheLatestSystemEntity(systemEntity)
 
         if (!entitiesMatch) {
             checkForIndexChanges(previousSystemEntity, newSystemEntity)
@@ -507,8 +499,13 @@ open class DefaultSchemaContext : SchemaContext {
 
     @Suppress("MemberVisibilityCanPrivate")
     protected val systemEntityByIDMap = HashMap<Int, SystemEntity?>()
+    // Only fully prepared entities are published here. Stable serialization reads never touch the
+    // backing HashMaps or the slow initialization monitor.
+    private val readySystemEntitiesById = ConcurrentHashMap<Int, SystemEntity>()
     @Suppress("MemberVisibilityCanPrivate")
     protected val defaultSystemEntities = HashMap<String, SystemEntity?>()
+    private val readySystemEntitiesByName = ConcurrentHashMap<String, SystemEntity>()
+    private val systemEntityInitializationLock = Any()
 
     /**
      * Get System Entity By Name.
@@ -518,27 +515,28 @@ open class DefaultSchemaContext : SchemaContext {
      * @throws OnyxException Default Exception
      */
     @Throws(OnyxException::class)
-    override fun getSystemEntityByName(name: String): SystemEntity? = synchronized(defaultSystemEntities) {
-        defaultSystemEntities.getOrPut(name) {
+    override fun getSystemEntityByName(name: String): SystemEntity? {
+        readySystemEntitiesByName[name]?.let { return it }
+
+        return synchronized(systemEntityInitializationLock) {
+            readySystemEntitiesByName[name]?.let { return@synchronized it }
+            defaultSystemEntities[name]?.let { cached ->
+                readySystemEntitiesByName[name] = cached
+                return@synchronized cached
+            }
 
             val result = serializedPersistenceManager
-                    .from(SystemEntity::class)
-                    .where("name" eq name).and("isLatestVersion" eq true)
-                    .orderBy("primaryKey".desc())
-                    .limit(1)
-                    .list<SystemEntity>()
-                    .firstOrNull()
+                .from(SystemEntity::class)
+                .where("name" eq name).and("isLatestVersion" eq true)
+                .orderBy("primaryKey".desc())
+                .limit(1)
+                .list<SystemEntity>()
+                .firstOrNull()
 
-            @Suppress("DuplicatedCode")
-            if (result != null) {
-                synchronized(systemEntityByIDMap) {
-                    systemEntityByIDMap.put(result.primaryKey, result)
-                }
-                result.attributes = result.attributes.sortedBy { it.name }.toMutableList()
-                result.relationships.sortBy { it.name }
-                result.indexes.sortBy { it.name }
+            result?.also {
+                prepareSystemEntityForPublication(it)
+                cacheLatestSystemEntity(it)
             }
-            return@getOrPut result
         }
     }
 
@@ -548,15 +546,44 @@ open class DefaultSchemaContext : SchemaContext {
      * @param systemEntityId Unique identifier for system entity version
      * @return System Entity matching ID
      */
-    override fun getSystemEntityById(systemEntityId: Int): SystemEntity? = synchronized(systemEntityByIDMap) {
-        systemEntityByIDMap.getOrPut(systemEntityId) {
-            val entity = serializedPersistenceManager.findById<SystemEntity>(SystemEntity::class.java, systemEntityId)
+    override fun getSystemEntityById(systemEntityId: Int): SystemEntity? {
+        readySystemEntitiesById[systemEntityId]?.let { return it }
 
-            entity?.attributes?.sortBy { it.name }
-            entity?.relationships?.sortBy { it.name }
-            entity?.indexes?.sortBy { it.name }
-            return@getOrPut entity
+        return synchronized(systemEntityInitializationLock) {
+            readySystemEntitiesById[systemEntityId]?.let { return@synchronized it }
+            systemEntityByIDMap[systemEntityId]?.let { cached ->
+                readySystemEntitiesById[systemEntityId] = cached
+                return@synchronized cached
+            }
+
+            serializedPersistenceManager
+                .findById<SystemEntity>(SystemEntity::class.java, systemEntityId)
+                ?.also {
+                    prepareSystemEntityForPublication(it)
+                    systemEntityByIDMap[systemEntityId] = it
+                    readySystemEntitiesById[systemEntityId] = it
+                }
         }
+    }
+
+    private fun prepareSystemEntityForPublication(entity: SystemEntity) {
+        entity.attributes = entity.attributes.sortedBy { it.name }.toMutableList()
+        entity.relationships.sortBy { it.name }
+        entity.indexes.sortBy { it.name }
+    }
+
+    private fun cacheLatestSystemEntity(entity: SystemEntity) = synchronized(systemEntityInitializationLock) {
+        systemEntityByIDMap[entity.primaryKey] = entity
+        readySystemEntitiesById[entity.primaryKey] = entity
+        defaultSystemEntities[entity.name] = entity
+        readySystemEntitiesByName[entity.name] = entity
+    }
+
+    private fun cacheSystemEntityByIdIfAbsent(entity: SystemEntity) = synchronized(systemEntityInitializationLock) {
+        val cached = systemEntityByIDMap[entity.primaryKey] ?: entity.also {
+            systemEntityByIDMap[entity.primaryKey] = it
+        }
+        readySystemEntitiesById[entity.primaryKey] = cached
     }
 
     // endregion
@@ -779,7 +806,8 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Data Files
 
-    @JvmField internal val dataFiles: MutableMap<String, DiskMapFactory> = hashMapOf()
+    // Concurrent reads keep stable factories off the initialization/deletion monitor.
+    @JvmField internal val dataFiles: MutableMap<String, DiskMapFactory> = ConcurrentHashMap()
     private val dataFilesLock = Any()
     private val dataDeletionLock = Any()
 
@@ -794,13 +822,27 @@ open class DefaultSchemaContext : SchemaContext {
      */
     override fun getDataFile(descriptor: EntityDescriptor): DiskMapFactory {
         val key = dataFileKey(descriptor)
-        var finalLocation = descriptor.primaryLocation
-        finalLocation = if(finalLocation != null) "$finalLocation/$key" else "$location/$key"
+        dataFiles[key]?.let { return it }
+
+        return getOrCreateDataFile(key, storeType) {
+            val primaryLocation = descriptor.primaryLocation
+            if (primaryLocation != null) "$primaryLocation/$key" else "$location/$key"
+        }
+    }
+
+    protected fun getOrCreateDataFile(
+        key: String,
+        fileStoreType: StoreType,
+        fileLocation: () -> String
+    ): DiskMapFactory {
+        dataFiles[key]?.let { return it }
 
         return synchronized(dataFilesLock) {
-            dataFiles.getOrPut(key) {
-                return@getOrPut DefaultDiskMapFactory(finalLocation, storeType, this@DefaultSchemaContext)
-            }
+            dataFiles[key] ?: DefaultDiskMapFactory(
+                fileLocation(),
+                fileStoreType,
+                this@DefaultSchemaContext
+            ).also { dataFiles[key] = it }
         }
     }
 
@@ -891,7 +933,7 @@ open class DefaultSchemaContext : SchemaContext {
      * clear non-volatile cached items in the disk maps
      */
     override fun flush() {
-        val files = synchronized(dataFilesLock) { dataFiles.values.toList() }
+        val files = dataFiles.values.toList()
         files.forEach { it.flush() }
     }
 
@@ -1081,16 +1123,14 @@ open class DefaultSchemaContext : SchemaContext {
         }
 
         synchronized(dataFilesLock) {
-            // Get the data file from cache
-            val dataFile = dataFiles[key]
+            // Invalidate before closing so lock-free readers arriving after this point take the
+            // synchronized initialization path rather than observing a closing factory.
+            val dataFile = dataFiles.remove(key)
 
             if (dataFile != null) {
                 // Close and delete the data file
                 dataFile.close()
                 dataFile.delete()
-
-                // Remove from cache
-                dataFiles.remove(key)
             } else {
                 // Data file might not be in cache, try to find and delete it directly
                 var finalLocation = descriptor.primaryLocation

@@ -1,6 +1,8 @@
 package com.onyx.interactors.cache.data
 
 import com.onyx.interactors.record.data.Reference
+import com.onyx.persistence.query.QueryListener
+import com.onyx.persistence.query.QueryListenerEvent
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -123,5 +125,41 @@ class CachedResultsTest {
         } finally {
             executor.shutdownNow()
         }
+    }
+
+    @Test
+    fun `listener callbacks do not hold the listener set lock`() {
+        val cached = CachedResults(linkedSetOf())
+        val callbackStarted = CountDownLatch(1)
+        val releaseCallback = CountDownLatch(1)
+        val callbackFinished = CountDownLatch(1)
+        val listener = object : QueryListener<Any> {
+            override fun onItemUpdated(item: Any) = Unit
+
+            override fun onItemAdded(item: Any) {
+                callbackStarted.countDown()
+                try {
+                    releaseCallback.await(10, TimeUnit.SECONDS)
+                } finally {
+                    callbackFinished.countDown()
+                }
+            }
+
+            override fun onItemRemoved(item: Any) = Unit
+        }
+
+        cached.subscribe(listener)
+        cached.put(first, Any(), QueryListenerEvent.INSERT)
+        assertTrue(callbackStarted.await(10, TimeUnit.SECONDS))
+
+        val executor = Executors.newSingleThreadExecutor()
+        try {
+            val unsubscribe = executor.submit<Boolean> { cached.unSubscribe(listener) }
+            assertTrue(unsubscribe.get(2, TimeUnit.SECONDS))
+        } finally {
+            releaseCallback.countDown()
+            executor.shutdownNow()
+        }
+        assertTrue(callbackFinished.await(10, TimeUnit.SECONDS))
     }
 }

@@ -81,17 +81,22 @@ class CachedResults(references: MutableSet<Reference>? = null) {
      */
     private fun dispatchEvent(entity: Any, body:(QueryListener<Any>,Any) -> Unit) {
         async {
-            synchronized(listeners) {
+            val listenerSnapshot = synchronized(listeners) {
                 listeners.remove(NULL_LISTENER)
-                val listenersToRemove = HashSet<QueryListener<*>>()
-                listeners.forEach {
-                    try {
-                        body.invoke(it, entity)
-                    } catch (e: Exception) {
-                        listenersToRemove.add(it)
-                    }
+                listeners.toList()
+            }
+            val listenersToRemove = HashSet<QueryListener<Any>>()
+            listenerSnapshot.forEach {
+                try {
+                    body.invoke(it, entity)
+                } catch (e: Exception) {
+                    listenersToRemove.add(it)
                 }
-                listeners.removeAll(listenersToRemove)
+            }
+            if (listenersToRemove.isNotEmpty()) {
+                synchronized(listeners) {
+                    listeners.removeAll(listenersToRemove)
+                }
             }
         }
     }

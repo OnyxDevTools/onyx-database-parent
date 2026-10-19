@@ -15,4 +15,21 @@ java {
 
 kotlin {
     jvmToolchain(Config.JAVA_VERSION)
+    compilerOptions {
+        freeCompilerArgs.add("-Xadd-modules=jdk.incubator.vector")
+    }
+}
+
+// The ordinary test task exercises the fallback without resolving the optional Vector API.
+tasks.register<Test>("vectorTest") {
+    description = "Run vector and HNSW regression tests with SIMD enabled."
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    jvmArgs("--add-modules=jdk.incubator.vector")
+    filter {
+        includeTestsMatching("com.onyx.vector.*")
+        includeTestsMatching("com.onyx.interactors.index.impl.*Hnsw*Test")
+    }
+    shouldRunAfter(tasks.test)
 }

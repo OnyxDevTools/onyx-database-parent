@@ -98,9 +98,9 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
             indexDescriptor.encodingVersion == source.indexDescriptor.encodingVersion) {
             "Vector index cloning requires identical source and destination configurations"
         }
-        synchronized(context.getRecordInteractor(descriptor)) {
+        return context.getRecordInteractor(descriptor).withMutationLock {
             synchronized(this) {
-                if (descriptor.hasRelationships || records.longSize() != 0L) return false
+                if (descriptor.hasRelationships || records.longSize() != 0L) return@synchronized false
                 check(!cloningHnsw) { "An HNSW clone is already in progress" }
                 hnswIndex.beginRebuild()
                 cloningHnsw = true
@@ -114,9 +114,9 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
                     cloningHnsw = false
                     if (!complete) hnswIndex.abortRebuild()
                 }
+                true
             }
         }
-        return true
     }
 
     @Synchronized
@@ -124,11 +124,20 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
         require(oldReferenceId <= 0L) {
             "The previous fingerprint representation is required for an update"
         }
-        save(null, indexValue, oldReferenceId, newReferenceId)
+        saveIndexValue(null, indexValue, oldReferenceId, newReferenceId)
     }
 
     @Synchronized
     override fun save(oldIndexValue: Any?, indexValue: Any?, oldReferenceId: Long, newReferenceId: Long) {
+        saveIndexValue(oldIndexValue, indexValue, oldReferenceId, newReferenceId)
+    }
+
+    private fun saveIndexValue(
+        oldIndexValue: Any?,
+        indexValue: Any?,
+        oldReferenceId: Long,
+        newReferenceId: Long
+    ) {
         val oldRepresentation = prepare(oldIndexValue)
         val representation = prepare(indexValue)
         representation?.representation?.validateConfiguration()
@@ -368,7 +377,7 @@ class FingerprintIndexInteractor @Throws(OnyxException::class) constructor(
     /** Rebuild stored routes, optionally retaining only compatible persisted getter vectors. */
     fun rebuild(recomputeSearchVectors: Boolean) {
         val recordInteractor = context.getRecordInteractor(descriptor)
-        synchronized(recordInteractor) {
+        recordInteractor.withMutationLock {
             synchronized(this) { rebuildWhileRecordWritesAreExcluded(recomputeSearchVectors) }
         }
     }

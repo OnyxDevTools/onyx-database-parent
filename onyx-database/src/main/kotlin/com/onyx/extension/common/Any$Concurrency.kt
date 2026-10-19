@@ -40,7 +40,7 @@ inline fun runJob(interval:Long, unit:TimeUnit, crossinline block: () -> Unit): 
  * @param block Block expression to execute
  * @since 2.0.0
  */
-inline fun <T> async(crossinline block: () -> T): Future<T> = defaultPool.submit<T> { block.invoke() }
+inline fun <T> async(crossinline block: () -> T): Future<T> = async(defaultPool) { block() }
 
 /**
  * Run a block in the background on the supplied executor.
@@ -48,7 +48,10 @@ inline fun <T> async(crossinline block: () -> T): Future<T> = defaultPool.submit
  * @param block Block expression to execute
  * @since 2.0.0
  */
-inline fun <T> async(executor: ExecutorService, crossinline block: () -> T): Future<T> = executor.submit<T> { block() }
+inline fun <T> async(executor: ExecutorService, crossinline block: () -> T): Future<T> {
+    val context = AsyncExecutionContext.capture()
+    return executor.submit<T> { context.run { block() } }
+}
 
 
 /*

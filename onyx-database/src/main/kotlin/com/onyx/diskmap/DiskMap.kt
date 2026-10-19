@@ -37,7 +37,11 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      */
     val references: Set<Long>
 
-    /** Walks stable record IDs and values without materializing map keys or entry wrappers. */
+    /**
+     * Walks stable record IDs and values without materializing the whole map. Read traversals
+     * invoke callbacks outside tree locks so slow predicates or projections do not block writes.
+     * Concurrent mutations may be observed between batches; this is not a transaction snapshot.
+     */
     fun forEachReference(action: (Long, V) -> Unit) {
         entries.forEach { entry ->
             val recordId = (entry as? DiskMapEntry<K, V>)?.recordId ?: getRecID(entry.key)
@@ -48,6 +52,8 @@ interface DiskMap<K, V> : MutableMap<K, V> {
     /**
      * Walks stable record IDs until [visitor] returns false, without materializing the map.
      * The return value is the number of records passed to [visitor].
+     * Callbacks run outside tree locks, with the same concurrent traversal semantics as
+     * [forEachReference]. Implementations may prefetch a bounded batch of records.
      */
     fun visitReferencesWhile(visitor: (Long, V) -> Boolean): Int {
         var visits = 0

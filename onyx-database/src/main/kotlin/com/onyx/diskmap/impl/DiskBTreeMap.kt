@@ -3,6 +3,7 @@ package com.onyx.diskmap.impl
 import com.onyx.diskmap.SortedDiskMap
 import com.onyx.diskmap.ValueUpdateMode
 import com.onyx.diskmap.data.BTreeEntry
+import com.onyx.diskmap.data.BTreePage
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.PutResult
 import com.onyx.diskmap.impl.base.btree.AbstractIterableBTree
@@ -70,8 +71,13 @@ open class DiskBTreeMap<K, V> @JvmOverloads constructor(
             super.internalPutAndGet(key.castTo(keyType) as K, value, preUpdate, capturePreviousValue)
         }
 
-    override fun containsValue(value: V): Boolean = mapReadWriteLock.readLock {
-        values.any { it == value }
+    override fun containsValue(value: V): Boolean {
+        var found = false
+        visitReferencesWhile { _, current ->
+            found = current == value
+            !found
+        }
+        return found
     }
 
     override fun putAll(from: Map<out K, V>) = from.forEach { this[it.key] = it.value }
@@ -84,44 +90,137 @@ open class DiskBTreeMap<K, V> @JvmOverloads constructor(
         super.clearCache()
     }
 
-    override fun forEachReference(action: (Long, V) -> Unit) = mapReadWriteLock.readLock {
-        super.forEachReference(action)
+    override fun forEachReference(action: (Long, V) -> Unit) {
+        visitReferencesWhile { reference, value ->
+            action(reference, value)
+            true
+        }
     }
 
-    override fun visitReferencesWhile(visitor: (Long, V) -> Boolean): Int =
-        mapReadWriteLock.readLock { super.visitReferencesWhile(visitor) }
+    override fun visitReferencesWhile(visitor: (Long, V) -> Boolean): Int {
+        val cursor = ReferenceCursor { page, index -> entryIdAt(page, index) to valueAt(page, index) }
+        var visits = 0
+        while (!cursor.finished) {
+            for ((reference, value) in cursor.nextBatch()) {
+                visits++
+                if (!visitor(reference, value)) return visits
+            }
+        }
+        return visits
+    }
 
     /**
      * Visits a page of stable entry IDs in ascending key order without decoding skipped rows.
-     * The count callback and traversal share the read lock, allowing callers to enforce a
-     * cardinality limit before loading values and to read the page against the same count.
+     * Count and the first batch of references are captured together. Both callbacks run without
+     * the map lock, so cardinality checks and row collection cannot hold up saves. Like full scans,
+     * pages spanning multiple batches are live traversals, not transaction snapshots.
      */
     internal fun visitAscendingReferencePage(
         firstRow: Int,
         maxResults: Int,
         onCount: (Long) -> Unit,
         visitor: (Long) -> Unit,
-    ) = mapReadWriteLock.readLock {
+    ) {
         require(firstRow >= 0 && maxResults > 0)
-        val count = longSize()
-        onCount(count)
-        if (firstRow.toLong() >= count) return@readLock
-
-        var remainingOffset = firstRow
-        var remainingRows = maxResults
-        var page = leftMostLeaf()
+        val cursor = ReferenceCursor(firstRow, maxResults.toLong(), read = ::entryIdAt)
+        var batch = cursor.nextBatch()
+        onCount(cursor.count)
         while (true) {
-            if (remainingOffset >= page.keyCount) {
-                remainingOffset -= page.keyCount
-            } else {
-                for (index in remainingOffset until page.keyCount) {
-                    visitor(entryIdAt(page, index))
-                    if (--remainingRows == 0) return@readLock
-                }
-                remainingOffset = 0
-            }
-            page = findPageAtPositionOrNull(page.nextLeaf) ?: return@readLock
+            batch.forEach(visitor)
+            if (cursor.finished) return
+            batch = cursor.nextBatch()
         }
+    }
+
+    /**
+     * Copy bounded batches while the tree is stable, then let callers process them without a
+     * lock. Only a decoded continuation key survives between batches: a leaf or slot may have
+     * moved, split, merged, or been deleted by the time the next batch is requested.
+     *
+     * Traversal is weakly consistent. Already copied values may precede a concurrent update;
+     * inserts behind the cursor are not revisited.
+     */
+    private inner class ReferenceCursor<T>(
+        private var remainingOffset: Int = 0,
+        private var remainingRows: Long = Long.MAX_VALUE,
+        private val from: K? = null,
+        private val includeFrom: Boolean = true,
+        private val to: K? = null,
+        private val includeTo: Boolean = true,
+        private val read: (BTreePage, Int) -> T,
+    ) {
+        var count = 0L
+            private set
+        var finished = false
+            private set
+        private var initialized = false
+        private var resumeKey: K? = null
+
+        fun nextBatch(): List<T> = mapReadWriteLock.readLock {
+            val batch = ArrayList<T>(minOf(REFERENCE_BATCH_SIZE.toLong(), remainingRows).toInt())
+            if (finished) return@readLock batch
+            if (!initialized) {
+                initialized = true
+                count = longSize()
+                if (remainingOffset.toLong() >= count) {
+                    finished = true
+                    return@readLock batch
+                }
+            }
+
+            val start = resumeKey ?: from
+            var page = if (start == null) leftMostLeaf() else findLeaf(start)
+            var index = when {
+                start == null -> 0
+                resumeKey != null || !includeFrom -> upperBound(page, start)
+                else -> lowerBound(page, start)
+            }
+            var pages = 0
+            while (batch.size < REFERENCE_BATCH_SIZE && pages < REFERENCE_BATCH_SIZE) {
+                // Most leaves are wholly inside the bound. Decode only their final key rather
+                // than every row's key; full scans previously needed only record IDs and values.
+                val reachesBound = to != null && page.keyCount > 0 &&
+                    compareKeys(keyAt(page, page.keyCount - 1), to) >= 0
+                val end = if (!reachesBound) page.keyCount else if (includeTo) {
+                    upperBound(page, to as K)
+                } else {
+                    lowerBound(page, to as K)
+                }
+                val startIndex = index
+                if (remainingOffset > 0 && index < end) {
+                    val skipped = minOf(remainingOffset, end - index)
+                    index += skipped
+                    remainingOffset -= skipped
+                }
+                val copied = minOf(
+                    (end - index).coerceAtLeast(0).toLong(),
+                    (REFERENCE_BATCH_SIZE - batch.size).toLong(),
+                    remainingRows,
+                ).toInt()
+                repeat(copied) { batch.add(read(page, index++)) }
+                if (index > startIndex) resumeKey = keyAt(page, index - 1)
+                remainingRows -= copied
+                if (remainingRows == 0L || reachesBound && index >= end) {
+                    finished = true
+                    return@readLock batch
+                }
+                if (index >= page.keyCount) {
+                    val next = findPageAtPositionOrNull(page.nextLeaf)
+                    if (next == null) {
+                        finished = true
+                        return@readLock batch
+                    }
+                    page = next
+                    index = 0
+                    pages++
+                }
+            }
+            batch
+        }
+    }
+
+    private companion object {
+        const val REFERENCE_BATCH_SIZE = 128
     }
 
     override fun forEachMutableReference(
@@ -152,18 +251,24 @@ open class DiskBTreeMap<K, V> @JvmOverloads constructor(
             entry.getRecord<Any>(records)?.getAny(attribute) as T
         }
 
-    override fun above(index: K, includeFirst: Boolean): Set<Long> = mapReadWriteLock.readLock {
-        HashSet<Long>().also { addPositionsAscending(index.castTo(keyType) as K, includeFirst, it) }
-    }
+    override fun above(index: K, includeFirst: Boolean): Set<Long> =
+        collectReferences(ReferenceCursor(from = index.castTo(keyType) as K, includeFrom = includeFirst, read = ::entryIdAt))
 
-    override fun below(index: K, includeFirst: Boolean): Set<Long> = mapReadWriteLock.readLock {
-        HashSet<Long>().also { addPositionsDescending(index.castTo(keyType) as K, includeFirst, it) }
-    }
+    override fun below(index: K, includeFirst: Boolean): Set<Long> =
+        collectReferences(ReferenceCursor(to = index.castTo(keyType) as K, includeTo = includeFirst, read = ::entryIdAt))
 
     override fun between(fromValue: K?, includeFrom: Boolean, toValue: K?, includeTo: Boolean): Set<Long> =
-        mapReadWriteLock.readLock {
-            val from = requireNotNull(fromValue?.castTo(keyType) as K?)
-            val to = requireNotNull(toValue?.castTo(keyType) as K?)
-            HashSet<Long>().also { addPositionsBetween(from, includeFrom, to, includeTo, it) }
+        collectReferences(ReferenceCursor(
+            from = requireNotNull(fromValue?.castTo(keyType) as K?),
+            includeFrom = includeFrom,
+            to = requireNotNull(toValue?.castTo(keyType) as K?),
+            includeTo = includeTo,
+            read = ::entryIdAt,
+        ))
+
+    private fun collectReferences(cursor: ReferenceCursor<Long>): Set<Long> = HashSet<Long>().also { result ->
+        while (!cursor.finished) {
+            result.addAll(cursor.nextBatch())
         }
+    }
 }

@@ -1370,6 +1370,12 @@ interface IOnyxDatabase<Schema : Any> {
     ): T
 
     /**
+     * Inserts one entity or a list without overwriting existing root identifiers in their partitions.
+     * Returns HTTP 409 on duplicates. Batches are sequential, not atomic; cascade children use save.
+     */
+    fun <T> insert(table: KClass<*>, entityOrEntities: T, options: SaveOptions? = null): T
+
+    /**
      * Retrieves a single entity by its primary key from a specified table.
      *
      * **Note:** The `inline reified` [findById] extension function is the preferred
@@ -1499,6 +1505,10 @@ fun IOnyxDatabase<*>.deleteInPartition(table: String, primaryKey: Any, partition
  * ```
  */
 inline fun <reified T : Any> IOnyxDatabase<*>.save(entity: T): T = this.save(T::class, entity)
+
+/** Inserts a new entity, inferring the table from its type. */
+inline fun <reified T : Any> IOnyxDatabase<*>.insert(entity: T): T = this.insert(T::class, entity)
+
 
 /**
  * Saves a list of entities in batches to improve performance and avoid request size limits.

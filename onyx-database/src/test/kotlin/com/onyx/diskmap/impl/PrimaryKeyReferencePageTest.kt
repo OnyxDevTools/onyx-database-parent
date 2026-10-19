@@ -5,7 +5,6 @@ import com.onyx.diskmap.store.StoreType
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -13,7 +12,7 @@ import kotlin.test.assertTrue
 
 class PrimaryKeyReferencePageTest {
     @Test
-    fun `count and page values share the read lock across concurrent writes`() {
+    fun `count callback allows writes while preserving its captured first page`() {
         val factory = DefaultDiskMapFactory("primary-page-lock", StoreType.IN_MEMORY)
         val executor = Executors.newFixedThreadPool(2)
         val releaseCount = CountDownLatch(1)
@@ -32,16 +31,13 @@ class PrimaryKeyReferencePageTest {
                 count to values
             }
             assertTrue(counted.await(10, TimeUnit.SECONDS))
-            val writing = CountDownLatch(1)
             val writer = executor.submit {
-                writing.countDown()
                 map[0L] = 0L
             }
-            assertTrue(writing.await(10, TimeUnit.SECONDS))
-            assertFailsWith<TimeoutException> { writer.get(100, TimeUnit.MILLISECONDS) }
+            writer.get(5, TimeUnit.SECONDS)
+            assertEquals(1L, releaseCount.count)
             releaseCount.countDown()
             assertEquals(10L to listOf(1L, 2L, 3L), page.get(10, TimeUnit.SECONDS))
-            writer.get(10, TimeUnit.SECONDS)
             val next = ArrayList<Long>()
             map.visitAscendingReferencePage(0, 3, { assertEquals(11L, it) }) {
                 next.add(map.getWithRecID(it)!!)
@@ -49,6 +45,45 @@ class PrimaryKeyReferencePageTest {
             assertEquals(listOf(0L, 1L, 2L), next)
         } finally {
             releaseCount.countDown()
+            executor.shutdownNow()
+            executor.awaitTermination(10, TimeUnit.SECONDS)
+            factory.close()
+        }
+    }
+
+    @Test
+    fun `page visitor allows writes and continues after the original offset`() {
+        val factory = DefaultDiskMapFactory("primary-page-visitor", StoreType.IN_MEMORY)
+        val executor = Executors.newFixedThreadPool(2)
+        val releaseVisitor = CountDownLatch(1)
+        try {
+            val map = factory.getHashMap<DiskBTreeMap<Long, Long>>(Long::class.java, "rows")
+            (1L..1_000L).forEach { map[it] = it }
+            val visiting = CountDownLatch(1)
+            val page = executor.submit<List<Long>> {
+                buildList {
+                    map.visitAscendingReferencePage(500, 300, { assertEquals(1_000L, it) }) { reference ->
+                        val value = map.getWithRecID(reference)!!
+                        add(value)
+                        if (value == 501L) {
+                            visiting.countDown()
+                            check(releaseVisitor.await(10, TimeUnit.SECONDS))
+                        }
+                    }
+                }
+            }
+            assertTrue(visiting.await(5, TimeUnit.SECONDS))
+            val writer = executor.submit {
+                (1L..250L).forEach { map.remove(it) }
+                map[0L] = 0L
+            }
+            writer.get(5, TimeUnit.SECONDS)
+            assertEquals(1L, releaseVisitor.count)
+
+            releaseVisitor.countDown()
+            assertEquals((501L..800L).toList(), page.get(10, TimeUnit.SECONDS))
+        } finally {
+            releaseVisitor.countDown()
             executor.shutdownNow()
             executor.awaitTermination(10, TimeUnit.SECONDS)
             factory.close()

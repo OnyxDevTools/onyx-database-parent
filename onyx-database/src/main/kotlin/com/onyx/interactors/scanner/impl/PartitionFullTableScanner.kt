@@ -16,6 +16,7 @@ import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryPartitionMode
 import com.onyx.extension.meetsCriteria
+import com.onyx.extension.prepareConcurrentScoreCollection
 import com.onyx.persistence.context.Contexts
 import java.util.concurrent.Future
 
@@ -69,6 +70,7 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
 
         if (query.partition === QueryPartitionMode.ALL) {
             context.reportQueryExecution(QueryExecutionEvent.FULL_TABLE_SCAN)
+            query.prepareConcurrentScoreCollection(descriptor)
             val matching = HashSet<Reference>()
             val units = ArrayList<Future<Set<Reference>>>()
 

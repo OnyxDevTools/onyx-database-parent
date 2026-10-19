@@ -2,7 +2,6 @@ package com.onyx.extension.common
 
 import com.onyx.interactors.classfinder.ApplicationClassFinder
 import com.onyx.persistence.annotations.*
-import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import java.lang.reflect.Constructor
@@ -11,7 +10,6 @@ import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 
 private val classMetadatas = ConcurrentHashMap<String, ClassMetadata>()
 
@@ -166,7 +164,8 @@ fun Class<*>.primitiveType(): Class<*>? = when {
 
 /**
  * This object is a container of cached class information.  Since some of these lookups are slow, this
- * will use optimistic locking caching to speed the lookup up.
+ * uses lock-free reads after each value has been initialized. Cache misses and class removal are
+ * serialized so related reflection entries are published and invalidated consistently.
  */
 class ClassMetadata {
 
@@ -210,16 +209,19 @@ class ClassMetadata {
         }
     }
 
-    private val constructors = OptimisticLockingMap<Class<*>, Constructor<*>>(HashMap())
-    private val classes = OptimisticLockingMap<String, Class<*>>(HashMap())
-    private val classFields = OptimisticLockingMap<Class<*>, List<Field>>(HashMap())
-    private val classSerializationFields = OptimisticLockingMap<Class<*>, List<SerializationField>>(HashMap())
+    private val cacheMutationLock = Any()
+    private val constructors = ConcurrentHashMap<Class<*>, Constructor<*>>()
+    private val classes = ConcurrentHashMap<String, Class<*>>()
+    private val classFields = ConcurrentHashMap<Class<*>, List<Field>>()
+    private val classSerializationFields = ConcurrentHashMap<Class<*>, List<SerializationField>>()
 
     fun removeClass(name: String) {
-        classes.remove(name)?.let { clazz ->
-            constructors.remove(clazz)
-            classFields.remove(clazz)
-            classSerializationFields.remove(clazz)
+        synchronized(cacheMutationLock) {
+            classes.remove(name)?.let { clazz ->
+                constructors.remove(clazz)
+                classFields.remove(clazz)
+                classSerializationFields.remove(clazz)
+            }
         }
     }
 
@@ -230,10 +232,15 @@ class ClassMetadata {
      *
      * @since 2.0.0
      */
-    fun constructor(clazz: Class<*>): Constructor<*> = constructors.getOrPut(clazz) {
-        val constructor = clazz.getDeclaredConstructor()
-        constructor.isAccessible = true
-        return@getOrPut constructor
+    fun constructor(clazz: Class<*>): Constructor<*> {
+        constructors[clazz]?.let { return it }
+
+        return synchronized(cacheMutationLock) {
+            constructors[clazz] ?: clazz.getDeclaredConstructor().also { constructor ->
+                constructor.isAccessible = true
+                constructors[clazz] = constructor
+            }
+        }
     }
 
     /**
@@ -241,7 +248,15 @@ class ClassMetadata {
      *
      * @since 2.0.0
      */
-    fun classForName(name:String, schemaContext: SchemaContext? = null): Class<*> = classes.getOrPut(name) { ApplicationClassFinder.forName(name, schemaContext) }
+    fun classForName(name:String, schemaContext: SchemaContext? = null): Class<*> {
+        classes[name]?.let { return it }
+
+        return synchronized(cacheMutationLock) {
+            classes[name] ?: ApplicationClassFinder.forName(name, schemaContext).also { clazz ->
+                classes[name] = clazz
+            }
+        }
+    }
 
     /**
      * Get fields for a java class
@@ -249,44 +264,49 @@ class ClassMetadata {
      * @since 2.0.0
      */
     fun fields(clazz:Class<*>) : List<Field> {
-        val isManagedEntity = clazz.isAnnotationPresent(ENTITY_ANNOTATION)
+        classFields[clazz]?.let { return it }
 
-        return classFields.getOrPut(clazz) {
-            val fields = ArrayList<Field>()
-            var aClass:Class<*> = clazz
-            while (aClass != ANY_CLASS
-                && aClass != Exception::class.java
-                && aClass != Throwable::class.java) {
-                aClass.declaredFields
-                    .asSequence()
-                    .filter { it.modifiers and Modifier.STATIC == 0 && !Modifier.isTransient(it.modifiers) && it.type != Exception::class.java && it.type != Throwable::class.java }
-                    .forEach {
-                        if (!isManagedEntity) {
-                            it.isAccessible = true
-                            fields.add(it)
-                        } else if (it.isAnnotationPresent(ATTRIBUTE_ANNOTATION)
-                            || it.isAnnotationPresent(INDEX_ANNOTATION)
-                            || it.isAnnotationPresent(PARTITION_ANNOTATION)
-                            || it.isAnnotationPresent(IDENTIFIER_ANNOTATION)
-                            || it.isAnnotationPresent(RELATIONSHIP_ANNOTATION)) {
-                            it.isAccessible = true
-                            fields.add(it)
+        return synchronized(cacheMutationLock) {
+            classFields[clazz] ?: run {
+                val isManagedEntity = clazz.isAnnotationPresent(ENTITY_ANNOTATION)
+                val fields = ArrayList<Field>()
+                var aClass:Class<*> = clazz
+                while (aClass != ANY_CLASS
+                    && aClass != Exception::class.java
+                    && aClass != Throwable::class.java) {
+                    aClass.declaredFields
+                        .asSequence()
+                        .filter { it.modifiers and Modifier.STATIC == 0 && !Modifier.isTransient(it.modifiers) && it.type != Exception::class.java && it.type != Throwable::class.java }
+                        .forEach {
+                            if (!isManagedEntity) {
+                                it.isAccessible = true
+                                fields.add(it)
+                            } else if (it.isAnnotationPresent(ATTRIBUTE_ANNOTATION)
+                                || it.isAnnotationPresent(INDEX_ANNOTATION)
+                                || it.isAnnotationPresent(PARTITION_ANNOTATION)
+                                || it.isAnnotationPresent(IDENTIFIER_ANNOTATION)
+                                || it.isAnnotationPresent(RELATIONSHIP_ANNOTATION)) {
+                                it.isAccessible = true
+                                fields.add(it)
+                            }
                         }
-                    }
-                aClass = aClass.superclass
-            }
+                    aClass = aClass.superclass
+                }
 
-            fields.sortBy { it.name }
-            fields
+                fields.sortBy { it.name }
+                fields.also { classFields[clazz] = it }
+            }
         }
     }
 
     /**
      * Returns the same stable, name-sorted fields as [fields], with the field kind calculated once.
      */
-    fun serializationFields(clazz: Class<*>): List<SerializationField> =
-        classSerializationFields.getOrPut(clazz) {
-            fields(clazz).map { field ->
+    fun serializationFields(clazz: Class<*>): List<SerializationField> {
+        classSerializationFields[clazz]?.let { return it }
+
+        return synchronized(cacheMutationLock) {
+            classSerializationFields[clazz] ?: fields(clazz).map { field ->
                 val kind = when (field.type) {
                     LONG_PRIMITIVE_TYPE -> SerializationFieldKind.LONG
                     INT_PRIMITIVE_TYPE -> SerializationFieldKind.INT
@@ -299,8 +319,9 @@ class ClassMetadata {
                     else -> SerializationFieldKind.OBJECT
                 }
                 SerializationField(field, kind)
-            }
+            }.also { classSerializationFields[clazz] = it }
         }
+    }
 
     // endregion
 }

@@ -10,8 +10,9 @@ import kotlin.math.max
  * A JDK 22 memory mapping that grows with the file.
  *
  * The owner must serialize [ensureCapacity], [write], and [close] against
- * other reads and writes. Reads may run concurrently while the mapping is
- * stable. [force] may run concurrently with all operations.
+ * other reads and writes because growth may replace the mapping. Reads and
+ * [writeWithinCapacity] calls may run concurrently while the mapping is stable.
+ * [force] may run concurrently with all operations.
  *
  * WAL mappings retain replaced arenas until close, so growth never waits for
  * an active force. Other mappings use operating-system writeback and release
@@ -88,6 +89,24 @@ internal class WholeFileMapping @JvmOverloads constructor(
     }
 
     fun write(source: ByteBuffer, filePosition: Long): Int {
+        val byteCount = source.remaining()
+        if (byteCount == 0) {
+            require(filePosition >= 0L) {
+                "File position cannot be negative: $filePosition"
+            }
+            return 0
+        }
+
+        val endExclusive = writeEndExclusive(filePosition, byteCount)
+        ensureCapacity(endExclusive)
+        return writeWithinCapacity(source, filePosition)
+    }
+
+    /**
+     * Writes without changing the mapping. The owner must keep the mapping
+     * stable and verify that the write fits before calling this method.
+     */
+    fun writeWithinCapacity(source: ByteBuffer, filePosition: Long): Int {
         require(filePosition >= 0L) {
             "File position cannot be negative: $filePosition"
         }
@@ -95,13 +114,16 @@ internal class WholeFileMapping @JvmOverloads constructor(
         val byteCount = source.remaining()
         if (byteCount == 0) return 0
 
-        val endExclusive = Math.addExact(filePosition, byteCount.toLong())
-        ensureCapacity(endExclusive)
+        val endExclusive = writeEndExclusive(filePosition, byteCount)
+        val current = mapping
+        require(endExclusive <= current.capacity) {
+            "Write ending at $endExclusive exceeds mapped capacity ${current.capacity}"
+        }
 
         MemorySegment.copy(
             MemorySegment.ofBuffer(source),
             0L,
-            mapping.memory,
+            current.memory,
             filePosition,
             byteCount.toLong()
         )
@@ -145,6 +167,13 @@ internal class WholeFileMapping @JvmOverloads constructor(
             channel.force(true)
             metadataForcedMapping = current
         }
+    }
+
+    private fun writeEndExclusive(filePosition: Long, byteCount: Int): Long {
+        require(filePosition >= 0L) {
+            "File position cannot be negative: $filePosition"
+        }
+        return Math.addExact(filePosition, byteCount.toLong())
     }
 
     private fun createMapping(capacity: Long): Mapping {

@@ -84,8 +84,24 @@ open class MemoryMappedStore : FileChannelStore {
      * @param position The position in the store to write to.
      * @return The number of bytes written.
      */
-    override fun write(buffer: ByteBuffer, position: Long): Int = mappingWriteLock.withLock {
-        currentMapping().write(buffer, position)
+    override fun write(buffer: ByteBuffer, position: Long): Int {
+        require(position >= 0L) { "File position cannot be negative: $position" }
+        val byteCount = buffer.remaining()
+        val endExclusive = Math.addExact(position, byteCount.toLong())
+
+        mappingReadLock.withLock {
+            val current = currentMapping()
+            if (byteCount == 0 || endExclusive <= current.capacity) {
+                return current.writeWithinCapacity(buffer, position)
+            }
+        }
+
+        // Remapping invalidates the old arena, so growth remains exclusive.
+        // Recheck capacity after acquiring the lock because another thread may
+        // already have grown the mapping while this writer was waiting.
+        return mappingWriteLock.withLock {
+            currentMapping().write(buffer, position)
+        }
     }
 
     override fun recoverLogicalEnd(persistedReservationEnd: Long, physicalEnd: Long): Long =
