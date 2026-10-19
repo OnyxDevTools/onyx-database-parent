@@ -14,8 +14,9 @@ import kotlin.concurrent.withLock
  * candidate receives another hit during the scan, the starting candidate is evicted anyway.
  *
  * Individual map operations are thread-safe. Iterators are weakly consistent, like those of
- * [ConcurrentHashMap]; compound operations such as get-then-put are not atomic. Keys and values
- * must be non-null. The number of mapped entries never exceeds [maxCapacity].
+ * [ConcurrentHashMap]. [putIfAbsent] publishes a value atomically; compound operations such as
+ * get-then-put are not atomic. Keys and values must be non-null. The number of mapped entries
+ * never exceeds [maxCapacity].
  */
 internal class ConcurrentClockCache<K : Any, V : Any>(private val maxCapacity: Int) : AbstractMutableMap<K, V>() {
     init {
@@ -40,6 +41,17 @@ internal class ConcurrentClockCache<K : Any, V : Any>(private val maxCapacity: I
 
     override fun put(key: K, value: V): V? = writeLock.withLock {
         table[key]?.let { return@withLock replaceValue(it, value) }
+        insert(key, value)
+        null
+    }
+
+    override fun putIfAbsent(key: K, value: V): V? = writeLock.withLock {
+        get(key)?.let { return@withLock it }
+        insert(key, value)
+        null
+    }
+
+    private fun insert(key: K, value: V) {
         val node = Node(key, value)
         if (table.size >= maxCapacity) evict()
         table[key] = node
@@ -56,7 +68,6 @@ internal class ConcurrentClockCache<K : Any, V : Any>(private val maxCapacity: I
             tail.next = node
             current.previous = node
         }
-        null
     }
 
     override fun remove(key: K): V? = writeLock.withLock {

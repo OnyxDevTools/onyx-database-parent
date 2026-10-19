@@ -18,6 +18,8 @@ import com.onyx.vector.VectorEntityEncoder
 import com.onyx.vector.VectorSearchEvaluator
 import com.onyx.vector.VectorValueCodec
 import java.util.Date
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 
 /**
  * Entity meets the query criteria.  This method is used to determine whether the entity meets all the
@@ -34,17 +36,17 @@ import java.util.Date
  * @since 1.3.0 Simplified query criteria management
  */
 @Throws(OnyxException::class)
-fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, context: SchemaContext, descriptor: EntityDescriptor): Boolean = synchronized(this) {
+fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, context: SchemaContext, descriptor: EntityDescriptor): Boolean {
 
-    var subCriteria: Boolean
     var evaluatedVectorSearch = false
     var evaluatedVectorSearchScore: Float? = null
 
-    // Iterate through
-    for(it in this.getAllCriteria()) {
-        if(it.flip)
-            continue
-        else if (it.isRelationship!!) {
+    // Keep each row's predicate results on its own call stack. Shared criteria describe the
+    // query; storing row results on them would serialize expensive getters and vector scoring.
+    fun evaluate(it: QueryCriteria): Boolean {
+        if (it.flip) return false
+        val subCriteria: Boolean
+        if (it.isRelationship!!) {
             subCriteria = if(descriptor.relationships.contains(it.relationship)) {
                 relationshipMeetsCriteria(entity, entityReference, it, context)
             } else {
@@ -75,7 +77,7 @@ fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, con
                 evaluatedScore != null
             } else {
                 vectorSearchMatches?.get(it)?.contains(entityReference)
-                    ?: (fullTextScores?.containsKey(entityReference) == true)
+                    ?: synchronized(this) { fullTextScores?.containsKey(entityReference) == true }
             }
             subCriteria = when (it.operator) {
                 QueryCriteriaOperator.NOT_MATCHES,
@@ -91,10 +93,8 @@ fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, con
             }
         } else {
             // Compare operator for attribute value
-            if (it.attributeDescriptor == null)
-                it.attributeDescriptor = descriptor.attributes[it.attribute!!]
-
-            val attribute = if (it.attributeDescriptor != null) {
+            val attributeDescriptor = it.attributeDescriptor ?: descriptor.attributes[it.attribute!!]
+            val attribute = if (attributeDescriptor != null) {
                 entity?.get<Any?>(context = context, descriptor = descriptor, name = it.attribute!!)
             } else {
                 entity?.get<Any?>(it.attribute!!) // Use Kotlin property accessors
@@ -130,51 +130,32 @@ fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, con
                 compareCriterion(it, comparableAttribute, comparisonValue)
             }
         }
-        it.meetsCriteria = subCriteria
+        var matches = subCriteria
+        it.subCriteria.forEach { child ->
+            if (!child.flip) {
+                // Evaluate before combining so every search clause still publishes its score,
+                // including clauses whose truth value cannot change the enclosing result.
+                val childMatches = evaluate(child)
+                matches = if (child.isOr) childMatches || matches else childMatches && matches
+            }
+        }
+        return if (it.isNot) !matches else matches
     }
 
+    val matches = criteria?.let(::evaluate) ?: true
     if (evaluatedVectorSearch) {
-        @Suppress("UNCHECKED_CAST")
-        val mutableScores = (fullTextScores as? MutableMap<Reference, Float>)
-            ?: fullTextScores?.toMutableMap()
-            ?: HashMap()
-        fullTextScores = mutableScores.apply {
-            if (evaluatedVectorSearchScore == null) remove(entityReference)
-            else put(entityReference, evaluatedVectorSearchScore!!)
+        synchronized(this) {
+            // Collectors can read scores while other rows finish evaluation. Reuse a concurrent
+            // map after its first publication; preserve scores supplied by prior admission.
+            val mutableScores = (fullTextScores as? ConcurrentMap<Reference, Float>)
+                ?: ConcurrentHashMap(fullTextScores ?: emptyMap())
+            fullTextScores = mutableScores.apply {
+                if (evaluatedVectorSearchScore == null) remove(entityReference)
+                else put(entityReference, evaluatedVectorSearchScore!!)
+            }
         }
     }
-
-    this.criteria ?: return@synchronized true
-    return calculateCriteriaMet(this.criteria!!)
-}
-
-/**
- * Calculates the result of the parent criteria and correlates
- * its set of children criteria.  A pre-requisite to invoking this method
- * is that all of the criteria have the meet criteria field set and
- * it does NOT take into account the not modifier in the pre-requisite.
- *
- *
- * @param criteria Root criteria to check.  This maintains the order of operations
- * @return Whether all the criteria are met taking into account the order of operations
- * and the not() modifier
- *
- * @since 1.3.0 Added to enhance insertion based criteria checking
- */
-private fun Query.calculateCriteriaMet(criteria: QueryCriteria): Boolean {
-    var meetsCriteria = criteria.meetsCriteria
-
-    if (criteria.subCriteria.size > 0) {
-        criteria.subCriteria.forEach {
-            if(it.flip)
-                return@forEach
-            meetsCriteria = if (it.isOr) { calculateCriteriaMet(it) || meetsCriteria } else { calculateCriteriaMet(it) && meetsCriteria }
-        }
-    }
-
-    if (criteria.isNot)
-        meetsCriteria = !meetsCriteria
-    return meetsCriteria
+    return matches
 }
 
 /**

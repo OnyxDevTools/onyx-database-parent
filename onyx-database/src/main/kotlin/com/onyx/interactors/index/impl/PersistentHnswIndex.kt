@@ -391,10 +391,9 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
             breadth = query.efSearch,
             evaluationLimit = query.efSearch,
         )
-        val scored = layerResult.evaluated.asSequence()
+        val scored = layerResult.best.asSequence()
             .filter { allowedRecordIds == null || it.id in allowedRecordIds }
             .filter { query.minScore == null || it.score >= query.minScore }
-            .sortedWith(BEST_FIRST_COMPARATOR)
             .take(query.maxCandidates)
             .toList()
         return PersistentHnswSearchResult(
@@ -596,8 +595,17 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
         evaluationLimit: Int,
     ): LayerSearchResult {
         val candidates = PriorityQueue(BEST_FIRST_COMPARATOR)
-        val best = PriorityQueue(WORST_FIRST_COMPARATOR)
-        val evaluated = ArrayList<ScoredNode>(minOf(evaluationLimit, INITIAL_SEARCH_CAPACITY))
+        // Query search sets breadth equal to its hard evaluation limit. In that case every
+        // evaluated node is retained, so maintaining a second heap only to sort it afterward is
+        // redundant. Construction still needs the bounded worst-first heap because its evaluation
+        // limit is wider than its retained breadth.
+        val retainEveryEvaluation = breadth >= evaluationLimit
+        val best = if (retainEveryEvaluation) null else PriorityQueue(WORST_FIRST_COMPARATOR)
+        val evaluated = if (retainEveryEvaluation) {
+            ArrayList<ScoredNode>(minOf(evaluationLimit, INITIAL_SEARCH_CAPACITY))
+        } else {
+            null
+        }
         val visited = HashSet<Long>(minOf(evaluationLimit, INITIAL_SEARCH_CAPACITY))
         var evaluationCount = 0
 
@@ -606,14 +614,13 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
             val scored = ScoredNode(entry.id, query.cosineSimilarity(entry.vector))
             evaluationCount++
             candidates += scored
-            best += scored
-            evaluated += scored
+            if (best == null) evaluated!!.add(scored) else best.add(scored)
         }
 
         while (candidates.isNotEmpty() && evaluationCount < evaluationLimit) {
             val current = candidates.remove()
-            val worst = best.peek()
-            if (best.size >= breadth && worst != null && isBetter(worst, current)) break
+            val worst = best?.peek()
+            if (best != null && best.size >= breadth && worst != null && isBetter(worst, current)) break
             val currentNode = loadNode(current.id) ?: continue
             for (neighborId in currentNode.neighborsAt(layer)) {
                 if (evaluationCount >= evaluationLimit) break
@@ -623,18 +630,21 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
                     ?: continue
                 val scored = ScoredNode(neighbor.id, query.cosineSimilarity(neighbor.vector))
                 evaluationCount++
-                evaluated += scored
-                val currentWorst = best.peek()
-                if (best.size < breadth || currentWorst == null || isBetter(scored, currentWorst)) {
+                if (best == null) {
                     candidates += scored
-                    best += scored
-                    if (best.size > breadth) best.remove()
+                    evaluated!!.add(scored)
+                } else {
+                    val currentWorst = best.peek()
+                    if (best.size < breadth || currentWorst == null || isBetter(scored, currentWorst)) {
+                        candidates += scored
+                        best += scored
+                        if (best.size > breadth) best.remove()
+                    }
                 }
             }
         }
         return LayerSearchResult(
-            best = best.toList().sortedWith(BEST_FIRST_COMPARATOR),
-            evaluated = evaluated,
+            best = (evaluated ?: best!!.toList()).sortedWith(BEST_FIRST_COMPARATOR),
             evaluationCount = evaluationCount,
         )
     }
@@ -903,7 +913,6 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
 
     private data class LayerSearchResult(
         val best: List<ScoredNode>,
-        val evaluated: List<ScoredNode>,
         val evaluationCount: Int,
     )
 

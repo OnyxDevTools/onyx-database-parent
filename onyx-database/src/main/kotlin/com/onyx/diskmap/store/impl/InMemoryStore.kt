@@ -80,9 +80,12 @@ class InMemoryStore(context: SchemaContext?, storeId: String) : FileChannelStore
 
     private fun sliceForPosition(position: Long): ByteBuffer {
         val index = (position / sliceCapacity).toInt()
-        return slices.getOrPut(index) {
+        val slice = slices.getOrPut(index) {
             BufferPool.allocateAndLimit(sliceCapacity)
         }
+        // Reads and writes share bytes, but copy() changes buffer positions and limits.
+        // Give each operation a private cursor so concurrent I/O cannot move another's view.
+        return slice.duplicate()
     }
 
     @Suppress("UseExpressionBody")

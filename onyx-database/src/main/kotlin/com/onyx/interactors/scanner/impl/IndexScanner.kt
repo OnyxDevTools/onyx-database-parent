@@ -3,11 +3,14 @@ package com.onyx.interactors.scanner.impl
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.MaxCardinalityExceededException
 import com.onyx.interactors.record.data.Reference
+import com.onyx.interactors.record.descriptorForReference
 import com.onyx.exception.OnyxException
 import com.onyx.extension.toManagedEntity
 import com.onyx.interactors.scanner.TableScanner
 import com.onyx.interactors.index.IndexInteractor
 import com.onyx.interactors.query.impl.collectors.IndexedEntityQueryCollector
+import com.onyx.lang.map.SortedLongNullMap
+import com.onyx.persistence.annotations.values.IndexType
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
@@ -83,7 +86,7 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
      */
     @Throws(OnyxException::class)
     override fun scan(existingValues: Set<Reference>): MutableSet<Reference> {
-        val context = Contexts.get(contextId)!!
+        scanExistingPostings(existingValues)?.let { return it }
         val matching = scan(true)
         return existingValues.filterTo(HashSet()) {
             if(matching.contains(it)) {
@@ -92,6 +95,46 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
             }
             return@filterTo false
         }
+    }
+
+    /** Probe a small incoming domain instead of enumerating a broad equality posting list. */
+    protected fun scanExistingPostings(existingValues: Set<Reference>): MutableSet<Reference>? {
+        if (isBetween || criteria.isNot || criteria.flip || criteria.isOr ||
+            criteria.operator != QueryCriteriaOperator.EQUAL && criteria.operator != QueryCriteriaOperator.IN
+        ) return null
+        val index = descriptor.indexes[criteria.attribute] ?: return null
+        val type = index.type
+        if (index.indexType != IndexType.DEFAULT || type.isArray ||
+            Iterable::class.java.isAssignableFrom(type) || Map::class.java.isAssignableFrom(type) ||
+            Pair::class.java.isAssignableFrom(type)
+        ) return null
+        val values = (criteria.value as? List<*> ?: listOf(criteria.value)).distinct()
+        if (existingValues.isEmpty() || values.isEmpty()) return hashSetOf()
+        // Without selectivity statistics, cap point work so broad intersections can still scan.
+        if (existingValues.size.toLong() * values.size > MAX_EXISTING_POSTING_PROBES) return null
+
+        val matching = HashSet<Reference>()
+        val indexesByPartition = HashMap<Long, IndexInteractor>()
+        try {
+            for (reference in existingValues) {
+                if (query.isTerminated) return hashSetOf()
+                val interactor = indexesByPartition.getOrPut(reference.partition) {
+                    val source = context.descriptorForReference(reference, query.entityType!!, descriptor)
+                    context.getIndexInteractor(source.indexes.getValue(requireNotNull(criteria.attribute)))
+                }
+                if (values.any { interactor.containsExactPosting(it, reference.reference) }) {
+                    matching.add(reference)
+                    if (matching.size > context.maxCardinality) {
+                        throw MaxCardinalityExceededException(context.maxCardinality)
+                    }
+                }
+            }
+        } catch (_: UnsupportedOperationException) {
+            // Finish all probes before collection so custom indexes can retry without duplicates.
+            return null
+        }
+        matching.forEach(::collectReference)
+        return if (collector == null) matching else hashSetOf()
     }
 
     /** Exact entity pages can collect known matches without decoding discarded records. */
@@ -155,7 +198,9 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
     }
 
     private fun collectScores(matches: Map<Long, *>, partition: Long) {
-        if (matches.isEmpty()) return
+        // Native scalar snapshots contain only implicit null values; do not allocate entries
+        // merely to discover that none of their postings carry a search score.
+        if (matches is SortedLongNullMap || matches.isEmpty()) return
 
         val numericScores = matches.entries.mapNotNull { (recordId, rawScore) ->
             val score = (rawScore as? Number)?.toFloat() ?: return@mapNotNull null
@@ -174,5 +219,9 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
             }
             query.fullTextScores = scores
         }
+    }
+
+    private companion object {
+        const val MAX_EXISTING_POSTING_PROBES = 4_096L
     }
 }

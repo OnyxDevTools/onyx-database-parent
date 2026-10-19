@@ -113,13 +113,14 @@ class IndexedAndQueryPlannerIntegrationTest {
     }
 
     @Test
-    fun `identifier IN beyond the planning bound retains the original index path`() {
+    fun `identifier IN beyond the planning bound probes the resolved candidate domain`() {
         val query = query(idIn((1L..1025L).toList()).and(broadIndex()))
         context.resetWork()
         assertEquals((1L..127L).toList(), execute(automatic, query))
         assertEquals(127, query.resultsCount)
-        assertEquals(1, context.indexLookups)
-        assertEquals(127L, context.materializedPostings)
+        assertEquals(0, context.indexLookups)
+        assertEquals(0L, context.materializedPostings)
+        assertEquals(128, context.pointProbes)
         assertEquals(0, context.fullTableScans)
         assertEquals(0, context.referenceFilterScans)
     }
@@ -220,11 +221,12 @@ class IndexedAndQueryPlannerIntegrationTest {
     fun `mixed type indexed equality preserves native index coercion`() {
         val query = query(idEquals(64L).and(QueryCriteria("index", QueryCriteriaOperator.EQUAL, 1.5)))
         context.resetWork()
-        // Mixed operand types retain the original index normalization path.
+        // Candidate probes retain native index normalization for mixed operand types.
         assertEquals(listOf(64L), execute(automatic, query))
         assertEquals(1, query.resultsCount)
-        assertEquals(1, context.indexLookups)
-        assertEquals(127L, context.materializedPostings)
+        assertEquals(0, context.indexLookups)
+        assertEquals(0L, context.materializedPostings)
+        assertEquals(1, context.pointProbes)
         assertEquals(0, context.fullTableScans)
         assertEquals(0, context.referenceFilterScans)
     }
@@ -243,7 +245,8 @@ class IndexedAndQueryPlannerIntegrationTest {
             context.resetWork()
             assertEquals(emptyList(), interactor.getReferencesForQuery<NullIndexEntity>(query).results.toList())
             assertEquals(0, query.resultsCount)
-            assertEquals(1, context.indexLookups)
+            assertEquals(if (leaf.operator == QueryCriteriaOperator.EQUAL) 0 else 1, context.indexLookups)
+            assertEquals(if (leaf.operator == QueryCriteriaOperator.EQUAL) 1 else 0, context.pointProbes)
             assertEquals(0, context.fullTableScans)
             assertEquals(0, context.referenceFilterScans)
         }
@@ -266,8 +269,9 @@ class IndexedAndQueryPlannerIntegrationTest {
         assertEquals(listOf(1L), results.map { (it as IndexedAndDateEntity).id })
         assertTrue((results.single() as IndexedAndDateEntity).recordedAt is Timestamp)
         assertEquals(1, query.resultsCount)
-        assertEquals(1, context.indexLookups)
-        assertEquals(1L, context.materializedPostings)
+        assertEquals(0, context.indexLookups)
+        assertEquals(0L, context.materializedPostings)
+        assertEquals(1, context.pointProbes)
         assertEquals(0, context.fullTableScans)
         assertEquals(0, context.referenceFilterScans)
 

@@ -42,14 +42,14 @@ abstract class BaseQueryCollector<T>(
 
     override var results: MutableCollection<T> = ArrayList()
 
-    protected fun createResults(resultComparator: () -> Comparator<T>): MutableCollection<T> =
+    protected fun createResults(prepareKeys: (T) -> Array<Any?>): MutableCollection<T> =
         if (query.shouldSortResults()) {
             val retainedRows = if (query.maxResults > 0) {
                 query.firstRow.coerceAtLeast(0).toLong() + query.maxResults.toLong()
             } else {
                 null
             }
-            OrderedQueryResults(resultComparator(), retainedRows)
+            OrderedQueryResults(comparator::compareKeys, retainedRows, prepareKeys)
         } else {
             ArrayList()
         }

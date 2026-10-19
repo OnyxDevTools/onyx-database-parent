@@ -19,7 +19,7 @@ class GroupFunctionQueryCollector(
 ) : BaseQueryCollector<Map<String, Any?>>(query, context, descriptor) {
 
     // Override to define sort comparator
-    override var results: MutableCollection<Map<String, Any?>> = createResults { MapComparator(comparator) }
+    override var results: MutableCollection<Map<String, Any?>> = createResults { comparator.sortKeys(it) }
 
     // Group results
     private val groups = OptimisticLockingMap(HashMap<List<Any?>, MutableMap<String, Any?>>())

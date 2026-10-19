@@ -1,6 +1,7 @@
 package com.onyx.lang.map
 
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
@@ -46,6 +47,54 @@ class ConcurrentClockCacheTest {
         cache[4] = "fourth"
         cache[5] = "fifth"
         assertEquals(mapOf(5 to "fifth"), cache)
+    }
+
+    @Test
+    fun `putIfAbsent preserves existing values and gives them a second chance`() {
+        val cache = ConcurrentClockCache<Int, String>(3)
+        for (id in 1..3) assertNull(cache.putIfAbsent(id, "value-$id"))
+        assertNull(cache.putIfAbsent(4, "value-4"))
+        assertEquals(setOf(2, 3, 4), cache.keys)
+        assertEquals("value-2", cache.putIfAbsent(2, "replacement"))
+        assertNull(cache.putIfAbsent(5, "value-5"))
+        assertEquals(setOf(2, 4, 5), cache.keys)
+        assertEquals("value-2", cache[2])
+        assertEquals(3, cache.size)
+    }
+
+    @Test
+    fun `racing putIfAbsent calls publish one winner while evicting older keys`() {
+        val workerCount = 8
+        val rounds = 100
+        val cache = ConcurrentClockCache<Int, String>(1)
+        val executor = Executors.newFixedThreadPool(workerCount)
+        val barrier = CyclicBarrier(workerCount)
+        try {
+            val workers = List(workerCount) { worker -> executor.submit<List<String?>> {
+                List(rounds) { round ->
+                    barrier.await(10, TimeUnit.SECONDS)
+                    val previous = cache.putIfAbsent(round, "worker-$worker")
+                    assertEquals(1, cache.size)
+                    // Every contender must finish before the next key can evict this round's winner.
+                    barrier.await(10, TimeUnit.SECONDS)
+                    previous
+                }
+            } }
+            val results = workers.map { it.get(30, TimeUnit.SECONDS) }
+            repeat(rounds) { round ->
+                val winners = results.indices.filter { results[it][round] == null }
+                assertEquals(1, winners.size, "round $round")
+                val winner = winners.single()
+                results.indices.filter { it != winner }.forEach { worker ->
+                    assertEquals("worker-$winner", results[worker][round], "round $round")
+                }
+            }
+            val finalWinner = results.indices.single { results[it].last() == null }
+            assertEquals(mapOf(rounds - 1 to "worker-$finalWinner"), cache)
+        } finally {
+            executor.shutdownNow()
+            executor.awaitTermination(5, TimeUnit.SECONDS)
+        }
     }
 
     @Test

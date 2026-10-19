@@ -159,7 +159,7 @@ class SecondaryIndexAndQueryPlannerIntegrationTest {
     }
 
     @Test
-    fun `bounded prefixes never truncate an exact query when every index is broad`() {
+    fun `broad indexes retain exact results by materializing the root and probing its candidates`() {
         val criteria = eq("status", 1).and(eq("bucket", 0))
         val query = query(criteria)
         context.resetWork()
@@ -167,14 +167,14 @@ class SecondaryIndexAndQueryPlannerIntegrationTest {
         assertEquals((1L..256L).filter { it % 32L != 0L }, actual)
         assertEquals(248, query.resultsCount)
         assertEquals(130L, context.postingVisits)
-        assertEquals(0, context.pointProbes)
-        assertEquals(2, context.indexLookups)
-        assertEquals(500L, context.materializedPostings)
+        assertEquals(252, context.pointProbes)
+        assertEquals(1, context.indexLookups)
+        assertEquals(252L, context.materializedPostings)
         assertEquals(actual, execute(fullTable, query(eq("status", 1).and(eq("bucket", 0)))))
     }
 
     @Test
-    fun `exactly 64 candidates qualify but 65 fall back even for a one row page`() {
+    fun `64 candidates seed directly while 65 use root enumeration and residual probes`() {
         for (candidateCount in listOf(64, 65)) {
             for (identifier in 1L..256L) {
                 manager.saveEntity<IManagedEntity>(SecondaryAndEntity().apply {
@@ -192,8 +192,9 @@ class SecondaryIndexAndQueryPlannerIntegrationTest {
                 assertEquals(64, context.pointProbes)
             } else {
                 assertEquals(130L, context.postingVisits)
-                assertEquals(2, context.indexLookups)
-                assertEquals(0, context.pointProbes)
+                assertEquals(1, context.indexLookups)
+                assertEquals(256L, context.materializedPostings)
+                assertEquals(256, context.pointProbes)
             }
         }
     }
@@ -238,20 +239,20 @@ class SecondaryIndexAndQueryPlannerIntegrationTest {
     }
 
     @Test
-    fun `OR negated groups ranges IN and residual predicates retain their existing paths`() {
-        val cases = listOf<() -> QueryCriteria>(
-            { eq("status", 1).or(eq("bucket", 7)) },
-            { conjunction().not() },
-            { eq("status", 1).and(QueryCriteria("bucket", QueryCriteriaOperator.GREATER_THAN, 0)) },
-            { eq("status", 1).and(QueryCriteria("bucket", QueryCriteriaOperator.IN, listOf(7, 7))) },
-            { conjunction().and(eq("residual", "present")) }
+    fun `fallback predicates retain semantics and eligible residual equalities use candidate probes`() {
+        val cases = listOf<Pair<Int, () -> QueryCriteria>>(
+            0 to { eq("status", 1).or(eq("bucket", 7)) },
+            0 to { conjunction().not() },
+            0 to { eq("status", 1).and(QueryCriteria("bucket", QueryCriteriaOperator.GREATER_THAN, 0)) },
+            252 to { eq("status", 1).and(QueryCriteria("bucket", QueryCriteriaOperator.IN, listOf(7, 7))) },
+            252 to { conjunction().and(eq("residual", "present")) }
         )
-        for (criteria in cases) {
+        for ((expectedProbes, criteria) in cases) {
             context.resetWork()
             val query = query(criteria())
             val actual = execute(automatic, query)
             assertEquals(0, context.streamingLookups)
-            assertEquals(0, context.pointProbes)
+            assertEquals(expectedProbes, context.pointProbes)
             val referenceQuery = query(criteria())
             assertEquals(execute(fullTable, referenceQuery), actual)
             assertEquals(referenceQuery.resultsCount, query.resultsCount)
@@ -313,7 +314,7 @@ class SecondaryIndexAndQueryPlannerIntegrationTest {
     }
 
     @Test
-    fun `a broad later partition discards the partial plan and falls back for the entire query`() {
+    fun `a broad later partition discards the partial seed and probes candidates across all partitions`() {
         savePartitions(broadSecondPartition = true)
         val descriptor = context.getDescriptorForEntity(SecondaryAndPartitionEntity::class.java, "")
         val indexed = DefaultQueryInteractor(descriptor, manager, context)
@@ -322,7 +323,7 @@ class SecondaryIndexAndQueryPlannerIntegrationTest {
         val expected = listOf(7L to 4L) + (1L..100L).map { 8L to it }
         assertEquals(expected, executePartition(indexed, query))
         assertEquals(expected.size, query.resultsCount)
-        assertEquals(4, context.indexLookups)
+        assertEquals(2, context.indexLookups)
         assertEquals(0, context.fullTableScans)
     }
 

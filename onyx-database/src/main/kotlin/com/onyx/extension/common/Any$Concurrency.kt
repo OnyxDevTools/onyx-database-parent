@@ -4,7 +4,14 @@ import java.util.concurrent.*
 
 typealias Block = Any
 
-val defaultPool: ExecutorService = ForkJoinPool(Runtime.getRuntime().availableProcessors()*200)
+// Partition scans, sequence producers and listener callbacks can block and submit
+// other async work. Keep this executor elastic, with idle workers parked and
+// expired, and isolate CPU row collection in its own bounded executor. A fixed
+// shared pool can starve nested work; virtual threads can pin their carriers in
+// listener callbacks holding Java monitors on our JDK 23 runtime.
+val defaultPool: ExecutorService = Executors.newCachedThreadPool(
+    Thread.ofPlatform().daemon(true).name("onyx-async-", 0).factory()
+)
 
 /**
  * Run a job using a single thread executor.  This will run a daemon thread and pause between iterations to save CPU
@@ -28,7 +35,7 @@ inline fun runJob(interval:Long, unit:TimeUnit, crossinline block: () -> Unit): 
 }
 
 /**
- * Run a block in background on the default pool.  The default pool should be implemented as a ForkJoinPool
+ * Run a block in the background on an elastic daemon pool, allowing nested blocking async work.
  *
  * @param block Block expression to execute
  * @since 2.0.0
@@ -36,7 +43,7 @@ inline fun runJob(interval:Long, unit:TimeUnit, crossinline block: () -> Unit): 
 inline fun <T> async(crossinline block: () -> T): Future<T> = defaultPool.submit<T> { block.invoke() }
 
 /**
- * Run a block in background on the default pool.  The default pool should be implemented as a ForkJoinPool
+ * Run a block in the background on the supplied executor.
  *
  * @param block Block expression to execute
  * @since 2.0.0
@@ -60,22 +67,13 @@ inline fun <A, B>Collection<A>.parallelMap(parallel:Boolean = true, crossinline 
     }
 }*/
 
-inline fun <A> Collection<A>.parallelForEach(crossinline block: (A) -> Unit) {
-    val futures:MutableList<Future<Unit>> = ArrayList()
-    this.forEach {
-        futures.add(async {
-            block.invoke(it)
-        })
-
-        if(futures.size > 100) {
-            futures.forEach {
-                it.get()
-            }
-            futures.clear()
-        }
-    }
-    futures.forEach { it.get() }
-}
+/**
+ * Process rows in chunks using a bounded CPU executor. The caller also processes
+ * rows; nested invocations or a busy executor make progress on the calling thread.
+ * Every started callback finishes before this method returns or throws.
+ */
+inline fun <A> Collection<A>.parallelForEach(crossinline block: (A) -> Unit) =
+    processRows(this) { block(it) }
 
 
 /**

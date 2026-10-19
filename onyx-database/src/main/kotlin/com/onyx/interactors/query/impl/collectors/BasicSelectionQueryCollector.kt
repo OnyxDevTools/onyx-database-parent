@@ -15,7 +15,7 @@ open class BasicSelectionQueryCollector(
     descriptor: EntityDescriptor
 ) : BaseQueryCollector<Map<String, Any?>>(query, context, descriptor) {
 
-    override var results: MutableCollection<Map<String, Any?>> = createResults { MapComparator(comparator) }
+    override var results: MutableCollection<Map<String, Any?>> = createResults { comparator.sortKeys(it) }
 
     // Track uniqueness independently of the retained page and of equal ORDER BY keys.
     private val distinctResults = if (query.isDistinct) HashSet<Map<String, Any?>>() else null

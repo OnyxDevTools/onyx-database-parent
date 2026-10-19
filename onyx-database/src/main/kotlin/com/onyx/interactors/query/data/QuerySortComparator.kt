@@ -104,6 +104,34 @@ class QuerySortComparator(query: Query, private val orderBy: Array<QueryOrder>, 
         return 0
     }
 
+    /** Resolve getters once on the collecting worker, before its result lock is acquired. */
+    internal fun sortKeys(entity: IManagedEntity): Array<Any?> {
+        val context = Contexts.get(contextId)!!
+        return Array(scanObjects.size) { getAttribute(scanObjects[it], entity, context) }
+    }
+
+    /** Selection rows have already materialized their computed attributes. */
+    internal fun sortKeys(entity: Map<String, Any?>): Array<Any?> =
+        Array(orderBy.size) { entity[orderBy[it].attribute] }
+
+    /** Compares captured values without hydrating records or invoking their getters. */
+    internal fun compareKeys(first: Array<Any?>, second: Array<Any?>): Int {
+        orderBy.forEachIndexed { index, order ->
+            var comparison = 0
+            catchAll {
+                comparison = when {
+                    second[index].compare(first[index], QueryCriteriaOperator.GREATER_THAN) ->
+                        if (order.isAscending) 1 else -1
+                    second[index].compare(first[index], QueryCriteriaOperator.LESS_THAN) ->
+                        if (order.isAscending) -1 else 1
+                    else -> 0
+                }
+            }
+            if (comparison != 0) return comparison
+        }
+        return 0
+    }
+
 
     /**
      * Get an attribute value

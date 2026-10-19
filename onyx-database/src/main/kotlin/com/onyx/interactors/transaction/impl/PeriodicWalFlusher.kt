@@ -26,11 +26,11 @@ internal object PeriodicWalFlusher {
     }
 
     fun unregister(target: PeriodicWalForceTarget) {
-        val workerToWake = synchronized(lifecycleLock) {
+        synchronized(lifecycleLock) {
             targets.remove(target)
-            worker?.takeIf { targets.isEmpty() }
         }
-        workerToWake?.interrupt()
+        // Do not interrupt an in-flight force: interruptible FileChannel I/O
+        // can close its channel. An idle worker exits after the 20 ms sleep.
     }
 
     internal fun registeredTargetCount(): Int = synchronized(lifecycleLock) {

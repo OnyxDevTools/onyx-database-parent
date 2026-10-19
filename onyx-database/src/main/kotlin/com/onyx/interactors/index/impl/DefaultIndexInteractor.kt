@@ -13,12 +13,12 @@ import com.onyx.extension.common.forceCompare
 import com.onyx.extension.common.long
 import com.onyx.extension.get
 import com.onyx.interactors.index.IndexInteractor
+import com.onyx.lang.map.SortedLongNullMap
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.QueryCriteriaOperator
 import java.lang.ref.WeakReference
 import java.util.Date
-import java.util.HashMap
 import java.util.HashSet
 
 /** Controls the persistent, sorted secondary index for one entity attribute. */
@@ -114,11 +114,9 @@ open class DefaultIndexInteractor @Throws(OnyxException::class) constructor(
     override fun findAll(indexValue: Any?): Map<Long, Any?> {
         if (indexValue == null) return emptyMap()
 
-        val matches = HashMap<Long, Any?>()
-        visitReferences(indexValue, Long.MIN_VALUE, true, indexValue, Long.MAX_VALUE, true) {
-            matches[it] = null
-        }
-        return matches
+        val matches = SortedLongNullMap.Builder()
+        visitReferences(indexValue, Long.MIN_VALUE, true, indexValue, Long.MAX_VALUE, true, matches::add)
+        return matches.build()
     }
 
     override fun containsExactPosting(indexValue: Any?, recordId: Long): Boolean =

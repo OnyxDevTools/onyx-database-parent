@@ -673,6 +673,12 @@ class DefaultQueryInteractor internal constructor(
             .toCollection(LinkedHashSet())
     }
 
+    private fun Query.hasPreorderedHnswAdmission(): Boolean {
+        val root = criteria ?: return false
+        return root.operator == QueryCriteriaOperator.HNSW_CANDIDATES &&
+            root.subCriteria.isEmpty() && !root.isNot && !root.flip && !root.isOr
+    }
+
     private fun Query.usesImplicitSearchScoreOrder(): Boolean =
         queryOrders.isNullOrEmpty() && getAllCriteria().any {
             it.operator in setOf(

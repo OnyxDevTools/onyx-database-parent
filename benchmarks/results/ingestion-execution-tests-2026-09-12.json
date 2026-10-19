@@ -1,0 +1,155 @@
+{
+  "totals": {
+    "tests": 165,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 4
+  },
+  "passed": 161,
+  "suites": [
+    {
+      "name": "com.onyx.extension.common.ParallelRowProcessorTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.225
+    },
+    {
+      "name": "transaction.DefaultTransactionInteractorReadTest",
+      "tests": 26,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.222
+    },
+    {
+      "name": "transaction.DefaultTransactionInteractorWriteTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.016
+    },
+    {
+      "name": "transaction.DefaultTransactionStoreTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.153
+    },
+    {
+      "name": "transaction.MemoryMappedTransactionStoreTest",
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.863
+    },
+    {
+      "name": "database.query.DeleteQueryTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.115
+    },
+    {
+      "name": "database.query.IndexCandidateProbeIntegrationTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.349
+    },
+    {
+      "name": "database.query.LazyQueryTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.043
+    },
+    {
+      "name": "database.query.MembershipQueryIntegrationTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.06
+    },
+    {
+      "name": "database.query.OrderedQueryPaginationTest",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.227
+    },
+    {
+      "name": "database.query.QueryCacheReferenceIntegrationTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.134
+    },
+    {
+      "name": "database.query.QueryCountTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.028
+    },
+    {
+      "name": "database.query.QueryListenerTest",
+      "tests": 39,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 4,
+      "time": 0.479
+    },
+    {
+      "name": "database.query.SelectQueryTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.044
+    },
+    {
+      "name": "database.query.SubQueryQueryTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.035
+    },
+    {
+      "name": "database.query.UpdateQueryTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.012
+    },
+    {
+      "name": "database.relationship.RelationshipConcurrencyTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 1.277
+    },
+    {
+      "name": "com.onyx.interactors.transaction.impl.PeriodicWalFlusherTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.042
+    }
+  ]
+}

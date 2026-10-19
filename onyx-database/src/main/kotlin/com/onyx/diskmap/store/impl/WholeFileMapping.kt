@@ -7,20 +7,22 @@ import java.nio.channels.FileChannel
 import kotlin.math.max
 
 /**
- * A single JDK 22 memory mapping that grows with the file.
+ * A JDK 22 memory mapping that grows with the file.
  *
- * The owner must serialize [ensureCapacity], [write], [force], and [close]
- * against all other operations. Reads may run concurrently while the mapping
- * is stable.
+ * The owner must serialize [ensureCapacity], [write], and [close] against
+ * other reads and writes. Reads may run concurrently while the mapping is
+ * stable. [force] may run concurrently with all operations.
  *
- * Only WAL owners enable forcing. Other mappings use operating-system
- * writeback and do not track dirty ranges.
+ * WAL mappings retain replaced arenas until close, so growth never waits for
+ * an active force. Other mappings use operating-system writeback and release
+ * replaced arenas immediately.
  */
-internal class WholeFileMapping(
+internal class WholeFileMapping @JvmOverloads constructor(
     private val channel: FileChannel,
     private val growthQuantum: Long,
     initialRequiredCapacity: Long,
-    private val forceEnabled: Boolean = false
+    private val forceEnabled: Boolean = false,
+    private val mappedForce: (MemorySegment) -> Unit = { it.force() }
 ) : AutoCloseable {
 
     private data class Mapping(
@@ -29,11 +31,14 @@ internal class WholeFileMapping(
         val capacity: Long
     )
 
+    @Volatile
     private var mapping = createMapping(capacityFor(0L, initialRequiredCapacity))
 
-    /* Writes are serialized by the owning store. */
-    private var dirtyStart = Long.MAX_VALUE
-    private var dirtyEndExclusive = 0L
+    /* Growth and close are serialized by the owning store. */
+    private val retiredMappings = ArrayList<Mapping>()
+    private val forceLock = Any()
+    private var metadataForcedMapping: Mapping? = null
+    private var closed = false
 
     val capacity: Long
         get() = mapping.capacity
@@ -50,10 +55,7 @@ internal class WholeFileMapping(
         val previous = mapping
 
         try {
-            // WAL mappings establish a durability boundary before unmapping.
-            // Other mappings leave writeback to the operating system.
-            force()
-            previous.arena.close()
+            if (forceEnabled) retiredMappings.add(previous) else previous.arena.close()
             mapping = replacement
         } catch (failure: Throwable) {
             runCatching { replacement.arena.close() }
@@ -96,8 +98,6 @@ internal class WholeFileMapping(
         val endExclusive = Math.addExact(filePosition, byteCount.toLong())
         ensureCapacity(endExclusive)
 
-        // WALs include even a partial copy in their next durability barrier.
-        if (forceEnabled) markDirty(filePosition, endExclusive)
         MemorySegment.copy(
             MemorySegment.ofBuffer(source),
             0L,
@@ -111,36 +111,40 @@ internal class WholeFileMapping(
 
     fun force() {
         if (!forceEnabled) return
-        if (dirtyStart < dirtyEndExclusive) {
-            mapping.memory
-                .asSlice(dirtyStart, dirtyEndExclusive - dirtyStart)
-                .force()
+        synchronized(forceLock) {
+            if (!closed) forceCurrentMapping()
         }
-
-        dirtyStart = Long.MAX_VALUE
-        dirtyEndExclusive = 0L
     }
 
-    override fun close() {
+    override fun close(): Unit = synchronized(forceLock) {
+        if (closed) return
+        closed = true
         var failure: Throwable? = null
         try {
-            force()
+            if (forceEnabled) forceCurrentMapping()
         } catch (current: Throwable) {
             failure = current
         }
 
-        try {
-            mapping.arena.close()
-        } catch (current: Throwable) {
-            if (failure == null) failure = current else failure.addSuppressed(current)
+        for (retired in retiredMappings + mapping) {
+            try {
+                retired.arena.close()
+            } catch (current: Throwable) {
+                if (failure == null) failure = current else failure.addSuppressed(current)
+            }
         }
+        retiredMappings.clear()
 
         failure?.let { throw it }
     }
 
-    private fun markDirty(start: Long, endExclusive: Long) {
-        if (start < dirtyStart) dirtyStart = start
-        if (endExclusive > dirtyEndExclusive) dirtyEndExclusive = endExclusive
+    private fun forceCurrentMapping() {
+        val current = mapping
+        mappedForce(current.memory)
+        if (metadataForcedMapping !== current) {
+            channel.force(true)
+            metadataForcedMapping = current
+        }
     }
 
     private fun createMapping(capacity: Long): Mapping {
@@ -152,9 +156,6 @@ internal class WholeFileMapping(
                 capacity,
                 arena
             )
-            if (forceEnabled) {
-                channel.force(true)
-            }
             return Mapping(
                 arena = arena,
                 memory = memory,

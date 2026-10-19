@@ -12,6 +12,7 @@ import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import entities.AllAttributeEntity
 import org.junit.Test
 import java.io.IOException
+import java.lang.foreign.Arena
 import java.nio.ByteBuffer
 import java.nio.channels.ClosedChannelException
 import java.nio.channels.FileChannel
@@ -30,6 +31,75 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class MemoryMappedTransactionStoreTest {
+
+    @Test
+    fun reservedWalCapacityCoversNormalSegmentAndCrossingRecordWithoutRemapping() {
+        val directory = Files.createTempDirectory("onyx-wal-reserved-capacity")
+        val store = MemoryMappedTransactionStore(directory.toString())
+        val walPath = directory.resolve("wal/0.wal")
+        val payload = ByteArray(3 * 1024 * 1024 + 17) { (it * 31).toByte() }
+        val frame = walRecord(payload)
+
+        try {
+            val channel = store.getTransactionFile()
+            val reservedLength = Files.size(walPath)
+            assertTrue(reservedLength >= 20L * 1024 * 1024)
+            assertEquals(0L, channel.size())
+
+            repeat(7) { ordinal ->
+                val header = ByteBuffer.wrap(frame, 0, 5).slice()
+                val data = ByteBuffer.wrap(payload)
+                assertEquals(frame.size.toLong(), channel.write(arrayOf(header, data)))
+                assertEquals((ordinal + 1L) * frame.size, channel.position())
+                assertEquals(channel.position(), channel.size())
+                assertEquals(reservedLength, Files.size(walPath))
+            }
+            // Rotation follows logical bytes once background preparation is ready.
+            val nextChannel = awaitRotation(store, channel)
+            assertTrue(nextChannel !== channel)
+            assertEquals(0L, nextChannel.size())
+            val nextFrame = walRecord(byteArrayOf(7, 8, 9))
+            nextChannel.write(ByteBuffer.wrap(nextFrame))
+            store.close()
+
+            val sealedBytes = Files.readAllBytes(walPath).decompressLz77()
+            assertEquals(frame.size * 7, sealedBytes.size)
+            repeat(7) { ordinal ->
+                assertContentEquals(frame, sealedBytes.copyOfRange(ordinal * frame.size, (ordinal + 1) * frame.size))
+            }
+            assertContentEquals(nextFrame, Files.readAllBytes(directory.resolve("wal/1.wal")))
+        } finally {
+            store.close()
+            deleteDirectory(directory)
+        }
+    }
+
+    @Test
+    fun gatheringFailurePreservesPositionAfterEarlierBufferAndAllowsNextAppend() {
+        val directory = Files.createTempDirectory("onyx-wal-gathering-progress")
+        val store = MemoryMappedTransactionStore(directory.toString())
+        val arena = Arena.ofShared()
+        val invalidSource = arena.allocate(8).asByteBuffer()
+        arena.close()
+
+        try {
+            val channel = store.getTransactionFile()
+            val prefix = byteArrayOf(1, 2, 3, 4, 5)
+            assertFailsWith<IllegalStateException> {
+                channel.write(arrayOf(ByteBuffer.wrap(prefix), invalidSource))
+            }
+            assertEquals(prefix.size.toLong(), channel.position())
+            assertEquals(prefix.size.toLong(), channel.size())
+            val suffix = byteArrayOf(6, 7)
+            channel.write(arrayOf(ByteBuffer.allocate(0), ByteBuffer.wrap(suffix)))
+            assertEquals((prefix.size + suffix.size).toLong(), channel.position())
+            store.close()
+            assertContentEquals(prefix + suffix, Files.readAllBytes(directory.resolve("wal/0.wal")))
+        } finally {
+            store.close()
+            deleteDirectory(directory)
+        }
+    }
 
     @Test
     fun memoryMappedStoreTypeRebuildsTransactionStore() {
@@ -100,7 +170,7 @@ class MemoryMappedTransactionStoreTest {
             val transactionFile = transactionStore.getTransactionFile()
             transactionFile.write(ByteBuffer.wrap(ByteArray(256) { 3 }))
 
-            val rotatedTransactionFile = transactionStore.getTransactionFile()
+            val rotatedTransactionFile = awaitRotation(transactionStore, transactionFile)
 
             assertTrue(transactionFile !== rotatedTransactionFile)
             transactionStore.close()
@@ -396,7 +466,7 @@ class MemoryMappedTransactionStoreTest {
             firstWalFile.write(ByteBuffer.wrap(ByteArray(256) { 4 }))
 
             val rotation = rotationExecutor.submit<FileChannel> {
-                transactionStore.getTransactionFile()
+                awaitRotation(transactionStore, firstWalFile)
             }
             val secondWalFile = rotation.get(5, TimeUnit.SECONDS)
 
@@ -446,8 +516,9 @@ class MemoryMappedTransactionStoreTest {
         }
 
         try {
-            transactionStore.getTransactionFile().write(ByteBuffer.wrap(ByteArray(256) { 8 }))
-            transactionStore.getTransactionFile()
+            val firstWal = transactionStore.getTransactionFile()
+            firstWal.write(ByteBuffer.wrap(ByteArray(256) { 8 }))
+            awaitRotation(transactionStore, firstWal)
 
             assertTrue(finalizationFailed.await(5, TimeUnit.SECONDS))
             assertFailsWith<com.onyx.exception.TransactionException> {
@@ -471,8 +542,9 @@ class MemoryMappedTransactionStoreTest {
         }
 
         try {
-            transactionStore.getTransactionFile().write(ByteBuffer.wrap(ByteArray(256) { 12 }))
-            transactionStore.getTransactionFile()
+            val firstWal = transactionStore.getTransactionFile()
+            firstWal.write(ByteBuffer.wrap(ByteArray(256) { 12 }))
+            awaitRotation(transactionStore, firstWal)
 
             assertTrue(compressionFailed.await(5, TimeUnit.SECONDS))
             assertFailsWith<com.onyx.exception.TransactionException> {
@@ -532,6 +604,16 @@ class MemoryMappedTransactionStoreTest {
             sourceFactory?.close()
             recoveredFactory?.close()
             deleteDirectory(tempDirectory)
+        }
+    }
+
+    private fun awaitRotation(store: MemoryMappedTransactionStore, previous: FileChannel): FileChannel {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (true) {
+            val current = store.getTransactionFile()
+            if (current !== previous) return current
+            check(System.nanoTime() < deadline) { "Timed out waiting for prepared WAL" }
+            Thread.sleep(1)
         }
     }
 

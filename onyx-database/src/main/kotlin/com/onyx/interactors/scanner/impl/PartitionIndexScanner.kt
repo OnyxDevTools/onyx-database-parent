@@ -27,6 +27,7 @@ class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: 
 
     override fun scan(existingValues: Set<Reference>): MutableSet<Reference> {
         if(query.partition === QueryPartitionMode.ALL) {
+            scanExistingPostings(existingValues)?.let { return it }
             val context = Contexts.get(contextId)!!
             val units = ArrayList<Future<Set<Reference>>>()
             val entries = context.getAllPartitions(query.entityType!!)
