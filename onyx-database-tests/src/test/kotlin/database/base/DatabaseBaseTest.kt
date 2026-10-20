@@ -16,6 +16,7 @@ import org.junit.BeforeClass
 import org.junit.runners.Parameterized
 import java.io.File
 import java.math.BigInteger
+import java.net.ServerSocket
 import java.security.SecureRandom
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
@@ -72,7 +73,8 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
         const val EMBEDDED_DATABASE_LOCATION = "C:/Sandbox/Onyx/Tests/embeddedOnyx.oxd"
         const val REMOTE_DATABASE_LOCATION = "C:/Sandbox/Onyx/Tests/remoteOnyx.oxd"
         const val WEB_DATABASE_LOCATION = "C:/Sandbox/Onyx/Tests/webOnyx.oxd"
-        const val REMOTE_DATABASE_ENDPOINT = "onx://localhost:8097"
+        val REMOTE_DATABASE_ENDPOINT: String
+            get() = "onx://localhost:${checkNotNull(remoteServer) { "Test server has not started" }.port}"
 
         /**
          * Delete all databases prior to running unit test
@@ -94,15 +96,16 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
 
         private fun startRemoteDatabase() {
             if(remoteServer == null) {
-                remoteServer = DatabaseServer(REMOTE_DATABASE_LOCATION)
-                remoteServer!!.port = 8097
-/*                remoteServer!!.sslKeystoreFilePath = "securesocket.jks"
-                remoteServer!!.sslTrustStoreFilePath = "securesocket.jks"
-                remoteServer!!.sslKeystorePassword = "inc0rrect"
-                remoteServer!!.sslTrustStorePassword = "mu\$tch8ng3"
-                remoteServer!!.sslStorePassword = "mu\$tch8ng3"*/
-                remoteServer!!.setCredentials("admin", "admin")
-                remoteServer!!.start()
+                val server = DatabaseServer(REMOTE_DATABASE_LOCATION)
+                server.port = ServerSocket(0).use { it.localPort }
+                server.setCredentials("admin", "admin")
+                try {
+                    server.start()
+                    remoteServer = server
+                } catch (failure: Throwable) {
+                    runCatching { server.stop() }.exceptionOrNull()?.let(failure::addSuppressed)
+                    throw failure
+                }
             }
         }
 
