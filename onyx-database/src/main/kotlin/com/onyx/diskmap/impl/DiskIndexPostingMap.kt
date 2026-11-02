@@ -37,7 +37,7 @@ class DiskIndexPostingMap @JvmOverloads constructor(
     private val dataStoreReference: WeakReference<Store>,
     header: Header,
     override val valueType: Class<*>,
-    pageCacheCapacity: Int = Integer.getInteger("onyx.index.pageCacheCapacity", PAGE_CACHE_CAPACITY)
+    pageCacheCapacity: Int = DEFAULT_PAGE_CACHE_CAPACITY
 ) : IndexPostingMap {
 
     private val nodeStore: Store
@@ -55,8 +55,8 @@ class DiskIndexPostingMap @JvmOverloads constructor(
         it.recordCount = AtomicLong(header.recordCount.get())
     }
 
-    // Retain decoded pages across GC; the entry limit applies to each posting index.
-    private val pageCache = ConcurrentClockCache<Long, IndexPostingPage>(pageCacheCapacity)
+    // Retain decoded pages across GC within one budget shared by every posting index.
+    private val pageCache = ConcurrentClockCache<Long, IndexPostingPage>(pageCacheCapacity, PAGE_CACHE_SHARED_CAPACITY)
     private val objectTokensByValue = WeakHashMap<Any, Long>()
     private val objectValuesByToken = ConcurrentWeakValueMap<Long, Any>()
     private val pathPool = ThreadLocal.withInitial { ArrayDeque<SearchPath>(2) }
@@ -1029,6 +1029,8 @@ class DiskIndexPostingMap @JvmOverloads constructor(
 
     private companion object {
         const val PAGE_CACHE_CAPACITY = 32_768
+        private val DEFAULT_PAGE_CACHE_CAPACITY = Integer.getInteger("onyx.index.pageCacheCapacity", PAGE_CACHE_CAPACITY)
+        private val PAGE_CACHE_SHARED_CAPACITY = ConcurrentClockCache.SharedCapacity(DEFAULT_PAGE_CACHE_CAPACITY)
         const val POSTING_SCAN_BATCH_SIZE = 1_024
         const val HEADER_RECORD_COUNT_OFFSET = 5L
         const val EDGE_KEYS_TO_RETAIN = 15

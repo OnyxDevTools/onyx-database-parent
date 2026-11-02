@@ -16,15 +16,19 @@ import kotlin.concurrent.withLock
  * Individual map operations are thread-safe. Iterators are weakly consistent, like those of
  * [ConcurrentHashMap]. [putIfAbsent] publishes a value atomically; compound operations such as
  * get-then-put are not atomic. Keys and values must be non-null. The number of mapped entries
- * never exceeds [maxCapacity].
+ * never exceeds [maxCapacity]. Caches given the same [SharedCapacity] also share an aggregate
+ * entry bound, while keeping their keys, values, and clearing independent.
  */
-class ConcurrentClockCache<K : Any, V : Any>(private val maxCapacity: Int) : AbstractMutableMap<K, V>() {
+class ConcurrentClockCache<K : Any, V : Any> @JvmOverloads constructor(
+    private val maxCapacity: Int,
+    private val sharedCapacity: SharedCapacity? = null,
+) : AbstractMutableMap<K, V>() {
     init {
         require(maxCapacity > 0) { "Cache capacity must be positive" }
     }
 
     private val table = ConcurrentHashMap<K, Node<K, V>>()
-    private val writeLock = ReentrantLock()
+    private val writeLock = sharedCapacity?.writeLock ?: ReentrantLock()
     // Only writers access the ring. Readers never follow next/previous links.
     private var hand: Node<K, V>? = null
 
@@ -52,8 +56,9 @@ class ConcurrentClockCache<K : Any, V : Any>(private val maxCapacity: Int) : Abs
     }
 
     private fun insert(key: K, value: V) {
-        val node = Node(key, value)
+        val node = Node(key, value, this)
         if (table.size >= maxCapacity) evict()
+        sharedCapacity?.makeRoom()
         table[key] = node
         val current = hand
         if (current == null) {
@@ -68,6 +73,7 @@ class ConcurrentClockCache<K : Any, V : Any>(private val maxCapacity: Int) : Abs
             tail.next = node
             current.previous = node
         }
+        sharedCapacity?.add(node)
     }
 
     override fun remove(key: K): V? = writeLock.withLock {
@@ -79,6 +85,7 @@ class ConcurrentClockCache<K : Any, V : Any>(private val maxCapacity: Int) : Abs
     override fun clear() = writeLock.withLock {
         // Detach nodes so an outstanding iterator entry cannot retain the rest of an old ring.
         table.values.forEach { node ->
+            sharedCapacity?.remove(node)
             node.previous = null
             node.next = null
         }
@@ -118,6 +125,7 @@ class ConcurrentClockCache<K : Any, V : Any>(private val maxCapacity: Int) : Abs
         }
         node.previous = null
         node.next = null
+        sharedCapacity?.remove(node)
     }
 
     override val entries: MutableSet<MutableMap.MutableEntry<K, V>> =
@@ -178,9 +186,78 @@ class ConcurrentClockCache<K : Any, V : Any>(private val maxCapacity: Int) : Abs
             }
         }
 
-    private class Node<K, V>(val key: K, @Volatile var value: V) {
+    /**
+     * One CLOCK eviction budget for a group of otherwise independent caches. Writers share a
+     * lock so an insertion evicts before publishing and cannot overshoot the aggregate bound.
+     * Reads still only touch their cache's concurrent table and the entry's reference bit.
+     */
+    class SharedCapacity(private val maxCapacity: Int) {
+        init {
+            require(maxCapacity > 0) { "Shared cache capacity must be positive" }
+        }
+
+        internal val writeLock = ReentrantLock()
+        private var size = 0
+        private var hand: Node<*, *>? = null
+
+        internal fun makeRoom() {
+            if (size < maxCapacity) return
+            var victim = checkNotNull(hand)
+            var remaining = size
+            while (remaining > 0 && victim.referenced) {
+                victim.referenced = false
+                victim = checkNotNull(victim.sharedNext)
+                remaining--
+            }
+            hand = victim.sharedNext
+            victim.evict()
+        }
+
+        internal fun add(node: Node<*, *>) {
+            val current = hand
+            if (current == null) {
+                node.sharedPrevious = node
+                node.sharedNext = node
+                hand = node
+            } else {
+                val tail = checkNotNull(current.sharedPrevious)
+                node.sharedPrevious = tail
+                node.sharedNext = current
+                tail.sharedNext = node
+                current.sharedPrevious = node
+            }
+            size++
+        }
+
+        internal fun remove(node: Node<*, *>) {
+            val next = checkNotNull(node.sharedNext)
+            val previous = checkNotNull(node.sharedPrevious)
+            if (next === node) {
+                hand = null
+            } else {
+                previous.sharedNext = next
+                next.sharedPrevious = previous
+                if (hand === node) hand = next
+            }
+            node.sharedPrevious = null
+            node.sharedNext = null
+            size--
+        }
+    }
+
+    internal class Node<K : Any, V : Any>(
+        val key: K,
+        @Volatile var value: V,
+        private val owner: ConcurrentClockCache<K, V>,
+    ) {
         @Volatile var referenced = true
         var previous: Node<K, V>? = null
         var next: Node<K, V>? = null
+        var sharedPrevious: Node<*, *>? = null
+        var sharedNext: Node<*, *>? = null
+
+        fun evict() {
+            owner.remove(key)
+        }
     }
 }

@@ -8,8 +8,14 @@ In this implementation, a hit performs a `ConcurrentHashMap` lookup and sets the
 reference bit only if it is clear. It never acquires the cache writer lock or changes ring links.
 Insertions, replacements, removals, and eviction use one writer lock. Eviction scans the ring,
 clearing reference bits and preferring unreferenced entries. A scan stops after at most one full
-revolution even if concurrent readers keep marking entries. The capacity remains **32,768 entries
-per index**, configurable through `-Donyx.hnsw.nodeCacheCapacity=<positive count>`.
+revolution even if concurrent readers keep marking entries. The current capacity is **32,768 entries
+across all HNSW index instances**, configurable through
+`-Donyx.hnsw.nodeCacheCapacity=<positive count>` before the class is initialized. Each index keeps
+its own keys and values; clearing one index leaves other indexes' entries intact. Secondary-index
+posting pages have a separate class-wide budget of 32,768 entries, configured through
+`-Donyx.index.pageCacheCapacity=<positive count>`. Constructor capacity arguments can impose a
+smaller per-instance limit, but cannot exceed either class's aggregate budget. The benchmark
+results below predate the shared budgets.
 
 The prior pruning shortcut, mutation working set, graph encoding, and persistence path are intact.
 The existing `ConcurrentLinkedHashMap` utility remains available to its other callers and serves

@@ -40,14 +40,14 @@ data class HnswRemovalWork(
  * Nodes and per-calibration entry points live in ordinary Onyx DiskMaps, so opening an index is
  * constant-time and a query never rebuilds or materializes the graph. Every mutation and search
  * has a dataset-size-independent distance-evaluation bound. Searches share a read lock while
- * mutations take the write lock. A bounded, strong-reference CLOCK cache retains decoded nodes
+ * mutations take the write lock. A class-wide bounded, strong-reference CLOCK budget retains decoded nodes
  * across GC; hits mark a reference bit without acquiring the cache writer lock. A mutation retains its
  * working set and persists each dirty node once, before publishing its metadata and cache entries.
  */
 internal class PersistentHnswIndex @JvmOverloads constructor(
     private val nodes: DiskMap<Long, ByteArray>,
     private val metadata: DiskMap<Long, ByteArray>,
-    nodeCacheCapacity: Int = Integer.getInteger("onyx.hnsw.nodeCacheCapacity", NODE_CACHE_CAPACITY),
+    nodeCacheCapacity: Int = DEFAULT_NODE_CACHE_CAPACITY,
 ) {
     init {
         require(nodeCacheCapacity > 0) { "HNSW node cache capacity must be positive" }
@@ -57,6 +57,7 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
     private val activeSearches = AtomicInteger()
     private val nodeCache: MutableMap<Long, HnswNode> = ConcurrentClockCache(
         maxCapacity = nodeCacheCapacity,
+        sharedCapacity = NODE_CACHE_SHARED_CAPACITY,
     )
     // Accessed only under graphLock; searches cannot observe an in-progress mutation.
     private var mutation: GraphMutation? = null
@@ -1065,6 +1066,8 @@ internal class PersistentHnswIndex @JvmOverloads constructor(
         private const val LEVEL_SEED = -7046029254386353131L
         private const val INITIAL_SEARCH_CAPACITY = 4_096
         private const val NODE_CACHE_CAPACITY = 32_768
+        private val DEFAULT_NODE_CACHE_CAPACITY = Integer.getInteger("onyx.hnsw.nodeCacheCapacity", NODE_CACHE_CAPACITY)
+        private val NODE_CACHE_SHARED_CAPACITY = ConcurrentClockCache.SharedCapacity(DEFAULT_NODE_CACHE_CAPACITY)
         private const val MIN_NODE_PAYLOAD_BYTES = 4 + 2 + 8 + 4 + 1 + 4
         private fun emptyRemovalWork(recordId: Long) =
             HnswRemovalWork(recordId, 0, 0, 0, 0, 0, 0)

@@ -14,9 +14,39 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class DiskIndexPostingMapCacheTest {
+    @Test
+    fun `posting indexes share a budget while stores and clearing stay independent`() = withStores { firstNodes, firstData ->
+        withStores { secondNodes, secondData ->
+            val first = postingMap(firstNodes, firstData, newHeader(firstNodes), 2)
+            val second = postingMap(secondNodes, secondData, newHeader(secondNodes), 2)
+            val firstCache = pageCache(first)
+            val secondCache = pageCache(second)
+            val capacityField = ConcurrentClockCache::class.java.getDeclaredField("sharedCapacity")
+                .apply { isAccessible = true }
+            val capacity = capacityField.get(firstCache)
+            assertTrue(capacity is ConcurrentClockCache.SharedCapacity)
+            assertSame(capacity, capacityField.get(secondCache))
+            // Separate partition stores allocate identical page positions.
+            assertEquals(firstCache.keys, secondCache.keys)
+            val firstIds = (1L..2_000L).toList()
+            val secondIds = (3_001L..5_000L).toList()
+            firstIds.forEach { assertTrue(first.add(42L, it)) }
+            secondIds.forEach { assertTrue(second.add(42L, it)) }
+            assertEquals(firstIds, recordIds(first))
+            assertEquals(secondIds, recordIds(second))
+            val retained = secondCache.toMap()
+            first.clearCache()
+            first.clear()
+            assertEquals(retained, secondCache)
+            assertEquals(secondIds, recordIds(second))
+            assertTrue(recordIds(first).isEmpty())
+        }
+    }
+
     @Test
     fun `tiny page caches preserve splits merges and reloaded postings`() {
         for (capacity in listOf(1, 2)) withStores { nodes, data ->

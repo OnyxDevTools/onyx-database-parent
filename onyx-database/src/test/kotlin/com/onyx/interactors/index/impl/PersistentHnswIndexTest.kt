@@ -25,6 +25,29 @@ import kotlin.test.assertTrue
 
 class PersistentHnswIndexTest {
     @Test
+    fun `graphs share a cache budget while record IDs and clearing stay independent`() {
+        val first = PersistentHnswIndex(RecordingMap().map, RecordingMap().map)
+        val second = PersistentHnswIndex(RecordingMap().map, RecordingMap().map)
+        val firstCache = nodeCache(first)
+        val secondCache = nodeCache(second)
+        val capacityField = ConcurrentClockCache::class.java.getDeclaredField("sharedCapacity")
+            .apply { isAccessible = true }
+        val capacity = capacityField.get(firstCache)
+        assertTrue(capacity is ConcurrentClockCache.SharedCapacity)
+        assertSame(capacity, capacityField.get(secondCache))
+        first.upsert(1L, CALIBRATION, byteArrayOf(127, 0))
+        second.upsert(1L, CALIBRATION, byteArrayOf(0, 127))
+        val query = HnswSearchQuery(CALIBRATION, floatArrayOf(127f, 0f), 1, 1)
+        assertEquals(linkedMapOf(1L to 1f), first.search(query).scores)
+        assertEquals(linkedMapOf(1L to 0f), second.search(query).scores)
+        val retained = secondCache.getValue(1L)
+        first.clear()
+        assertSame(retained, secondCache[1L])
+        assertEquals(linkedMapOf(1L to 0f), second.search(query).scores)
+        assertTrue(first.search(query).scores.isEmpty())
+    }
+
+    @Test
     fun `neighbor rewrites retain immutable vectors while vector updates replace them`() {
         val nodes = RecordingMap()
         val metadata = RecordingMap()

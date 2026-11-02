@@ -1,5 +1,6 @@
 package com.onyx.lang.map
 
+import java.util.AbstractMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Executors
@@ -12,6 +13,111 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ConcurrentClockCacheTest {
+    @Test
+    fun `many independent caches share one aggregate entry bound`() {
+        val capacity = ConcurrentClockCache.SharedCapacity(7)
+        val caches = List(128) { ConcurrentClockCache<Int, String>(7, capacity) }
+        caches.forEachIndexed { partition, cache ->
+            repeat(3) { key ->
+                cache[key] = "$partition-$key"
+                assertEquals("$partition-$key", cache[key])
+                assertTrue(caches.sumOf { it.size } <= 7)
+            }
+        }
+        assertEquals(7, caches.sumOf { it.size })
+        assertEquals(mapOf(0 to "127-0", 1 to "127-1", 2 to "127-2"), caches.last())
+        assertTrue(caches.first().isEmpty())
+    }
+
+    @Test
+    fun `shared CLOCK gives hits a second chance across cache instances`() {
+        val capacity = ConcurrentClockCache.SharedCapacity(3)
+        val caches = List(5) { ConcurrentClockCache<Int, String>(3, capacity) }
+        for (index in 0..3) caches[index][1] = "value-$index"
+        assertTrue(caches[0].isEmpty())
+        assertEquals("value-1", caches[1][1])
+        caches[4][1] = "value-4"
+        assertTrue(caches[2].isEmpty())
+        assertEquals("value-1", caches[1][1])
+        assertEquals("value-3", caches[3][1])
+        assertEquals("value-4", caches[4][1])
+    }
+
+    @Test
+    fun `shared capacity preserves local limits and releases removed entries`() {
+        assertFailsWith<IllegalArgumentException> { ConcurrentClockCache.SharedCapacity(0) }
+        assertFailsWith<IllegalArgumentException> { ConcurrentClockCache.SharedCapacity(-1) }
+        val capacity = ConcurrentClockCache.SharedCapacity(3)
+        val first = ConcurrentClockCache<Int, String>(1, capacity)
+        val second = ConcurrentClockCache<Int, String>(3, capacity)
+        repeat(100) { round ->
+            first[1] = "old"
+            val iterator = first.entries.iterator()
+            val stale = iterator.next()
+            first[2] = "replacement"
+            iterator.remove()
+            assertFailsWith<IllegalStateException> { stale.setValue("stale") }
+            assertEquals(mapOf(2 to "replacement"), first)
+            second[1] = "independent"
+            assertEquals("replacement", first[2])
+            assertEquals("independent", second.putIfAbsent(1, "ignored"))
+            when (round % 5) {
+                0 -> assertEquals("replacement", first.remove(2))
+                1 -> assertTrue(first.keys.remove(2))
+                2 -> assertTrue(first.values.remove("replacement"))
+                3 -> assertTrue(first.entries.remove(AbstractMap.SimpleEntry(2, "replacement")))
+                else -> first.clear()
+            }
+            assertEquals(mapOf(1 to "independent"), second)
+            second[2] = "second"
+            second[3] = "third"
+            assertEquals(3, second.size, "Removed entries must release the shared budget")
+            first[4] = "fourth"
+            assertEquals(3, first.size + second.size)
+            first.clear()
+            second.clear()
+        }
+    }
+
+    @Test
+    fun `concurrent caches share a bound during writes removals clears and iteration`() {
+        val capacity = ConcurrentClockCache.SharedCapacity(17)
+        val caches = List(8) { ConcurrentClockCache<Int, Pair<Int, Int>>(7, capacity) }
+        val barrier = CyclicBarrier(caches.size) {
+            assertTrue(caches.sumOf { it.size } <= 17)
+            assertTrue(caches.all { it.size <= 7 })
+        }
+        val executor = Executors.newFixedThreadPool(caches.size)
+        try {
+            val workers = caches.mapIndexed { partition, cache -> executor.submit {
+                repeat(200) { round ->
+                    repeat(10) { key ->
+                        cache[key] = partition to key
+                        cache[key]?.let { assertEquals(partition to key, it) }
+                        if (key % 3 == 0) cache.remove(key - 1)
+                    }
+                    if (round % 7 == 0) cache.clear()
+                    val iterator = cache.entries.iterator()
+                    while (iterator.hasNext()) {
+                        val entry = iterator.next()
+                        assertEquals(partition to entry.key, entry.value)
+                        if (entry.key % 2 == 0) iterator.remove()
+                    }
+                    barrier.await(10, TimeUnit.SECONDS)
+                    // Keep every cache stable until the barrier's aggregate assertion finishes.
+                    barrier.await(10, TimeUnit.SECONDS)
+                }
+            } }
+            workers.forEach { it.get(30, TimeUnit.SECONDS) }
+            caches.forEach { it.clear() }
+            caches.forEachIndexed { index, cache -> cache[1] = index to 1 }
+            assertEquals(8, caches.sumOf { it.size })
+        } finally {
+            executor.shutdownNow()
+            executor.awaitTermination(5, TimeUnit.SECONDS)
+        }
+    }
+
     @Test
     fun `reference bits protect reused nodes without guaranteeing exact LRU order`() {
         val cache = ConcurrentClockCache<Int, String>(3)
